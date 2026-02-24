@@ -65,12 +65,13 @@ namespace ams::ldr::hoc::pcv::erista {
         R_SUCCEED();
     }
 
+    /* In theory this should work, but it doesn't, I have no idea why ¯\_(ツ)_/¯ */
     Result CpuVoltDfll(u32* ptr) {
         cvb_cpu_dfll_data *entry = reinterpret_cast<cvb_cpu_dfll_data *>(ptr);
-        R_UNLESS(entry->tune0_low == 0xFFEAD0FF,   ldr::ResultInvalidCpuVoltDfllEntry());
-        R_UNLESS(entry->tune0_high == 0x0,   ldr::ResultInvalidCpuVoltDfllEntry());
-        R_UNLESS(entry->tune1_low == 0x0,   ldr::ResultInvalidCpuVoltDfllEntry());
-        R_UNLESS(entry->tune1_high == 0x0,    ldr::ResultInvalidCpuVoltDfllEntry());
+        R_UNLESS(entry->tune0_low == 0xFFEAD0FF, ldr::ResultInvalidCpuVoltDfllEntry());
+        R_UNLESS(entry->tune0_high == 0x0, ldr::ResultInvalidCpuVoltDfllEntry());
+        R_UNLESS(entry->tune1_low == 0x0, ldr::ResultInvalidCpuVoltDfllEntry());
+        R_UNLESS(entry->tune1_high == 0x0, ldr::ResultInvalidCpuVoltDfllEntry());
 
         if( !C.eristaCpuUV) {
             R_SKIP();
@@ -436,14 +437,13 @@ namespace ams::ldr::hoc::pcv::erista {
     // }
 
     void Patch(uintptr_t mapped_nso, size_t nso_size) {
-        /* TODO: limit patch count */
         PatcherEntry<u32> patches[] = {
             {"CPU Freq Table", CpuFreqCvbTable<false>, 1, nullptr, static_cast<u32>(GetDvfsTableLastEntry(CpuCvbTableDefault)->freq)},
-            {"CPU Volt DVFS", &CpuVoltDvfs, 0, nullptr, CpuVminOfficial},
-            {"CPU Volt Thermals", &CpuVoltThermals, 0, nullptr, CpuVminOfficial},
-            {"CPU Volt Dfll", &CpuVoltDfll, 0, nullptr, 0xFFEAD0FF},
-            {"GPU Volt DVFS", &GpuVoltDVFS, 0, nullptr, GpuVminOfficial},
-            {"GPU Volt Thermals", &GpuVoltThermals, 0, nullptr, GpuVminOfficial},
+            {"CPU Volt DVFS", &CpuVoltDvfs, 1, nullptr, CpuVminOfficial},
+            {"CPU Volt Thermals", &CpuVoltThermals, 1, nullptr, CpuVminOfficial},
+            {"CPU Volt Dfll", &CpuVoltDfll, 1, nullptr, 0xFFEAD0FF},
+            {"GPU Volt DVFS", &GpuVoltDVFS, 1, nullptr, GpuVminOfficial},
+            {"GPU Volt Thermals", &GpuVoltThermals, 1, nullptr, GpuVminOfficial},
             {"GPU Freq Table", GpuFreqCvbTable<false>, 1, nullptr, static_cast<u32>(GetDvfsTableLastEntry(GpuCvbTableDefault)->freq)},
             {"GPU Freq Asm", &GpuFreqMaxAsm, 2, &GpuMaxClockPatternFn},
             {"GPU PLL Max", &GpuFreqPllMax, 1, nullptr, GpuClkPllMax},

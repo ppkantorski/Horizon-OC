@@ -1249,6 +1249,7 @@ MarikoCpuUvEntry marikoCpuUvHigh[12] = {
     {0x0, 0xdfff, 0, 0x27f07ff},
 };
 void Board::SetCpuUvLevel(u32 levelLow, u32 levelHigh, u32 tbreakPoint) {
+    return;
 
     u32* tune0_ptr = (u32*)(cldvfs + CL_DVFS_TUNE0_0);
     u32* tune1_ptr = (u32*)(cldvfs + CL_DVFS_TUNE1_0);

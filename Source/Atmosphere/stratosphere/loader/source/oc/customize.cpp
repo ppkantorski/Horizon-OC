@@ -71,11 +71,11 @@ volatile CustomizeTable C = {
 .mem_burst_read_latency = RL_1866,
 .mem_burst_write_latency = WL_1866,
 
-.eristaCpuUV = 0,
+.eristaCpuUV = 5,
 .eristaCpuVmin = 800,
 .eristaCpuMaxVolt = 1200,
 /* Unlocks up to 2295 Mhz CPU, usage is not recommended. */
-.eristaCpuUnlock = DISABLED,
+.eristaCpuUnlock = ENABLED,
 
 .marikoCpuUVLow = 0, // No undervolt
 .marikoCpuUVHigh = 0, // No undervolt
@@ -98,7 +98,7 @@ volatile CustomizeTable C = {
 .eristaCpuBoostClock = 1785000, // Default boost clock
 .marikoCpuBoostClock = 1963000, // Default boost clock
 
-.eristaGpuUV = 0,
+.eristaGpuUV = 2,
 .eristaGpuVmin = 810,
 
 .marikoGpuUV = 0,
