@@ -22,26 +22,26 @@
 
 namespace ams::ldr::hoc::ptm {
 
-typedef struct {
-    u32 conf_id;
-    u32 cpu_freq_1; // min-max pair?
-    u32 cpu_freq_2;
-    u32 gpu_freq_1;
-    u32 gpu_freq_2;
-    u32 emc_freq_1;
-    u32 emc_freq_2;
-    u32 padding;
-} perf_conf_entry;
+    typedef struct {
+        u32 conf_id;
+        u32 cpu_freq_1; // min-max pair?
+        u32 cpu_freq_2;
+        u32 gpu_freq_1;
+        u32 gpu_freq_2;
+        u32 emc_freq_1;
+        u32 emc_freq_2;
+        u32 padding;
+    } perf_conf_entry;
 
-constexpr u32 entryCnt       = 16;
-constexpr u32 cpuPtmDefault  = 1020'000'000;
-constexpr u32 cpuPtmDevOC    = 1224'000'000;
-constexpr u32 cpuPtmBoost    = 1785'000'000;
+    constexpr u32 entryCnt      = 16;
+    constexpr u32 cpuPtmDefault = 1020'000'000;
+    constexpr u32 cpuPtmDevOC   = 1224'000'000;
+    constexpr u32 cpuPtmBoost   = 1785'000'000;
 
-constexpr u32 memPtmLimit    = 1600'000'000;
-constexpr u32 memPtmAlt      = 1331'200'000;
-constexpr u32 memPtmClamp    = 1065'600'000;
+    constexpr u32 memPtmLimit   = 1600'000'000;
+    constexpr u32 memPtmAlt     = 1331'200'000;
+    constexpr u32 memPtmClamp   = 1065'600'000;
 
-void Patch(uintptr_t mapped_nso, size_t nso_size);
+    void Patch(uintptr_t mapped_nso, size_t nso_size);
 
 }
