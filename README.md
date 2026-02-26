@@ -36,7 +36,7 @@ It enables advanced CPU, GPU, and RAM tuning with user-friendly configuration to
 
 * **CPU:** Up to 1963MHz (Mariko) / 1785MHz (Erista)
 * **GPU:** Up to 1075MHz (Mariko) / 921MHz (Erista)
-* **RAM:** Up to 1866MHz (Mariko) / 1600MHz (Erista)
+* **RAM:** Up to 1866/2133MHz (Mariko) / 1600MHz (Erista)
 * Over/undervolting support
 * Built-in configurator
 * Compatible with most homebrew
