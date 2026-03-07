@@ -652,9 +652,8 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         // Copy unmodified 1600000 table to tmp
         std::memcpy(reinterpret_cast<void *>(tmp), reinterpret_cast<void *>(table_max), sizeof(MarikoMtcTable));
-        // Adjust max freq mtc timing parameters with reference to 1331200 table
-        /* TODO: Implement mariko */
-
+        
+        /* Adjust timings properly according to the new frequency. */
         MemMtcTableAutoAdjust(table_max);
 
         MemMtcPllmbDivisor(table_max);
@@ -683,6 +682,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         #define DVB_VOLT(zero, one, two) std::min(zero + voltAdd, 1050), std::min(one + voltAdd, 1025), std::min(two + voltAdd, 1000),
 
+        /* TODO: More fine tuned values? */
         if (C.marikoEmcMaxClock < 1862400) {
             std::memcpy(new_start, default_end, sizeof(emc_dvb_dvfs_table_t));
         } else if (C.marikoEmcMaxClock < 2131200) {

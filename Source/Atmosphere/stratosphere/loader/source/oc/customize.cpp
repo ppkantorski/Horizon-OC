@@ -26,7 +26,7 @@
 #define DISABLED 0
 #define DEACTIVATED_GPU_FREQ 2000
 #define GPU_MIN_MIN_VOLT 480000
-#define CPU_MAX_MAX_VOLT 1235000
+#define CPU_MAX_MAX_VOLT 1200000
 
 namespace ams::ldr::hoc {
 

@@ -437,6 +437,12 @@ void MiscGui::listUI()
         );
 
         std::vector<NamedValue> dvfsOffset = {
+            NamedValue("-80 mV", 0xFFFFFFB0),
+            NamedValue("-75 mV", 0xFFFFFFB5),
+            NamedValue("-70 mV", 0xFFFFFFBA),
+            NamedValue("-65 mV", 0xFFFFFFBF),
+            NamedValue("-60 mV", 0xFFFFFFC4),
+            NamedValue("-55 mV", 0xFFFFFFC9),
             NamedValue("-50 mV", 0xFFFFFFCE),
             NamedValue("-45 mV", 0xFFFFFFD3),
             NamedValue("-40 mV", 0xFFFFFFD8),
@@ -445,7 +451,7 @@ void MiscGui::listUI()
             NamedValue("-20 mV", 0xFFFFFFEC),
             NamedValue("-10 mV", 0xFFFFFFF6),
             NamedValue(" -5 mV", 0xFFFFFFFB),
-            NamedValue("Disabled",          0),
+            NamedValue("Disabled",        0),
             NamedValue(" +5 mV",          5),
             NamedValue("+10 mV",         10),
             NamedValue("+15 mV",         15),
@@ -991,7 +997,7 @@ protected:
             addConfigButton(
                 KipConfigValue_marikoCpuMaxVolt,
                 "CPU Max Voltage",
-                ValueRange(1000, 1235, 5, "mV", 1),
+                ValueRange(1000, 1200, 5, "mV", 1),
                 "CPU Max Voltage",
                 &mCpuVoltThresholds,
                 {},
