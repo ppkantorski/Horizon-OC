@@ -151,6 +151,12 @@ typedef enum {
     GovernorState_Enabled_Gpu,
     GovernorState_EnumMax,
 } GovernorState;
+typedef enum {
+    RamDisplayMode_VDD2VDDQ = 0,
+    RamDisplayMode_VDD2Usage,
+    RamDisplayMode_VDDQUsage,
+    RamDisplayMode_EnumMax,
+} RamDisplayMode;
 
 #define SYSCLK_ENUM_VALID(n, v) ((v) < n##_EnumMax)
 

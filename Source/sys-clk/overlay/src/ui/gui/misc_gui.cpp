@@ -352,6 +352,18 @@ void MiscGui::listUI()
         return;
     }
 
+    ValueThresholds thresholdsDisabled(0, 0);
+    std::vector<NamedValue> noNamedValues = {};
+
+    this->listElement->addItem(new tsl::elm::CategoryHeader("UI Settings"));
+    std::vector<NamedValue> ramVoltDispModes = {
+        NamedValue("VDD2 + VDDQ", RamDisplayMode_VDD2VDDQ),
+        NamedValue("VDD2 + Usage", RamDisplayMode_VDD2Usage),
+        NamedValue("VDDQ + Usage", RamDisplayMode_VDDQUsage),
+    };
+
+    addConfigButton(HorizonOCConfigValue_RAMVoltUsageDisplayMode, "RAM Voltage Display Mode", ValueRange(0, 12, 1, "", 0), "RAM Voltage Display Mode", &thresholdsDisabled, {}, ramVoltDispModes, false);
+
     this->listElement->addItem(new tsl::elm::CategoryHeader("Safety Settings"));
     addConfigToggle(HocClkConfigValue_UncappedClocks, nullptr);
     addConfigToggle(HocClkConfigValue_ThermalThrottle, nullptr);
@@ -393,9 +405,6 @@ void MiscGui::listUI()
             &throttleThresholds
         );
     #endif
-
-    ValueThresholds thresholdsDisabled(0, 0);
-    std::vector<NamedValue> noNamedValues = {};
 
     this->listElement->addItem(new tsl::elm::CategoryHeader("CPU Settings"));
     addConfigToggle(HocClkConfigValue_OverwriteBoostMode, nullptr);

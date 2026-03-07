@@ -63,6 +63,9 @@ typedef enum {
 
     HorizonOCConfigValue_GPUScheduling,
     HorizonOCConfigValue_GPUSchedulingMethod,
+
+    HorizonOCConfigValue_RAMVoltUsageDisplayMode,
+
     KipConfigValue_custRev,
     // KipConfigValue_mtcConf,
     KipConfigValue_hpMode,
@@ -243,6 +246,9 @@ static inline const char* sysclkFormatConfigValue(SysClkConfigValue val, bool pr
 
         case HorizonOCConfigValue_EnableExperimentalSettings:
             return pretty ? "Enable Experimental Settings" : "enable_experimental_settings";
+
+        case HorizonOCConfigValue_RAMVoltUsageDisplayMode:
+            return pretty ? "RAM Voltage / Usage Display Mode" : "ram_volt_usage_display_mode";
 
         // KIP config values
         case KipConfigValue_custRev:
@@ -572,6 +578,7 @@ static inline uint64_t sysclkValidConfigValue(SysClkConfigValue val, uint64_t in
         case HorizonOCConfigValue_DVFSMode:
         case HorizonOCConfigValue_DVFSOffset:
         case HorizonOCConfigValue_GPUScheduling:
+        case HorizonOCConfigValue_RAMVoltUsageDisplayMode:
             return true;
         case HorizonOCConfigValue_BatteryChargeCurrent:
             return ((input >= 1024) && (input <= 3072)) || !input;
