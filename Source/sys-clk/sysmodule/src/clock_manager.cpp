@@ -771,7 +771,7 @@ void ClockManager::HandleFreqReset(SysClkModule module, bool isBoost) {
     case SysClkModule_CPU:
         if(!(isBoost || (this->config->GetConfigValue(HocClkConfigValue_OverwriteBoostMode) && isBoost)))
             Board::ResetToStockCpu();
-        if(this->config->GetConfigValue(HorizonOCConfigValue_LiveCpuUv) || (kipAvailable && Board::GetSocType() == SysClkSocType_Erista)) { 
+        if(this->config->GetConfigValue(HorizonOCConfigValue_LiveCpuUv)) {
             if(Board::GetSocType() == SysClkSocType_Erista)
                 Board::SetCpuUvLevel(this->config->GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000);
             else
@@ -865,8 +865,7 @@ void ClockManager::SetClocks(bool isBoost) {
                 Board::SetHz((SysClkModule)module, nearestHz);
                 this->context->freqs[module] = nearestHz;
 
-                if(module == SysClkModule_CPU && (this->config->GetConfigValue(HorizonOCConfigValue_LiveCpuUv) || (kipAvailable && Board::GetSocType() == SysClkSocType_Erista)))
-                {
+                if(module == SysClkModule_CPU && (this->config->GetConfigValue(HorizonOCConfigValue_LiveCpuUv))) {
                     HandleCpuUv();
                 }
 
