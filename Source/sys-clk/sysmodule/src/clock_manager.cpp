@@ -900,7 +900,7 @@ void ClockManager::Tick()
 
 void ClockManager::ResetToStockClocks() {
     Board::ResetToStockCpu();
-    if(this->config->GetConfigValue(HorizonOCConfigValue_LiveCpuUv) || (kipAvailable && Board::GetSocType() == SysClkSocType_Erista))
+    if(this->config->GetConfigValue(HorizonOCConfigValue_LiveCpuUv))
     {
         if(Board::GetSocType() == SysClkSocType_Erista)
             Board::SetCpuUvLevel(this->config->GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000);
