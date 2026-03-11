@@ -357,7 +357,7 @@ void MiscGui::listUI()
     ValueThresholds thresholdsDisabled(0, 0);
     std::vector<NamedValue> noNamedValues = {};
 
-    this->listElement->addItem(new tsl::elm::CategoryHeader("Hoc-clk Settings"));
+    this->listElement->addItem(new tsl::elm::CategoryHeader("Settings"));
     std::vector<NamedValue> ramVoltDispModes = {
         NamedValue("VDD2 + VDDQ", RamDisplayMode_VDD2VDDQ),
         NamedValue("VDD2 + Usage", RamDisplayMode_VDD2Usage),
@@ -421,18 +421,18 @@ void MiscGui::listUI()
         return false;
     });
     this->listElement->addItem(gpuSubmenu);
-
-    this->listElement->addItem(new tsl::elm::CategoryHeader("Display"));
-    tsl::elm::ListItem* displaySubMenu = new tsl::elm::ListItem("Display Settings");
-    displaySubMenu->setClickListener([](u64 keys) {
-        if (keys & HidNpadButton_A) {
-            tsl::changeTo<DisplaySubMenuGui>();
-            return true;
-        }
-        return false;
-    });
-    this->listElement->addItem(displaySubMenu);
-
+    if(!IsHoag()) {
+        this->listElement->addItem(new tsl::elm::CategoryHeader("Display"));
+        tsl::elm::ListItem* displaySubMenu = new tsl::elm::ListItem("Display Settings");
+        displaySubMenu->setClickListener([](u64 keys) {
+            if (keys & HidNpadButton_A) {
+                tsl::changeTo<DisplaySubMenuGui>();
+                return true;
+            }
+            return false;
+        });
+        this->listElement->addItem(displaySubMenu);
+    }
     #if IS_MINIMAL == 0
         // std::vector<NamedValue> chargerCurrents = {
         //     NamedValue("Disabled", 0),
@@ -535,18 +535,16 @@ public:
 
 protected:
     void listUI() override {
-        if(!IsHoag()) {
-            addConfigToggle(HorizonOCConfigValue_OverwriteRefreshRate, nullptr);
-            tsl::elm::CustomDrawer* warningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-                renderer->drawString("\uE150 Enabling unsafe display", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
-                renderer->drawString("refresh rates may cause stress", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
-                renderer->drawString("or damage to your display! ", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
-                renderer->drawString("Proceed at your own risk!", false, x + 20, y + 90, 18, tsl::style::color::ColorText);
-            });
-            warningText->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 110);
-            this->listElement->addItem(warningText);
-            addConfigToggle(HorizonOCConfigValue_EnableUnsafeDisplayFreqs, nullptr);
-        }
+        addConfigToggle(HorizonOCConfigValue_OverwriteRefreshRate, nullptr);
+        tsl::elm::CustomDrawer* warningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString("\uE150 Enabling unsafe display", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
+            renderer->drawString("refresh rates may cause stress", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
+            renderer->drawString("or damage to your display! ", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
+            renderer->drawString("Proceed at your own risk!", false, x + 20, y + 90, 18, tsl::style::color::ColorText);
+        });
+        warningText->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 110);
+        this->listElement->addItem(warningText);
+        addConfigToggle(HorizonOCConfigValue_EnableUnsafeDisplayFreqs, nullptr);
     }
 };
 
