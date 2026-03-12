@@ -32,69 +32,76 @@ bool SysDockIntegration::getCurrentSysDockState() {
         return false;
     }
 }
-bool wasSaltyNxLoaded = false;
+
 SaltyNXIntegration::SaltyNXIntegration() {
-    if(!CheckPort()) {
+    if (!CheckPort())
         return;
-    }
-    wasSaltyNxLoaded = true;
     LoadSharedMemory();
 }
-
-
-//Check if SaltyNX is working
-bool SaltyNXIntegration::CheckPort () {
+ 
+bool SaltyNXIntegration::CheckPort() {
     Handle saltysd;
-    for (int i = 0; i < 500; i++) {
+ 
+    for (int i = 0; i < 67; i++) {
+        if (R_SUCCEEDED(svcConnectToNamedPort(&saltysd, "InjectServ"))) {
+            svcCloseHandle(saltysd);
+            break;
+        }
+        if (i == 66) return false;
+        svcSleepThread(1'000'000);
+    }
+ 
+    for (int i = 0; i < 67; i++) {
         if (R_SUCCEEDED(svcConnectToNamedPort(&saltysd, "InjectServ"))) {
             svcCloseHandle(saltysd);
             return true;
         }
-        else {
-            if (i == 499) return false;
-            svcSleepThread(100'000'000);
-        }
+        svcSleepThread(1'000'000);
     }
+ 
     return false;
 }
-
+ 
 void SaltyNXIntegration::LoadSharedMemory() {
     if (SaltySD_Connect())
         return;
-
     SaltySD_GetSharedMemoryHandle(&remoteSharedMemory);
     SaltySD_Term();
-
     shmemLoadRemote(&_sharedmemory, remoteSharedMemory, 0x1000, Perm_Rw);
     if (!shmemMap(&_sharedmemory))
         SharedMemoryUsed = true;
 }
-
+ 
 void SaltyNXIntegration::searchSharedMemoryBlock(uintptr_t base) {
     ptrdiff_t search_offset = 0;
-    while(search_offset < 0x1000) {
+    while (search_offset < 0x1000) {
         NxFps = (NxFpsSharedBlock*)(base + search_offset);
-        if (NxFps -> MAGIC == 0x465053) {
+        if (NxFps->MAGIC == 0x465053)
             return;
-        }
-        else search_offset += 4;
+        search_offset += 4;
     }
     NxFps = 0;
-    return;
 }
-
+ 
 u64 prevTid = 0;
-
 u8 SaltyNXIntegration::GetFPS() {
+    if (!SharedMemoryUsed)
+        return 254;
+ 
     u64 tid = ProcessManagement::GetCurrentApplicationId();
-    if(tid == 0 || wasSaltyNxLoaded == false) 
-        return 254; // only try to read fps for games, not system apps
-
-    if(prevTid != tid) {
-		uintptr_t base = (uintptr_t)shmemGetAddr(&_sharedmemory);
-		searchSharedMemoryBlock(base);
+    if (tid == 0)
+        return 254;
+ 
+    if (prevTid != tid) {
+        NxFps = 0;
         prevTid = tid;
     }
-    
+ 
+    if (!NxFps) {
+        uintptr_t base = (uintptr_t)shmemGetAddr(&_sharedmemory);
+        searchSharedMemoryBlock(base);
+    }
+ 
     return NxFps ? NxFps->FPS : 254;
 }
+ 
