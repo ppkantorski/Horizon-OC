@@ -43,9 +43,9 @@
 #define HOSPPC_HAS_BOOST (hosversionAtLeast(7,0,0))
 
 // governor constants
-#define POLL_NS         = 5'000'000;  // 5 ms  – governor poll rate
-#define DOWN_HOLD_TICKS = 10;         // 50 ms – how long to in POLL_NS to hold while ramping down
-#define STEP_UTIL    = 900;        // multiplier for step calculations
+#define POLL_NS 5'000'000  // 5 ms  – governor poll rate
+#define DOWN_HOLD_TICKS 10         // 50 ms – how long to in POLL_NS to hold while ramping down
+#define STEP_UTIL 900        // multiplier for step calculations
 
 bool isGpuGovernorEnabled = false;
 bool isCpuGovernorEnabled = false;
@@ -100,6 +100,8 @@ ClockManager::ClockManager()
     this->lastCsvWriteNs = 0;
 
     this->sysDockIntegration = new SysDockIntegration;
+    this->saltyNXIntegration = new SaltyNXIntegration;
+
     memset(&initialConfigValues, 0, sizeof(initialConfigValues));
     this->GetKipData();
 
@@ -322,7 +324,7 @@ u32 ClockManager::SchedutilTargetHz(u32 util, u32 tableMaxHz) {
 
 u32 ClockManager::TableIndexForHz(const FreqTable& table, u32 targetHz) { // must pass in a freqTable as tables are different for cpu/gpu
     for (u32 i = 0; i < table.count; i++)
-        if (this->freqTable.list[i] >= targetHz)
+        if (table.list[i] >= targetHz)
             return i;
     return table.count - 1;
 }
@@ -630,6 +632,7 @@ void ClockManager::HandleFreqReset(SysClkModule module, bool isBoost) {
 }
 
 void ClockManager::SetClocks(bool isBoost) {
+    FileUtils::LogLine("FPS: %d", this->saltyNXIntegration->GetFPS());
     std::uint32_t targetHz = 0;
     std::uint32_t maxHz = 0;
     std::uint32_t nearestHz = 0;

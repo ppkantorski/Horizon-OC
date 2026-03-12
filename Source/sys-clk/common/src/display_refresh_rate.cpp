@@ -88,6 +88,7 @@ static const DockedTimings g_dockedTimings1080p[] = {
     {8, 32, 40, 108, 8, 6, 0, 528880},     //220Hz CVT-RBv2
     {8, 32, 40, 114, 8, 6, 0, 555680},     //230Hz CVT-RBv2
     {8, 32, 40, 121, 8, 6, 0, 583200},     //240Hz CVT-RBv2
+    // technically you can go to 476hz, but in practice, why would you?
 };
 
 static const HandheldTimings g_handheldTimingsRETRO[] = {

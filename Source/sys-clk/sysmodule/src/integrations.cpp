@@ -18,6 +18,8 @@
 
 #include "integrations.h"
 #include <sys/stat.h>
+#include <SaltyNX.h>
+#include "process_management.h"
 
 SysDockIntegration::SysDockIntegration() {
 }
@@ -28,5 +30,75 @@ bool SysDockIntegration::getCurrentSysDockState() {
         return true;
     } else {
         return false;
+    }
+}
+
+SaltyNXIntegration::SaltyNXIntegration() {
+    if(!CheckPort()) return;
+    LoadSharedMemory();
+}
+
+
+//Check if SaltyNX is working
+bool SaltyNXIntegration::CheckPort () {
+    Handle saltysd;
+    for (int i = 0; i < 67; i++) {
+        if (R_SUCCEEDED(svcConnectToNamedPort(&saltysd, "InjectServ"))) {
+            svcCloseHandle(saltysd);
+            break;
+        }
+        else {
+            if (i == 66) return false;
+            svcSleepThread(1'000'000);
+        }
+    }
+    for (int i = 0; i < 67; i++) {
+        if (R_SUCCEEDED(svcConnectToNamedPort(&saltysd, "InjectServ"))) {
+            svcCloseHandle(saltysd);
+            return true;
+        }
+        else svcSleepThread(1'000'000);
+    }
+    return false;
+}
+
+void SaltyNXIntegration::LoadSharedMemory() {
+    if (SaltySD_Connect())
+        return;
+
+    SaltySD_GetSharedMemoryHandle(&remoteSharedMemory);
+    SaltySD_Term();
+
+    shmemLoadRemote(&_sharedmemory, remoteSharedMemory, 0x1000, Perm_Rw);
+    if (!shmemMap(&_sharedmemory))
+        SharedMemoryUsed = true;
+}
+
+void SaltyNXIntegration::searchSharedMemoryBlock(uintptr_t base) {
+    ptrdiff_t search_offset = 0;
+    while(search_offset < 0x1000) {
+        NxFps = (NxFpsSharedBlock*)(base + search_offset);
+        if (NxFps -> MAGIC == 0x465053) {
+            return;
+        }
+        else search_offset += 4;
+    }
+    NxFps = 0;
+    return;
+}
+
+u64 prevTid = 0;
+
+u8 SaltyNXIntegration::GetFPS() {
+    if(ProcessManagement::GetCurrentApplicationId() <= 0x010000000000FFFFULL) return 254; // only try to read fps for games, not system apps
+    if(prevTid != ProcessManagement::GetCurrentApplicationId()) {
+				uintptr_t base = (uintptr_t)shmemGetAddr(&_sharedmemory);
+				searchSharedMemoryBlock(base);
+                        prevTid = ProcessManagement::GetCurrentApplicationId();
+    }
+    if (NxFps) {
+        return NxFps->FPS;
+    } else {
+        return 254;
     }
 }

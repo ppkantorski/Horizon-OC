@@ -38,8 +38,11 @@
 #include "ipc_service.h"
 #define INNER_HEAP_SIZE 0x40000
 
+
 extern "C"
 {
+    void virtmemSetup(void);
+
     extern std::uint32_t __start__;
 
     std::uint32_t __nx_applet_type = AppletType_None;
@@ -88,6 +91,8 @@ extern "C"
         rc = i2cInitialize();
         if (R_FAILED(rc))
             diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_ShouldNotHappen));
+        
+        virtmemSetup();
     }
 
     void __appExit(void)

@@ -33,6 +33,7 @@
 #include "integrations.h"
 
 class SysDockIntegration;
+class SaltyNXIntegration;
 class ClockManager
 {
   public:
@@ -257,4 +258,5 @@ class ClockManager
     std::uint64_t lastPowerLogNs;
     std::uint64_t lastCsvWriteNs;
     SysDockIntegration *sysDockIntegration;
+    SaltyNXIntegration *saltyNXIntegration;
 };
