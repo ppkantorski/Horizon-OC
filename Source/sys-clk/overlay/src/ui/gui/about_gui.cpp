@@ -25,6 +25,8 @@
 tsl::elm::ListItem* SpeedoItem = NULL;
 tsl::elm::ListItem* IddqItem = NULL;
 tsl::elm::ListItem* sysdockStatusItem = NULL;
+tsl::elm::ListItem* saltyNXStatusItem = NULL;
+
 ImageElement* CatImage = NULL;
 HideableCategoryHeader* CatHeader = NULL;
 HideableCustomDrawer* CatSpacer = NULL;
@@ -56,6 +58,10 @@ void AboutGui::listUI()
     sysdockStatusItem =
         new tsl::elm::ListItem("sys-dock status:");
     this->listElement->addItem(sysdockStatusItem);
+
+    saltyNXStatusItem =
+        new tsl::elm::ListItem("SaltyNX status:");
+    this->listElement->addItem(saltyNXStatusItem);
 
     this->listElement->addItem(
         new tsl::elm::CategoryHeader("Credits")
@@ -227,4 +233,5 @@ void AboutGui::refresh()
     SpeedoItem->setValue(strings[0]);
     IddqItem->setValue(strings[1]);
     sysdockStatusItem->setValue(this->context->isSysDockInstalled ? "Installed" : "Not Installed");
+    saltyNXStatusItem->setValue(this->context->isSaltyNXInstalled ? "Installed" : "Not Installed");
 }

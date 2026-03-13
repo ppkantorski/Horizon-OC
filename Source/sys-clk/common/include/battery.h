@@ -19,7 +19,6 @@
 #include <switch.h>
 #include <inttypes.h>
 #include <string.h>
-// Battery charging flags
 typedef enum {
     BatteryFlag_NoHub  = BIT(0),  // Hub is disconnected
     BatteryFlag_Rail   = BIT(8),  // At least one Joy-con is charging from rail
@@ -27,7 +26,6 @@ typedef enum {
     BatteryFlag_ACC    = BIT(16)  // Accessory
 } BatteryChargeFlags;
 
-// Power Delivery Controller State (BM92T series)
 typedef enum {
     PDState_NewPDO      = 1, // Received new Power Data Object
     PDState_NoPD        = 2, // No Power Delivery source is detected
@@ -47,14 +45,11 @@ typedef enum {
     ChargerType_Apple_1000mA = 8,
     ChargerType_Apple_2000mA = 9
 } BatteryChargerType;
-
-// Power role (USB Power Delivery)
 typedef enum {
     PowerRole_Sink   = 1, // Device is receiving power
     PowerRole_Source = 2  // Device is providing power
 } BatteryPowerRole;
 
-// Complete battery charge information structure
 typedef struct {
     int32_t InputCurrentLimit;       // Input (Sink) current limit in mA
     int32_t VBUSCurrentLimit;        // Output (Source/VBUS/OTG) current limit in mA
@@ -64,7 +59,7 @@ typedef struct {
     int32_t unk_x14;                 // Unknown field (possibly flags)
     BatteryPDControllerState PDControllerState; // PD Controller State
     int32_t BatteryTemperature;      // Battery temperature in milli-Celsius
-    int32_t RawBatteryCharge;        // Battery charge in per cent-mille (100% = 100000)
+    int32_t RawBatteryCharge;        // Battery charge in percentmille
     int32_t VoltageAvg;              // Average voltage in mV
     int32_t BatteryAge;              // Battery health (capacity full/design) in pcm
     BatteryPowerRole PowerRole;      // Current power role
@@ -74,36 +69,27 @@ typedef struct {
     BatteryChargeFlags Flags;        // Various status flags
 } BatteryChargeInfo;
 
-// Helper macro to check if battery charging is enabled
 #define IS_BATTERY_CHARGING_ENABLED(info) (((info)->unk_x14 >> 8) & 1)
 
-// Initialize the battery info driver
 Result batteryInfoInitialize(void);
 
-// Cleanup the battery info driver
 void batteryInfoExit(void);
 
-// Get complete battery charge information
 Result batteryInfoGetChargeInfo(BatteryChargeInfo *out);
 
-// Get battery charge percentage (0-100)
 Result batteryInfoGetChargePercentage(u32 *out);
 
-// Check if enough power is being supplied
 Result batteryInfoIsEnoughPowerSupplied(bool *out);
 
-// Battery charge control functions
 Result batteryInfoEnableCharging(void);
 Result batteryInfoDisableCharging(void);
 Result batteryInfoEnableFastCharging(void);
 Result batteryInfoDisableFastCharging(void);
 
-// Helper functions to get human-readable strings
 const char* batteryInfoGetChargerTypeString(BatteryChargerType type);
 const char* batteryInfoGetPowerRoleString(BatteryPowerRole role);
 const char* batteryInfoGetPDStateString(BatteryPDControllerState state);
 
-// Convenience functions for common values
 static inline int batteryInfoGetTemperatureMiliCelsius(BatteryChargeInfo *info) {
     return info->BatteryTemperature;
 }
@@ -120,7 +106,6 @@ static inline bool batteryInfoIsCharging(BatteryChargeInfo *info) {
     return IS_BATTERY_CHARGING_ENABLED(info);
 }
 
-// String lookup tables
 static const char* s_chargerTypeStrings[] = {
     "None",
     "Power Delivery",
@@ -187,7 +172,6 @@ static Result psmDisableFastBatteryCharging_internal(void) {
     return serviceDispatch(&g_psmService, 11);
 }
 
-// Public API implementations
 Result batteryInfoInitialize(void) {
     if (g_batteryInfoInitialized)
         return 0;

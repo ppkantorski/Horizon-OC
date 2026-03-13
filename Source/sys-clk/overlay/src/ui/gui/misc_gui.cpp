@@ -366,6 +366,13 @@ void MiscGui::listUI()
 
     addConfigButton(HorizonOCConfigValue_RAMVoltUsageDisplayMode, "RAM Voltage Display Mode", ValueRange(0, 12, 1, "", 0), "RAM Voltage Display Mode", &thresholdsDisabled, {}, ramVoltDispModes, false);
 
+    addConfigButton(
+        HocClkConfigValue_LiteTDPLimit,
+        "Polling Interval",
+        ValueRange(50, 1000, 50, "ms", 1),
+        "Polling Interval",
+        &thresholdsDisabled
+    );
     tsl::elm::ListItem* safetySubmenu = new tsl::elm::ListItem("Safety Settings");
     safetySubmenu->setClickListener([](u64 keys) {
         if (keys & HidNpadButton_A) {
@@ -536,6 +543,7 @@ public:
 protected:
     void listUI() override {
         addConfigToggle(HorizonOCConfigValue_OverwriteRefreshRate, nullptr);
+        addConfigToggle(HorizonOCConfigValue_VRR, nullptr);
         tsl::elm::CustomDrawer* warningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150 Enabling unsafe display", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
             renderer->drawString("refresh rates may cause stress", false, x + 20, y + 50, 18, tsl::style::color::ColorText);

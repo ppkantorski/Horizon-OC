@@ -6,11 +6,11 @@
 	"main_thread_stack_size": "0x0000C000",
 	"main_thread_priority": 16,
 	"default_cpu_id": 3,
-	"process_category": 0,
+	"process_category": 1,
 	"is_retail": true,
 	"pool_partition": 2,
 	"is_64_bit": true,
-	"address_space_type": 1,
+	"address_space_type": 3,
 	"filesystem_access": {
 		"permissions": "0xFFFFFFFFFFFFFFFF"
 	},

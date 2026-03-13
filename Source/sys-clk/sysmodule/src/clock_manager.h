@@ -33,6 +33,7 @@
 #include "integrations.h"
 
 class SysDockIntegration;
+class SaltyNXIntegration;
 class ClockManager
 {
   public:
@@ -185,6 +186,13 @@ class ClockManager
     static void GovernorThread(void* arg);
 
     /**
+     * Runs the VRR Algorithm
+     *
+     * @param arg Cast to ClockManager* for context
+     */
+    static void VRRThread(void* arg);
+
+    /**
      * Gets the effective governor state from application/temporary override
      *
      * @param appState Governor state from app
@@ -257,4 +265,5 @@ class ClockManager
     std::uint64_t lastPowerLogNs;
     std::uint64_t lastCsvWriteNs;
     SysDockIntegration *sysDockIntegration;
+    SaltyNXIntegration *saltyNXIntegration;
 };

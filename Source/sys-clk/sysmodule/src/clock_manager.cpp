@@ -55,10 +55,10 @@ bool hasChanged = true;
 ClockManager *ClockManager::instance = NULL;
 Thread cpuGovernorTHREAD;
 Thread gpuGovernorTHREAD;
+Thread vrrTHREAD;
 u32 initialConfigValues[SysClkConfigValue_EnumMax]; // initial config. used for safety checks
 bool kipAvailable = false;
 bool isCpuGovernorInBoostMode = false;
-
 
 ClockManager *ClockManager::GetInstance()
 {
@@ -100,6 +100,8 @@ ClockManager::ClockManager()
     this->lastCsvWriteNs = 0;
 
     this->sysDockIntegration = new SysDockIntegration;
+    this->saltyNXIntegration = new SaltyNXIntegration;
+
     memset(&initialConfigValues, 0, sizeof(initialConfigValues));
     this->GetKipData();
 
@@ -123,8 +125,15 @@ ClockManager::ClockManager()
         -2
     );
 
-	threadStart(&cpuGovernorTHREAD);
-	threadStart(&gpuGovernorTHREAD);
+    threadCreate(
+        &vrrTHREAD,
+        ClockManager::VRRThread,
+        this,
+        NULL,
+        0x2000,
+        0x3F,
+        -2
+    );
 
     for(int i = 0; i < HorizonOCSpeedo_EnumMax; i++) {
         this->context->speedos[i] = Board::getSpeedo((HorizonOCSpeedo)i);
@@ -135,13 +144,27 @@ ClockManager::ClockManager()
     this->context->isDram8GB = Board::IsDram8GB();
     Board::SetGpuSchedulingMode((GpuSchedulingMode)this->config->GetConfigValue(HorizonOCConfigValue_GPUScheduling), (GpuSchedulingOverrideMethod)this->config->GetConfigValue(HorizonOCConfigValue_GPUSchedulingMethod));
     this->context->gpuSchedulingMode = (GpuSchedulingMode)this->config->GetConfigValue(HorizonOCConfigValue_GPUScheduling);
+    
     this->context->isSysDockInstalled = this->sysDockIntegration->getCurrentSysDockState();
+    this->context->isSaltyNXInstalled = this->saltyNXIntegration->getCurrentSaltyNXState();
+    if(this->context->isSaltyNXInstalled) {
+        this->saltyNXIntegration->LoadSaltyNX();
+    }
+
+    
+	threadStart(&cpuGovernorTHREAD);
+	threadStart(&gpuGovernorTHREAD);
+    threadStart(&vrrTHREAD);
 }
 
 ClockManager::~ClockManager()
 {
     threadClose(&cpuGovernorTHREAD);
     threadClose(&gpuGovernorTHREAD);
+    threadClose(&vrrTHREAD);
+
+    delete this->sysDockIntegration;
+    delete this->saltyNXIntegration;
     delete this->config;
     delete this->context;
 }
@@ -459,6 +482,67 @@ void ClockManager::GovernorThread(void* arg) {
         svcSleepThread(POLL_NS);
     }
 }
+
+void ClockManager::VRRThread(void* arg) {
+    ClockManager* mgr = static_cast<ClockManager*>(arg);
+    u8 tick = 0;
+    for (;;) {
+        if (!mgr->running || !mgr->config->GetConfigValue(HorizonOCConfigValue_VRR) || mgr->context->profile == SysClkProfile_Docked) {
+            continue;
+        }
+
+        if(Board::GetConsoleType() == HorizonOCConsoleType_Hoag) {
+            svcSleepThread(~0ULL);
+            continue;
+        }
+
+        std::scoped_lock lock{mgr->contextMutex};
+
+        u8 fps;
+
+        if(mgr->context->isSaltyNXInstalled) {
+            fps = mgr->saltyNXIntegration->GetFPS();
+        } else {
+            svcSleepThread(~0ULL); // effectively disable the thread if SaltyNX isn't installed, as there's no point in it running
+            continue;
+        }
+
+        if(fps == 254)
+            continue;
+        // if(appletGetFocusState() != AppletFocusState_InFocus) {
+        //     Board::ResetToStockDisplay();
+        //     continue;
+        // }
+        u8 maxDisplay;
+        if(Board::GetConsoleType() == HorizonOCConsoleType_Aula) {
+            maxDisplay = mgr->config->GetConfigValue(HorizonOCConfigValue_EnableUnsafeDisplayFreqs) ? 65 : 60;
+        } else {
+            maxDisplay = mgr->config->GetConfigValue(HorizonOCConfigValue_EnableUnsafeDisplayFreqs) ? 72 : 60;
+        }
+
+        u8 minDisplay = Board::GetConsoleType() == HorizonOCConsoleType_Aula ? 40 : 45;
+        if(fps >= minDisplay && fps <= maxDisplay)
+            Board::SetHz(HorizonOCModule_Display, fps);
+        else {
+            for(u32 i = 0; i < 10; i++) {
+                u32 compareHz = fps * i;
+                if(compareHz >= minDisplay && compareHz <= maxDisplay) {
+                    Board::SetHz(HorizonOCModule_Display, compareHz);
+                    break;
+                }
+            }
+        }
+        if(++tick > 10) {
+            Board::ResetToStockDisplay();
+            tick = 0;
+            svcSleepThread(10'000'000);
+        }
+
+        svcSleepThread(POLL_NS);
+    }
+}
+
+
 GovernorState ClockManager::GetEffectiveGovernorState(GovernorState appState, GovernorState tempState)
 {
     if (tempState == GovernorState_Disabled)
@@ -623,6 +707,12 @@ void ClockManager::HandleFreqReset(SysClkModule module, bool isBoost) {
     case SysClkModule_MEM:
         Board::ResetToStockMem();
         DVFSReset();
+        break;
+    case HorizonOCModule_Display:
+        if(this->config->GetConfigValue(HorizonOCConfigValue_OverwriteRefreshRate) && Board::GetConsoleType() != HorizonOCConsoleType_Hoag) {
+            Board::ResetToStockDisplay();
+        }
+        break;
     default:
         break;
     }
@@ -888,7 +978,11 @@ bool ClockManager::RefreshContext()
 
     if(Board::GetConsoleType() != HorizonOCConsoleType_Hoag)
         Board::SetDisplayRefreshDockedState(this->context->profile == SysClkProfile_Docked);
-
+    if(this->context->isSaltyNXInstalled)
+        this->context->fps = saltyNXIntegration->GetFPS();
+    else
+        this->context->fps = 254; // N/A
+    
     return hasChanged;
 }
 

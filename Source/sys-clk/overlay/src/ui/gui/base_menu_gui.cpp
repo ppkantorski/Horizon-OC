@@ -58,7 +58,7 @@ void BaseMenuGui::preDraw(tsl::gfx::Renderer* renderer) {
 
     // All constants pre-calculated and cached
     static constexpr const char* const labels[] = {
-        "App ID", "Profile", "CPU", "GPU", "MEM", "SoC", "Board", "Skin", "Now", "Avg", "BAT", "PMIC", "FAN", "DISP"
+        "App ID", "Profile", "CPU", "GPU", "MEM", "SoC", "Board", "Skin", "Now", "Avg", "BAT", "PMIC", "FAN", "DISP", "FPS"
     };
 
     static constexpr u32 dataPositions[6] = {63-3+3, 200-1, 344-1-3, 200-1, 342-1, 321-1};
@@ -168,8 +168,10 @@ void BaseMenuGui::preDraw(tsl::gfx::Renderer* renderer) {
     renderer->drawString(displayStrings[21], false, dataPositions[0], y, SMALL_TEXT_SIZE, tsl::infoTextColor);   // Bat voltage
     renderer->drawString(displayStrings[23], false, positions[2] - 2, y, SMALL_TEXT_SIZE, tsl::infoTextColor);  // Bat Age
 
-
-    renderer->drawString(displayStrings[26], false, dataPositions[2], y, SMALL_TEXT_SIZE, tsl::infoTextColor);   // disp volt
+    if(this->context->isSaltyNXInstalled) {
+        renderer->drawString(labels[14], false, positions[4], y, SMALL_TEXT_SIZE, tsl::sectionTextColor); // FPS label
+        renderer->drawString(displayStrings[26], false, dataPositions[2], y, SMALL_TEXT_SIZE, tsl::infoTextColor);   // FPS
+    }
 
     y+=20;
 }
@@ -285,9 +287,14 @@ void BaseMenuGui::refresh()
     sprintf(displayStrings[24], "%u%%", context->partLoad[HocClkPartLoad_FAN]);
 
     sprintf(displayStrings[25], "%u Hz", context->realFreqs[HorizonOCModule_Display]);
-
-    //sprintf(displayStrings[26], "%u", context->speedos[HorizonOCSpeedo_CPU]);
-
+    if(this->context->isSaltyNXInstalled) {
+        if(context->fps == 254) {
+            strcpy(displayStrings[26], "N/A");
+        } else {
+            memset(displayStrings[26], 0, sizeof(displayStrings[26]));
+            sprintf(displayStrings[26], "%u", context->fps);
+        }
+    }
 }
 
 tsl::elm::Element* BaseMenuGui::baseUI()

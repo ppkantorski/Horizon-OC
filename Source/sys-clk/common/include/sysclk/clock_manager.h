@@ -45,6 +45,7 @@ typedef struct
     u16 iddq[HorizonOCSpeedo_EnumMax];
     GpuSchedulingMode gpuSchedulingMode;
     bool isSysDockInstalled;
+    bool isSaltyNXInstalled;
     u8 maxDisplayFreq;
     u8 dramID;
     bool isDram8GB;

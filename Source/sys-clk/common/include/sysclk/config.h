@@ -66,6 +66,8 @@ typedef enum {
 
     HorizonOCConfigValue_RAMVoltUsageDisplayMode,
 
+    HorizonOCConfigValue_VRR,
+
     KipConfigValue_custRev,
     // KipConfigValue_mtcConf,
     KipConfigValue_hpMode,
@@ -250,6 +252,9 @@ static inline const char* sysclkFormatConfigValue(SysClkConfigValue val, bool pr
         case HorizonOCConfigValue_RAMVoltUsageDisplayMode:
             return pretty ? "RAM Voltage / Usage Display Mode" : "ram_volt_usage_display_mode";
 
+        case HorizonOCConfigValue_VRR:
+            return pretty ? "Variable Refresh Rate (VRR)" : "vrr";
+
         // KIP config values
         case KipConfigValue_custRev:
             return pretty ? "Custom Revision" : "kip_cust_rev";
@@ -430,6 +435,7 @@ static inline uint64_t sysclkDefaultConfigValue(SysClkConfigValue val)
         case HorizonOCConfigValue_GPUScheduling:
         case HorizonOCConfigValue_LiveCpuUv:
         case HorizonOCConfigValue_GPUSchedulingMethod:
+        case HorizonOCConfigValue_VRR:
             return 0ULL;
         case HocClkConfigValue_EristaMaxCpuClock:
             return 1785ULL;
@@ -479,6 +485,7 @@ static inline uint64_t sysclkValidConfigValue(SysClkConfigValue val, uint64_t in
         case HorizonOCConfigValue_EnableExperimentalSettings:
         case HorizonOCConfigValue_LiveCpuUv:
         case HorizonOCConfigValue_GPUSchedulingMethod:
+        case HorizonOCConfigValue_VRR:
             return (input & 0x1) == input;
 
         case KipConfigValue_custRev:
