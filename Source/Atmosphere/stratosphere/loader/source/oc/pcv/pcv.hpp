@@ -209,8 +209,7 @@ namespace ams::ldr::hoc::pcv {
         constexpr u32 CpuVoltL4T = 1257'000;
 
         static const u32 cpuVoltDvfsPattern[] = { 1227, 1000, 100, 1000, 0 };
-        static const u32 cpuVoltDvfsOffsets[] = {    5,    6,   7,    8, 9 };
-        static_assert(sizeof(cpuVoltDvfsPattern) == sizeof(cpuVoltDvfsOffsets), "Invalid cpuVoltDvfsPattern");
+        static_assert(sizeof(cpuVoltDvfsPattern) == 0x14, "invalid cpuVoltDvfsPattern size");
 
         static const u32 cpuVoltageThermalPattern[] = { 950, 1132, 0, 950, 1227, 0, 825, 1227, 15000, 825, 1170, 60000, 825, 1132, 80000 };
         static_assert(sizeof(cpuVoltageThermalPattern) == 0x3c, "invalid cpuVoltageThermalPattern size");
