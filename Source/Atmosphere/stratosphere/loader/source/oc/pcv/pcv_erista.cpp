@@ -31,6 +31,9 @@ namespace ams::ldr::hoc::pcv::erista {
 
         if (C.eristaCpuVmin) {
             PATCH_OFFSET(ptr, C.eristaCpuVmin);
+        }
+
+        if (C.eristaCpuUV) {
             PATCH_OFFSET(ptr - 2, C.eristaCpuVmin);
         }
 
