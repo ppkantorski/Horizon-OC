@@ -65,6 +65,7 @@ typedef enum {
     HorizonOCConfigValue_GPUSchedulingMethod,
 
     HorizonOCConfigValue_RAMVoltUsageDisplayMode,
+    HorizonOCConfigValue_CpuGovernorMinimumFreq,
 
     KipConfigValue_custRev,
     // KipConfigValue_mtcConf,
@@ -249,7 +250,8 @@ static inline const char* sysclkFormatConfigValue(SysClkConfigValue val, bool pr
 
         case HorizonOCConfigValue_RAMVoltUsageDisplayMode:
             return pretty ? "RAM Voltage / Usage Display Mode" : "ram_volt_usage_display_mode";
-
+        case HorizonOCConfigValue_CpuGovernorMinimumFreq:
+            return pretty ? "CPU Governor Minimum Frequency" : "cpu_gov_min_freq";
         // KIP config values
         case KipConfigValue_custRev:
             return pretty ? "Custom Revision" : "kip_cust_rev";
@@ -448,6 +450,8 @@ static inline uint64_t sysclkDefaultConfigValue(SysClkConfigValue val)
             return 9600ULL; // 8600mW will trigger on erista stock, so raise it a bit
         case HocClkConfigValue_LiteTDPLimit:
             return 6400ULL; // 0.5C
+        case HorizonOCConfigValue_CpuGovernorMinimumFreq:
+            return 612ULL; // 612MHz
         default:
             return 0ULL;
     }

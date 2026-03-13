@@ -28,7 +28,10 @@
 #pragma message("Compiling with minimal features")
 #endif
 
-class SysmoduleSettingsSubMenuGui;
+#define A_BTN "\ue0e0"
+#define R_ARROW "\u2192"
+class GeneralSettingsSubMenuGui;
+class GovernorSettingsSubMenuGui;
 class DisplaySubMenuGui;
 class SafetySubMenuGui;
 class RamSubmenuGui;
@@ -38,6 +41,7 @@ class CpuSubmenuGui;
 class GpuSubmenuGui;
 class GpuCustomTableSubmenuGui;
 class RamTableEditor;
+
 MiscGui::MiscGui()
 {
     this->configList = new SysClkConfigValueList {};
@@ -359,15 +363,27 @@ void MiscGui::listUI()
     std::vector<NamedValue> noNamedValues = {};
 
     this->listElement->addItem(new tsl::elm::CategoryHeader("Settings"));
-    tsl::elm::ListItem* sysmoduleSettingsSubMenu = new tsl::elm::ListItem("Sysmodule Settings");
+    tsl::elm::ListItem* sysmoduleSettingsSubMenu = new tsl::elm::ListItem("General Settings");
     sysmoduleSettingsSubMenu->setClickListener([](u64 keys) {
         if (keys & HidNpadButton_A) {
-            tsl::changeTo<SysmoduleSettingsSubMenuGui>();
+            tsl::changeTo<GeneralSettingsSubMenuGui>();
             return true;
         }
         return false;
     });
+    sysmoduleSettingsSubMenu->setValue(R_ARROW);
     this->listElement->addItem(sysmoduleSettingsSubMenu);
+
+    tsl::elm::ListItem* governorSettingsSubMenu = new tsl::elm::ListItem("Governor Settings");
+    governorSettingsSubMenu->setClickListener([](u64 keys) {
+        if (keys & HidNpadButton_A) {
+            tsl::changeTo<GovernorSettingsSubMenuGui>();
+            return true;
+        }
+        return false;
+    });
+    governorSettingsSubMenu->setValue(R_ARROW);
+    this->listElement->addItem(governorSettingsSubMenu);
 
     tsl::elm::ListItem* safetySubmenu = new tsl::elm::ListItem("Safety Settings");
     safetySubmenu->setClickListener([](u64 keys) {
@@ -377,9 +393,10 @@ void MiscGui::listUI()
         }
         return false;
     });
+    safetySubmenu->setValue(R_ARROW);
     this->listElement->addItem(safetySubmenu);
 
-    this->listElement->addItem(new tsl::elm::CategoryHeader("KIP"));
+    // this->listElement->addItem(new tsl::elm::CategoryHeader("KIP"));
 
     tsl::elm::ListItem* saveBtn = new tsl::elm::ListItem("Save KIP Settings");
     saveBtn->setClickListener([](u64 keys) {
@@ -393,6 +410,7 @@ void MiscGui::listUI()
         }
         return false;
     });
+    saveBtn->setValue(A_BTN);
     this->listElement->addItem(saveBtn);
 
     tsl::elm::ListItem* ramSubmenu = new tsl::elm::ListItem("RAM Settings");
@@ -403,6 +421,7 @@ void MiscGui::listUI()
         }
         return false;
     });
+    ramSubmenu->setValue(R_ARROW);
     this->listElement->addItem(ramSubmenu);
 
     tsl::elm::ListItem* cpuSubmenu = new tsl::elm::ListItem("CPU Settings");
@@ -413,6 +432,7 @@ void MiscGui::listUI()
         }
         return false;
     });
+    cpuSubmenu->setValue(R_ARROW);
     this->listElement->addItem(cpuSubmenu);
 
     tsl::elm::ListItem* gpuSubmenu = new tsl::elm::ListItem("GPU Settings");
@@ -423,8 +443,9 @@ void MiscGui::listUI()
         }
         return false;
     });
+    gpuSubmenu->setValue(R_ARROW);
     this->listElement->addItem(gpuSubmenu);
-    this->listElement->addItem(new tsl::elm::CategoryHeader("Display"));
+
     tsl::elm::ListItem* displaySubMenu = new tsl::elm::ListItem("Display Settings");
     displaySubMenu->setClickListener([](u64 keys) {
         if (keys & HidNpadButton_A) {
@@ -433,7 +454,9 @@ void MiscGui::listUI()
         }
         return false;
     });
+    displaySubMenu->setValue(R_ARROW);
     this->listElement->addItem(displaySubMenu);
+
     #if IS_MINIMAL == 0
         // std::vector<NamedValue> chargerCurrents = {
         //     NamedValue("Disabled", 0),
@@ -530,12 +553,13 @@ void MiscGui::listUI()
     #endif
 }
 
-class SysmoduleSettingsSubMenuGui : public MiscGui {
+class GeneralSettingsSubMenuGui : public MiscGui {
 public:
-    SysmoduleSettingsSubMenuGui() { }
+    GeneralSettingsSubMenuGui() { }
 
 protected:
     void listUI() override {
+        this->listElement->addItem(new tsl::elm::CategoryHeader("General Settings"));
         ValueThresholds thresholdsDisabled(0, 0);
         std::vector<NamedValue> ramVoltDispModes = {
             NamedValue("VDD2 + VDDQ", RamDisplayMode_VDD2VDDQ),
@@ -558,12 +582,25 @@ protected:
     }
 };
 
+class GovernorSettingsSubMenuGui : public MiscGui {
+public:
+    GovernorSettingsSubMenuGui() { }
+
+protected:
+    void listUI() override {
+        this->listElement->addItem(new tsl::elm::CategoryHeader("Governor Settings"));
+        addFreqButton(HorizonOCConfigValue_CpuGovernorMinimumFreq, "CPU Governor Minimum Frequency", SysClkModule_CPU, BaseMenuGui::IsMariko() ? cpu_freq_label_m : cpu_freq_label_e);
+    }
+};
+
+
 class DisplaySubMenuGui : public MiscGui {
 public:
     DisplaySubMenuGui() { }
 
 protected:
     void listUI() override {
+        this->listElement->addItem(new tsl::elm::CategoryHeader("Display Settings"));
         addConfigToggle(HorizonOCConfigValue_OverwriteRefreshRate, nullptr);
         tsl::elm::CustomDrawer* warningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150 Enabling unsafe display", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
@@ -692,6 +729,7 @@ protected:
             }
             return false;
         });
+        freqSubmenu->setValue(R_ARROW);
         this->listElement->addItem(freqSubmenu);
 
         tsl::elm::ListItem* latenciesSubmenu = new tsl::elm::ListItem("RAM Latency Editor");
@@ -702,6 +740,7 @@ protected:
             }
             return false;
         });
+        latenciesSubmenu->setValue(R_ARROW);
         this->listElement->addItem(latenciesSubmenu);
 
         tsl::elm::ListItem* timingsSubmenu = new tsl::elm::ListItem("RAM Timing Reductions");
@@ -712,6 +751,7 @@ protected:
             }
             return false;
         });
+        timingsSubmenu->setValue(R_ARROW);
         this->listElement->addItem(timingsSubmenu);
 
     }
@@ -1104,7 +1144,7 @@ protected:
                 {},
                 marikoMaxEmcClock,
                 false,
-                "\ue0e0"
+                A_BTN
             );
         } else {
             // 1600000, 1331200, 1065600, 800000, 665600, 408000, 204000
@@ -1166,9 +1206,9 @@ protected:
                 NamedValue("2400 MHz", 2400000, "JEDEC."),
             };
 
-            addConfigButtonS(KipConfigValue_eristaEmcMaxClock, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, "\ue0e0");
-            addConfigButtonS(KipConfigValue_eristaEmcMaxClock1, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, "\ue0e0");
-            addConfigButtonS(KipConfigValue_eristaEmcMaxClock2, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, "\ue0e0");
+            addConfigButtonS(KipConfigValue_eristaEmcMaxClock, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN);
+            addConfigButtonS(KipConfigValue_eristaEmcMaxClock1, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN);
+            addConfigButtonS(KipConfigValue_eristaEmcMaxClock2, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN);
         }
     };
 };
@@ -1355,6 +1395,7 @@ protected:
             }
             return false;
         });
+        customTableSubmenu->setValue(R_ARROW);
         this->listElement->addItem(customTableSubmenu);
     }
 };
