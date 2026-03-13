@@ -320,18 +320,8 @@ void GlobalOverrideGui::listUI()
         if(configList.values[HorizonOCConfigValue_OverwriteRefreshRate])
             this->addModuleListItemValue(HorizonOCModule_Display, "Display", IsAula() ? 45 : 40, configList.values[HorizonOCConfigValue_EnableUnsafeDisplayFreqs] ? IsAula() ? 65 : 72 : 60, 1, " Hz", 1, 0, lcdThresholds);
     #endif
-    
 
-
-    std::vector<NamedValue> governorSettings = {
-        NamedValue("Do Not Override", GovernorState_DoNotOverride),
-        NamedValue("Disabled", GovernorState_Disabled),
-        NamedValue("GPU + VRR", GovernorState_Enabled_GpuVrr),
-        NamedValue("GPU", GovernorState_Enabled_Gpu),
-        NamedValue("VRR", GovernorState_Enabled_Vrr),
-    };
-
-    this->addModuleListItemValue(HorizonOCModule_Governor, "Governor", 0, 0, 1, "", 1, 0, ValueThresholds(), configList.values[HorizonOCConfigValue_EnableExperimentalSettings] ?governorSettingsE : governorSettings, false);
+    this->addModuleListItemValue(HorizonOCModule_Governor, "Governor", 0, 0, 1, "", 1, 0, ValueThresholds(), governorSettingsE, false);
 }
 
 void GlobalOverrideGui::refresh()

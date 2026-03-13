@@ -378,15 +378,8 @@ void AppProfileGui::addProfileUI(SysClkProfile profile)
         NamedValue("VRR", GovernorState_Enabled_Vrr),
     };
 
-    std::vector<NamedValue> governorSettings = {
-        NamedValue("Do Not Override", GovernorState_DoNotOverride),
-        NamedValue("Disabled", GovernorState_Disabled),
-        NamedValue("GPU + VRR", GovernorState_Enabled_GpuVrr),
-        NamedValue("GPU", GovernorState_Enabled_Gpu),
-        NamedValue("VRR", GovernorState_Enabled_Vrr),
-    };
 
-    this->addModuleListItemValue(profile, HorizonOCModule_Governor, "Governor", 0, 0, 1, "", 1, 0, ValueThresholds(), configList.values[HorizonOCConfigValue_EnableExperimentalSettings] ? governorSettingsE : governorSettings, false);
+    this->addModuleListItemValue(profile, HorizonOCModule_Governor, "Governor", 0, 0, 1, "", 1, 0, ValueThresholds(), governorSettingsE, false);
 }
 
 void AppProfileGui::listUI()
