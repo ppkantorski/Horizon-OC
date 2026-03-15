@@ -27,12 +27,15 @@ class AboutGui : public BaseMenuGui
 {
 protected:
     char strings[32][32];  // Pre-formatted strings
-    
+
 public:
     AboutGui();
     ~AboutGui();
-    
+
     void listUI() override;
     void update() override;
     void refresh() override;
+
+private:
+    std::string formatRamModule();
 };

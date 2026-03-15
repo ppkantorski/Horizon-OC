@@ -24,6 +24,7 @@
 
 tsl::elm::ListItem* SpeedoItem = NULL;
 tsl::elm::ListItem* IddqItem = NULL;
+tsl::elm::ListItem* DramModule = NULL;
 tsl::elm::ListItem* sysdockStatusItem = NULL;
 tsl::elm::ListItem* saltyNXStatusItem = NULL;
 
@@ -54,6 +55,10 @@ void AboutGui::listUI()
     IddqItem =
         new tsl::elm::ListItem("IDDQ:");
     this->listElement->addItem(IddqItem);
+
+    DramModule =
+        new tsl::elm::ListItem("Module: ");
+    this->listElement->addItem(DramModule);
 
     sysdockStatusItem =
         new tsl::elm::ListItem("sys-dock status:");
@@ -128,7 +133,7 @@ void AboutGui::listUI()
     this->listElement->addItem(
         new tsl::elm::ListItem("Happy")
     );
-    
+
     this->listElement->addItem(
         new tsl::elm::ListItem("Flopsider")
     );
@@ -206,7 +211,7 @@ void AboutGui::listUI()
     CatHeader = new HideableCategoryHeader("Cat");
     CatHeader->setVisible(false);
     this->listElement->addItem(CatHeader);
-    
+
     CatImage = new ImageElement(CAT_DATA, CAT_WIDTH, CAT_HEIGHT);
     CatImage->setVisible(false);
     this->listElement->addItem(CatImage);
@@ -214,6 +219,57 @@ void AboutGui::listUI()
     CatSpacer = new HideableCustomDrawer(75);
     CatSpacer->setVisible(false);
     this->listElement->addItem(CatSpacer);
+}
+
+std::string AboutGui::formatRamModule() {
+    switch (this->context->dramID) {
+        case 0: return "HB-MGCH 4GB";
+        case 4: return "HM-MGCH 6GB";
+        case 7: return "HM-MGXX 8GB";
+
+        case 1: return "NLE";
+        case 2: return "WT:C";
+
+        case 3:
+        case 5:
+        case 6: return "NEE";
+
+        case 8:
+        case 12: return "AM-MGCJ 4GB";
+        case 9:
+        case 13: return "AM-MGCJ 8GB";
+
+        case 10:
+        case 14: return "NME";
+
+        case 11:
+        case 15: return "WT:E";
+
+        case 17:
+        case 19:
+        case 24: return "AA-MGCL 4GB";
+        case 18:
+        case 23:
+        case 28: return "AA-MGCL 8GB";
+
+        case 20:
+        case 21:
+        case 22: return "AB-MGCL 4GB";
+
+        case 25:
+        case 26:
+        case 27: return "WT:F";
+
+        case 29:
+        case 30:
+        case 31: return "x267";
+
+        case 32:
+        case 33:
+        case 34: return "WT:B";
+
+        default: return "Unknown";
+    }
 }
 
 void AboutGui::update()
@@ -224,7 +280,8 @@ void AboutGui::update()
 void AboutGui::refresh()
 {
     BaseMenuGui::refresh();
-    
+    std::string ramModule = formatRamModule();
+
     if (!this->context)
         return;
     // Format strings once per refresh
@@ -232,6 +289,7 @@ void AboutGui::refresh()
     sprintf(strings[1], "%u/%u/%u", this->context->iddq[HorizonOCSpeedo_CPU], this->context->iddq[HorizonOCSpeedo_GPU], this->context->iddq[HorizonOCSpeedo_SOC]);
     SpeedoItem->setValue(strings[0]);
     IddqItem->setValue(strings[1]);
+    DramModule->setValue(formatRamModule());
     sysdockStatusItem->setValue(this->context->isSysDockInstalled ? "Installed" : "Not Installed");
     saltyNXStatusItem->setValue(this->context->isSaltyNXInstalled ? "Installed" : "Not Installed");
 }
