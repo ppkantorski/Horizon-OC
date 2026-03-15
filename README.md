@@ -41,7 +41,7 @@ It enables advanced CPU, GPU, and RAM tuning with user-friendly configuration to
 * Built-in configurator
 * Compatible with most homebrew
 
-> It is reccomended to read the [guide](https://rentry.co/howtoget60fps) before proceeding, as this can help you get a *significant* performance boost over the default settings, often times with less power draw and heat output
+> It is recommended to read the [guide](https://rentry.co/howtoget60fps) before proceeding, as this can help you get a *significant* performance boost over the default settings, often times with less power draw and heat output
 
 ---
 
