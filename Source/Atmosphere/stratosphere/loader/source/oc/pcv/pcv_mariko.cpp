@@ -415,6 +415,8 @@ namespace ams::ldr::hoc::pcv::mariko {
         u32 trefbw = refresh_raw + 0x40;
         trefbw = MIN(trefbw, static_cast<u32>(0x3FFF));
 
+        const u32 dyn_self_ref_control = (static_cast<u32>(7605.0 / tCK_avg) + 260) | (table->burst_regs.emc_dyn_self_ref_control & 0xffff0000);
+
         CalculateTimings();
 
         WRITE_PARAM_ALL_REG(table, emc_rd_rcd, GET_CYCLE_CEIL(tRCD));
@@ -446,7 +448,6 @@ namespace ams::ldr::hoc::pcv::mariko {
         WRITE_PARAM_ALL_REG(table, emc_refresh, refresh_raw);
         WRITE_PARAM_ALL_REG(table, emc_pre_refresh_req_cnt, refresh_raw / 4);
         WRITE_PARAM_ALL_REG(table, emc_trefbw, trefbw);
-        const u32 dyn_self_ref_control = (static_cast<u32>(7605.0 / tCK_avg) + 260) | (table->burst_regs.emc_dyn_self_ref_control & 0xffff0000);
         WRITE_PARAM_ALL_REG(table, emc_dyn_self_ref_control, dyn_self_ref_control);
         WRITE_PARAM_ALL_REG(table, emc_pdex2wr, pdex2rw);
         WRITE_PARAM_ALL_REG(table, emc_pdex2rd, pdex2rw);
@@ -479,8 +480,9 @@ namespace ams::ldr::hoc::pcv::mariko {
         WRITE_PARAM_ALL_REG(table, emc_rdv_early_mask, rdv);
         WRITE_PARAM_ALL_REG(table, emc_rdv_mask, rdv + 2);
         WRITE_PARAM_ALL_REG(table, emc_tr_rdv, rdv);
-        WRITE_PARAM_ALL_REG(table, emc_cmd_brlshft_2, 0x24)
-        WRITE_PARAM_ALL_REG(table, emc_cmd_brlshft_3, 0x24)
+        /* TODO: Check this out again at some point. */
+        WRITE_PARAM_ALL_REG(table, emc_cmd_brlshft_2, 0x24);
+        WRITE_PARAM_ALL_REG(table, emc_cmd_brlshft_3, 0x24);
 
         /* This needs some clean up. */
         constexpr double MC_ARB_DIV = 4.0;
@@ -498,7 +500,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         table->burst_mc_regs.mc_emem_arb_timing_wap2pre = CEIL(tW2P / MC_ARB_DIV) + MC_ARB_SFA;
 
         /* Two consecutive reads between two different dram modules. */
-        /* Only be above 1 for 8gb ram. */
+        /* Only above 1 for 8gb ram. */
         if (table->burst_mc_regs.mc_emem_arb_timing_r2r > 1) {
             table->burst_mc_regs.mc_emem_arb_timing_r2r = CEIL(table->burst_regs.emc_rext / 4) - 1 + MC_ARB_SFA;
         }
