@@ -29,11 +29,9 @@
 
 #define MAX_REFRESH_RATE 72
 
-// Configuration
 static DisplayRefreshConfig g_config = {0};
 static bool g_initialized = false;
 
-// State
 static uint8_t g_dockedHighestRefreshRate = 60;
 static uint8_t g_dockedLinkRate = 10;
 static bool g_wasRetroSuperTurnedOff = false;
@@ -41,7 +39,6 @@ static uint32_t g_lastVActive = 1080;
 static bool g_canChangeRefreshRateDocked = false;
 static uint8_t g_lastVActiveSet = 0;
 
-// Refresh rate tables
 static const uint8_t g_dockedRefreshRates[] = {40, 45, 50, 55, 60, 70, 72, 75, 80, 90, 95, 100, 110, 120, 130, 140, 144, 150, 160, 165, 170, 180, 190, 200, 210, 220, 230, 240};
 // Calculate with this tool:
 
@@ -101,8 +98,6 @@ static const HandheldTimings g_handheldTimingsRETRO[] = {
 
 static const MinMaxRefreshRate g_handheldModeRefreshRate = {40, 80};
 
-// Utility functions
-static uint8_t _getDockedRefreshRateIterator(uint32_t refreshRate) {
     for (size_t i = 0; i < sizeof(g_dockedRefreshRates) / sizeof(g_dockedRefreshRates[0]); i++) {
         if (g_dockedRefreshRates[i] == refreshRate) return i;
     }

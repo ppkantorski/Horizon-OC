@@ -154,11 +154,11 @@ void BaseMenuGui::preDraw(tsl::gfx::Renderer* renderer) {
     renderer->drawString(labels[10], false, positions[2], y, SMALL_TEXT_SIZE, tsl::sectionTextColor);
 
     renderer->drawString(displayStrings[20], false, dataPositions[0], y, SMALL_TEXT_SIZE, tempColors[HorizonOCThermalSensor_Battery]);  // Battery
+    if(!IsHoag()) {
+        renderer->drawString(labels[13], false, positions[4], y, SMALL_TEXT_SIZE, tsl::sectionTextColor); // disp label
 
-    renderer->drawString(labels[13], false, positions[4], y, SMALL_TEXT_SIZE, tsl::sectionTextColor); // disp label
-
-    renderer->drawString(displayStrings[25], false, dataPositions[2], y, SMALL_TEXT_SIZE, tsl::infoTextColor);   // disp freq
-
+        renderer->drawString(displayStrings[25], false, dataPositions[2], y, SMALL_TEXT_SIZE, tsl::infoTextColor);   // disp freq
+    }
     renderer->drawString(labels[12], false, positions[3], y, SMALL_TEXT_SIZE, tsl::sectionTextColor); // fan label
 
     renderer->drawString(displayStrings[24], false, dataPositions[1], y, SMALL_TEXT_SIZE, tsl::infoTextColor);   // fan speed

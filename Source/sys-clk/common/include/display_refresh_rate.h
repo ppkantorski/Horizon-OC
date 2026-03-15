@@ -15,17 +15,12 @@
  * 
  */
 
-#ifndef DISPLAY_REFRESH_RATE_H
-#define DISPLAY_REFRESH_RATE_H
+#pragma once
 
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-// Display mode structures
 typedef struct {
     uint16_t hFrontPorch;
     uint8_t hSyncWidth;
@@ -52,7 +47,6 @@ typedef struct {
     uint8_t max;
 } MinMaxRefreshRate;
 
-// Display mode information
 typedef struct {
     uint32_t unk0;
     uint32_t hActive;
@@ -76,7 +70,6 @@ typedef struct {
     uint32_t num_modes;
 } NvdcModeDB2;
 
-// PLL structures
 typedef struct {
     unsigned int PLLD_DIVM: 8;
     unsigned int reserved_1: 3;
@@ -109,7 +102,6 @@ typedef struct {
     unsigned int reserved: 2;
 } PLLD_MISC;
 
-// Configuration structure
 typedef struct {
     uint64_t clkVirtAddr;
     uint64_t dsiVirtAddr;
@@ -132,9 +124,3 @@ uint8_t DisplayRefresh_GetDockedHighestAllowed(void);
 void DisplayRefresh_CorrectOledGamma(uint32_t refresh_rate);
 void DisplayRefresh_SetAllowedDockedRatesIPC(uint32_t refreshRates, bool is720p);
 void DisplayRefresh_Shutdown(void);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // DISPLAY_REFRESH_RATE_H
