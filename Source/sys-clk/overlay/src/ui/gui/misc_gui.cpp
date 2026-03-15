@@ -1292,11 +1292,11 @@ protected:
             // });
 
             addConfigButton(KipConfigValue_marikoGpuVmin, "GPU VMIN", ValueRange(0, 0, 0, "0", 1), "GPU VMIN", &thresholdsDisabled, {}, mGpuVoltsVmin, false);
-            ValueThresholds MgpuVmaxThresholds(800, 850);
+            ValueThresholds MgpuVmaxThresholds(805, 850);
             addConfigButton(
                 KipConfigValue_marikoGpuVmax,
                 "GPU Maximum Voltage",
-                ValueRange(750, 960, 5, "mV", 1),
+                ValueRange(800, 960, 5, "mV", 1),
                 "GPU Maximum Voltage",
                 &MgpuVmaxThresholds,
                 {},
