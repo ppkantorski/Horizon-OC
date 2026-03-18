@@ -38,7 +38,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
 APP_TITLE	:=	Horizon OC Monitor
-APP_VERSION	:=	1.3.2+r4-hoc
+APP_VERSION	:=	1.3.2+r4-hoc-r2
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 SOURCES		:=	source

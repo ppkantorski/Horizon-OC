@@ -79,14 +79,17 @@ Result sysclkIpcGetAPIVersion(u32* out_ver)
 Result sysclkIpcGetVersionString(char* out, size_t len)
 {
     return serviceDispatch(&g_sysclkSrv, SysClkIpcCmd_GetVersionString,
-        .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_Out },
+        .buffer_attrs = { SfBufferAttr_HipcAutoSelect | SfBufferAttr_Out },
         .buffers = {{out, len}},
     );
 }
 
 Result sysclkIpcGetCurrentContext(SysClkContext* out_context)
 {
-    return serviceDispatchOut(&g_sysclkSrv, SysClkIpcCmd_GetCurrentContext, *out_context);
+    return serviceDispatch(&g_sysclkSrv, SysClkIpcCmd_GetCurrentContext,
+        .buffer_attrs = { SfBufferAttr_HipcAutoSelect | SfBufferAttr_Out },
+        .buffers = {{out_context, sizeof(SysClkContext)}},
+    );
 }
 
 Result sysclkIpcGetProfileCount(u64 tid, u8* out_count)
@@ -112,7 +115,7 @@ Result sysclkIpcSetOverride(SysClkModule module, u32 hz)
 Result sysclkIpcGetProfiles(u64 tid, SysClkTitleProfileList* out_profiles)
 {
     return serviceDispatchIn(&g_sysclkSrv, SysClkIpcCmd_GetProfiles, tid,
-        .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_Out },
+        .buffer_attrs = { SfBufferAttr_HipcAutoSelect | SfBufferAttr_Out },
         .buffers = {{out_profiles, sizeof(SysClkTitleProfileList)}},
     );
 }
@@ -128,7 +131,7 @@ Result sysclkIpcSetProfiles(u64 tid, SysClkTitleProfileList* profiles)
 Result sysclkIpcGetConfigValues(SysClkConfigValueList* out_configValues)
 {
     return serviceDispatch(&g_sysclkSrv, SysClkIpcCmd_GetConfigValues,
-        .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_Out },
+        .buffer_attrs = { SfBufferAttr_HipcAutoSelect | SfBufferAttr_Out },
         .buffers = {{out_configValues, sizeof(SysClkConfigValueList)}},
     );
 }
@@ -136,7 +139,7 @@ Result sysclkIpcGetConfigValues(SysClkConfigValueList* out_configValues)
 Result sysclkIpcSetConfigValues(SysClkConfigValueList* configValues)
 {
     return serviceDispatch(&g_sysclkSrv, SysClkIpcCmd_SetConfigValues,
-        .buffer_attrs = { SfBufferAttr_HipcMapAlias | SfBufferAttr_In },
+        .buffer_attrs = { SfBufferAttr_HipcAutoSelect | SfBufferAttr_In },
         .buffers = {{configValues, sizeof(SysClkConfigValueList)}},
     );
 }

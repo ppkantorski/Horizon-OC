@@ -119,9 +119,15 @@ Result IpcService::ServiceHandlerFunc(void* arg, const IpcServerRequest* r, u8* 
             break;
 
         case SysClkIpcCmd_GetCurrentContext:
-            *out_dataSize = sizeof(SysClkContext);
-            return ipcSrv->GetCurrentContext((SysClkContext*)out_data);
-
+            if(r->data.size >= sizeof(std::uint64_t) && r->hipc.meta.num_recv_buffers >= 1)
+            {
+                size_t bufSize = hipcGetBufferSize(r->hipc.data.recv_buffers);
+                if(bufSize >= sizeof(SysClkContext))
+                {
+                    return ipcSrv->GetCurrentContext((SysClkContext*)hipcGetBufferAddress(r->hipc.data.recv_buffers));
+                }
+            }
+            break;
         case SysClkIpcCmd_Exit:
             return ipcSrv->Exit();
 
