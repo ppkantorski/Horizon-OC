@@ -193,14 +193,6 @@ class ClockManager
     static void VRRThread(void* arg);
 
     /**
-     * Gets the effective governor state from application/temporary override
-     *
-     * @param appState Governor state from app
-     * @param tempState Governor state from temporary override
-     */
-    GovernorState GetEffectiveGovernorState(GovernorState appState, GovernorState tempState);
-
-    /**
      * Frequency table
      *
      */

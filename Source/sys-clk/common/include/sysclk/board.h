@@ -30,7 +30,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-
+#include <switch/types.h>
 typedef enum
 {
     SysClkSocType_Erista = 0,
@@ -142,19 +142,12 @@ typedef enum {
     GpuSchedulingOverrideMethod_NvService,
     GpuSchedulingOverrideMethod_EnumMax,
 } GpuSchedulingOverrideMethod;
-
 typedef enum {
-    GovernorState_DoNotOverride = 0,
-    GovernorState_Disabled,
-    GovernorState_Enabled_CpuGpuVrr,
-    GovernorState_Enabled_CpuVrr,
-    GovernorState_Enabled_GpuVrr,
-    GovernorState_Enabled_CpuGpu,
-    GovernorState_Enabled_Cpu,
-    GovernorState_Enabled_Gpu,
-    GovernorState_Enabled_Vrr,
-    GovernorState_EnumMax,
-} GovernorState;
+    ComponentGovernor_DoNotOverride = 0,
+    ComponentGovernor_Enabled       = 1,
+    ComponentGovernor_Disabled      = 2,
+    ComponentGovernor_EnumMax,
+} ComponentGovernorState;
 typedef enum {
     RamDisplayMode_VDD2VDDQ = 0,
     RamDisplayMode_VDD2Usage,
@@ -163,6 +156,25 @@ typedef enum {
 } RamDisplayMode;
 
 #define SYSCLK_ENUM_VALID(n, v) ((v) < n##_EnumMax)
+
+// Packed u32
+// Bits 0-7 - CPU
+// Bits 8-15 - GPU
+// Bits 16-23 - VRR
+// Bits 24-32 - unused
+
+inline u32 GovernorStatePack(u8 cpu, u8 gpu, u8 vrr) {
+    return (u32)cpu | ((u32)gpu << 8) | ((u32)vrr << 16);
+}
+inline u8 GovernorStateCpu(u32 p) { 
+    return (u8)(p         & 0xFF); 
+}
+inline u8 GovernorStateGpu(u32 p) { 
+    return (u8)((p >>  8) & 0xFF); 
+}
+inline u8 GovernorStateVrr(u32 p) {
+    return (u8)((p >> 16) & 0xFF); 
+}
 
 static inline const char* sysclkFormatModule(SysClkModule module, bool pretty)
 {
@@ -177,7 +189,7 @@ static inline const char* sysclkFormatModule(SysClkModule module, bool pretty)
         case HorizonOCModule_Display:
             return pretty ? "Display" : "display";
         case HorizonOCModule_Governor:
-            return pretty ? "Governor" : "gov";
+            return pretty ? "Governor" : "governor";
         default:
             return "null";
     }

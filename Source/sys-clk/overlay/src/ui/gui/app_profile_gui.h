@@ -70,6 +70,7 @@ class AppProfileGui : public BaseMenuGui
             std::vector<NamedValue> namedValues = {},
             bool showDefaultValue = true
         );
+        void addGovernorSection(SysClkProfile profile);
         void addProfileUI(SysClkProfile profile);
     public:
         AppProfileGui(std::uint64_t applicationId, SysClkTitleProfileList* profileList);

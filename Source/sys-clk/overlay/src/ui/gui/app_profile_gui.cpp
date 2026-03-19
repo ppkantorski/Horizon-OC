@@ -277,6 +277,56 @@ void AppProfileGui::addModuleListItemValue(
     this->listElement->addItem(listItem);
 }
 
+class GovernorProfileSubMenuGui : public BaseMenuGui {
+    uint64_t applicationId;
+    SysClkTitleProfileList* profileList;
+    SysClkProfile profile;
+public:
+    GovernorProfileSubMenuGui(uint64_t appId, SysClkTitleProfileList* pList, SysClkProfile prof)
+        : applicationId(appId), profileList(pList), profile(prof) {}
+
+    void listUI() override {
+        this->listElement->addItem(new tsl::elm::CategoryHeader("Governor"));
+
+        static constexpr struct { const char* label; int shift; } kAll[] = {
+            {"CPU", 0}, {"GPU", 8}, {"VRR", 16}
+        };
+        int count = IsHoag() ? 2 : 3;
+
+        for (int i = 0; i < count; i++) {
+            u8 cur = (this->profileList->mhzMap[this->profile][HorizonOCModule_Governor] >> kAll[i].shift) & 0xFF;
+            auto* bar = new tsl::elm::NamedStepTrackBar(
+                "", {"Do Not Override", "Enabled", "Disabled"},
+                true, kAll[i].label
+            );
+            bar->setProgress(cur);
+            int shift = kAll[i].shift;
+            bar->setValueChangedListener([this, shift](u8 value) {
+                u32& packed = this->profileList->mhzMap[this->profile][HorizonOCModule_Governor];
+                packed = (packed & ~(0xFFu << shift)) | ((u32)value << shift);
+                Result rc = sysclkIpcSetProfiles(this->applicationId, this->profileList);
+                if (R_FAILED(rc)) FatalGui::openWithResultCode("sysclkIpcSetProfiles", rc);
+            });
+            this->listElement->addItem(bar);
+        }
+    }
+};
+
+void AppProfileGui::addGovernorSection(SysClkProfile profile) {
+    auto* item = new tsl::elm::ListItem("Governor");
+    item->setValue("\u2192"); // Right arrow
+    item->setClickListener([this, profile](u64 keys) {
+        if (keys & HidNpadButton_A) {
+            tsl::changeTo<GovernorProfileSubMenuGui>(
+                this->applicationId, this->profileList, profile
+            );
+            return true;
+        }
+        return false;
+    });
+    this->listElement->addItem(item);
+}
+
 void AppProfileGui::addProfileUI(SysClkProfile profile)
 {    
     BaseMenuGui::refresh();
@@ -367,27 +417,7 @@ void AppProfileGui::addProfileUI(SysClkProfile profile)
             }
         }
     #endif
-    std::vector<NamedValue> governorSettingsE = {
-        NamedValue("Do Not Override", GovernorState_DoNotOverride),
-        NamedValue("Disabled", GovernorState_Disabled),
-        NamedValue("CPU + GPU + VRR", GovernorState_Enabled_CpuGpuVrr),
-        NamedValue("CPU + VRR", GovernorState_Enabled_CpuVrr),
-        NamedValue("GPU + VRR", GovernorState_Enabled_GpuVrr),
-        NamedValue("CPU + GPU", GovernorState_Enabled_CpuGpu),
-        NamedValue("CPU", GovernorState_Enabled_Cpu),
-        NamedValue("GPU", GovernorState_Enabled_Gpu),
-        NamedValue("VRR", GovernorState_Enabled_Vrr),
-    };
-
-    std::vector<NamedValue> governorSettingsH = {
-        NamedValue("Do Not Override", GovernorState_DoNotOverride),
-        NamedValue("Disabled", GovernorState_Disabled),
-        NamedValue("CPU + GPU", GovernorState_Enabled_CpuGpu),
-        NamedValue("CPU", GovernorState_Enabled_Cpu),
-        NamedValue("GPU", GovernorState_Enabled_Gpu),
-    };
-
-    this->addModuleListItemValue(profile, HorizonOCModule_Governor, "Governor", 0, 0, 1, "", 1, 0, ValueThresholds(), IsHoag() ? governorSettingsH : governorSettingsE, false);
+    this->addGovernorSection(profile);
 }
 
 void AppProfileGui::listUI()

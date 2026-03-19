@@ -566,18 +566,6 @@ void ClockManager::VRRThread(void* arg) {
 }
 
 
-GovernorState ClockManager::GetEffectiveGovernorState(GovernorState appState, GovernorState tempState)
-{
-    if (tempState == GovernorState_Disabled)
-    {
-        return GovernorState_Disabled;
-    }
-    if (tempState != GovernorState_DoNotOverride)
-    {
-        return tempState;
-    }
-    return appState;
-}
 
 void ClockManager::HandleSafetyFeatures() {
     AppletOperationMode opMode = appletGetOperationMode();
@@ -608,37 +596,32 @@ void ClockManager::HandleMiscFeatures() {
 }
 
 void ClockManager::HandleGovernor(uint32_t targetHz) {
-    GovernorState appGovernorState = (GovernorState)targetHz;
-
     u32 tempTargetHz = this->context->overrideFreqs[HorizonOCModule_Governor];
     if (!tempTargetHz)
     {
         tempTargetHz = this->config->GetAutoClockHz(this->context->applicationId, HorizonOCModule_Governor, this->context->profile, true);
-        if(!tempTargetHz)
+        if (!tempTargetHz)
             tempTargetHz = this->config->GetAutoClockHz(GLOBAL_PROFILE_ID, HorizonOCModule_Governor, this->context->profile, true);
     }
-    GovernorState tempGovernorState = (GovernorState)tempTargetHz;
 
-    GovernorState effectiveState = this->GetEffectiveGovernorState(appGovernorState, tempGovernorState);
+    auto resolve = [](u8 app, u8 temp) -> u8 {
+        if (temp == ComponentGovernor_Disabled) return ComponentGovernor_Disabled;
+        if (temp != ComponentGovernor_DoNotOverride) return temp;
+        return app;
+    };
 
-    bool newCpuGovernorState = (effectiveState == GovernorState_Enabled_CpuGpuVrr ||
-                                effectiveState == GovernorState_Enabled_CpuVrr ||
-                                effectiveState == GovernorState_Enabled_CpuGpu ||
-                                effectiveState == GovernorState_Enabled_Cpu);
+    u8 effectiveCpu = resolve(GovernorStateCpu(targetHz), GovernorStateCpu(tempTargetHz));
+    u8 effectiveGpu = resolve(GovernorStateGpu(targetHz), GovernorStateGpu(tempTargetHz));
+    u8 effectiveVrr = resolve(GovernorStateVrr(targetHz), GovernorStateVrr(tempTargetHz));
 
-    bool newGpuGovernorState = (effectiveState == GovernorState_Enabled_CpuGpuVrr ||
-                                effectiveState == GovernorState_Enabled_GpuVrr ||
-                                effectiveState == GovernorState_Enabled_CpuGpu ||
-                                effectiveState == GovernorState_Enabled_Gpu);
-
-    bool newVrrGovernorState = (effectiveState == GovernorState_Enabled_CpuGpuVrr ||
-                                effectiveState == GovernorState_Enabled_CpuVrr ||
-                                effectiveState == GovernorState_Enabled_GpuVrr ||
-                                effectiveState == GovernorState_Enabled_Vrr);
+    bool newCpuGovernorState = (effectiveCpu == ComponentGovernor_Enabled);
+    bool newGpuGovernorState = (effectiveGpu == ComponentGovernor_Enabled);
+    bool newVrrGovernorState = (effectiveVrr == ComponentGovernor_Enabled);
 
     isCpuGovernorEnabled = newCpuGovernorState;
     isGpuGovernorEnabled = newGpuGovernorState;
     isVRREnabled = newVrrGovernorState;
+    
     if(newCpuGovernorState == false && lastCpuGovernorState == true) {
         svcSleepThread(50'000'000); // thread syncing. probably a cleaner way to do this but hey, it works!
         Board::ResetToStockCpu();

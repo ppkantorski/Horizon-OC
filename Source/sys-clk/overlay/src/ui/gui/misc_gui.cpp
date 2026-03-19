@@ -30,6 +30,7 @@
 
 #define A_BTN "\ue0e0"
 #define R_ARROW "\u2192"
+
 class GeneralSettingsSubMenuGui;
 class GovernorSettingsSubMenuGui;
 class DisplaySubMenuGui;

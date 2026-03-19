@@ -15,11 +15,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 #include "../format.h"
 #include "fatal_gui.h"
 #include "global_override_gui.h"
 #include "value_choice_gui.h"
 #include "labels.h"
+
 GlobalOverrideGui::GlobalOverrideGui()
 {
     for (std::uint16_t m = 0; m < SysClkModule_EnumMax; m++) {
@@ -291,25 +293,51 @@ void GlobalOverrideGui::addModuleToggleItem(SysClkModule module)
     this->listItems[module] = toggle;
 }
 
-std::vector<NamedValue> governorSettingsE = {
-    NamedValue("Do Not Override", GovernorState_DoNotOverride),
-    NamedValue("Disabled", GovernorState_Disabled),
-    NamedValue("CPU + GPU + VRR", GovernorState_Enabled_CpuGpuVrr),
-    NamedValue("CPU + VRR", GovernorState_Enabled_CpuVrr),
-    NamedValue("GPU + VRR", GovernorState_Enabled_GpuVrr),
-    NamedValue("CPU + GPU", GovernorState_Enabled_CpuGpu),
-    NamedValue("CPU", GovernorState_Enabled_Cpu),
-    NamedValue("GPU", GovernorState_Enabled_Gpu),
-    NamedValue("VRR", GovernorState_Enabled_Vrr),
+class GovernorOverrideSubMenuGui : public BaseMenuGui {
+    u32 packed;
+public:
+    GovernorOverrideSubMenuGui(u32 initialPacked) : packed(initialPacked) {}
+
+    void listUI() override {
+        this->listElement->addItem(new tsl::elm::CategoryHeader("Governor"));
+
+        static constexpr struct { const char* label; int shift; } kAll[] = {
+            {"CPU", 0}, {"GPU", 8}, {"VRR", 16}
+        };
+        int count = IsHoag() ? 2 : 3;
+
+        for (int i = 0; i < count; i++) {
+            u8 cur = (this->packed >> kAll[i].shift) & 0xFF;
+            auto* bar = new tsl::elm::NamedStepTrackBar(
+                "", {"Do Not Override", "Enabled", "Disabled"},
+                true, kAll[i].label
+            );
+            bar->setProgress(cur);
+            int shift = kAll[i].shift;
+            bar->setValueChangedListener([this, shift](u8 value) {
+                this->packed = (this->packed & ~(0xFFu << shift)) | ((u32)value << shift);
+                Result rc = sysclkIpcSetOverride(HorizonOCModule_Governor, this->packed);
+                if (R_FAILED(rc)) FatalGui::openWithResultCode("sysclkIpcSetOverride", rc);
+                this->lastContextUpdate = armGetSystemTick();
+            });
+            this->listElement->addItem(bar);
+        }
+    }
 };
 
-std::vector<NamedValue> governorSettingsH = {
-    NamedValue("Do Not Override", GovernorState_DoNotOverride),
-    NamedValue("Disabled", GovernorState_Disabled),
-    NamedValue("CPU + GPU", GovernorState_Enabled_CpuGpu),
-    NamedValue("CPU", GovernorState_Enabled_Cpu),
-    NamedValue("GPU", GovernorState_Enabled_Gpu),
-};
+void GlobalOverrideGui::addGovernorSection() {
+    auto* item = new tsl::elm::ListItem("Governor");
+    item->setValue("\u2192"); // right arrow
+    item->setClickListener([this](u64 keys) {
+        if (keys & HidNpadButton_A) {
+            u32 packed = this->context ? this->context->overrideFreqs[HorizonOCModule_Governor] : 0;
+            tsl::changeTo<GovernorOverrideSubMenuGui>(packed);
+            return true;
+        }
+        return false;
+    });
+    this->listElement->addItem(item);
+}
 
 void GlobalOverrideGui::listUI()
 {
@@ -330,7 +358,7 @@ void GlobalOverrideGui::listUI()
             this->addModuleListItemValue(HorizonOCModule_Display, "Display", IsAula() ? 45 : 40, configList.values[HorizonOCConfigValue_EnableUnsafeDisplayFreqs] ? IsAula() ? 65 : 72 : 60, 1, " Hz", 1, 0, lcdThresholds);
     #endif
 
-    this->addModuleListItemValue(HorizonOCModule_Governor, "Governor", 0, 0, 1, "", 1, 0, ValueThresholds(), IsHoag() ? governorSettingsH : governorSettingsE, false);
+    this->addGovernorSection();
 }
 
 void GlobalOverrideGui::refresh()
@@ -342,23 +370,7 @@ void GlobalOverrideGui::refresh()
 
     for (std::uint16_t m = 0; m < SysClkModule_EnumMax; m++) {
         if (m == HorizonOCModule_Governor) {
-            if (this->listItems[m] != nullptr &&
-                this->listHz[m] != this->context->overrideFreqs[m]) {
-                
-                std::string displayText = FREQ_DEFAULT_TEXT;
-                std::uint32_t currentValue = this->context->overrideFreqs[m];
-                
-
-                for (const auto& setting : governorSettingsE) {
-                    if (setting.value == currentValue) {
-                        displayText = setting.name;
-                        break;
-                    }
-                }
-                
-                this->listItems[m]->setValue(displayText);
-                this->listHz[m] = currentValue;
-            }
+            this->listHz[m] = this->context->overrideFreqs[m];
             continue;
         }
 
