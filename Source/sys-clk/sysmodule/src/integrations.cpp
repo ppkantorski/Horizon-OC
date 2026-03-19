@@ -110,6 +110,19 @@ u8 SaltyNXIntegration::GetFPS() {
     return NxFps ? NxFps->FPS : 254;
 }
 
+struct resolutionCalls { // classes are bad :)
+    uint16_t width;
+    uint16_t height;
+    uint16_t calls;
+};
+
+resolutionCalls m_resolutionRenderCalls[8] = {0};
+
+int compare (const void* elem1, const void* elem2) {
+    if ((((resolutionCalls*)(elem1))->calls) > (((resolutionCalls*)(elem2))->calls)) return -1;
+    else return 1;
+}
+
 u16 SaltyNXIntegration::GetResolutionHeight() {
     if (!SharedMemoryUsed)
         return 0;
@@ -130,6 +143,10 @@ u16 SaltyNXIntegration::GetResolutionHeight() {
     if(NxFps) {
         NxFps -> renderCalls[0].calls = 0xFFFF;
         svcSleepThread(10*1000);
+
+        memcpy(&m_resolutionRenderCalls, &(NxFps->renderCalls), sizeof(m_resolutionRenderCalls));
+        qsort(m_resolutionRenderCalls, 8, sizeof(resolutionCalls), compare);
+
         return NxFps->viewportCalls[0].height;
     }
     return 0;
