@@ -30,6 +30,7 @@
 #include <algorithm>
 #include <math.h>
 #include <numeric>
+#include "board_misc.hpp"
 
 namespace board {
 
@@ -114,6 +115,8 @@ namespace board {
                 BatteryChargeInfo info;
                 batteryInfoGetChargeInfo(&info);
                 return info.RawBatteryCharge;
+            case HocClkPartLoad_FAN:
+                return GetFanLevel();
             default:
                 ASSERT_ENUM_VALID(SysClkPartLoad, loadSource);
         }

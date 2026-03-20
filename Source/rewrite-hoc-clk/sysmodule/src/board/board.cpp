@@ -33,6 +33,7 @@
 #include "board_fuse.hpp"
 #include "board_load.hpp"
 #include "board_ram_oc_dvfs.hpp"
+#include "board_misc.hpp"
 
 namespace board {
 
@@ -113,15 +114,17 @@ namespace board {
 
         StartGpuLoad(nvCheck, fd);
         /* TODO: Add back fan. */
-        // threadCreate(&miscThread, miscThreadFunc, NULL, NULL, 0x1000, 0x10, 3);
+        StartMiscThread(pwmCheck)
 
-        // threadStart(&miscThread);
         batteryInfoInitialize();
         FetchHardwareInfos();
 
-        // if (hosversionAtLeast(6,0,0) && R_SUCCEEDED(pwmInitialize())) {
-        //     pwmCheck = pwmOpenSession2(&g_ICon, 0x3D000001);
-        // }
+        Result pwmCheck = 1;
+        if (hosversionAtLeast(6,0,0) && R_SUCCEEDED(pwmInitialize())) {
+            pwmCheck = pwmOpenSession2(&g_ICon, 0x3D000001);
+        }
+
+        StartMiscThread(pwmCheck);
 
         if (gConsoleType != HorizonOCConsoleType_Hoag) {
             u64 clkVirtAddr, dsiVirtAddr, outsize;
@@ -168,7 +171,7 @@ namespace board {
 
         ExitLoad();
 
-        // threadClose(&miscThread);
+        ExitMiscThread();
 
         pwmChannelSessionClose(&g_ICon);
         pwmExit();
