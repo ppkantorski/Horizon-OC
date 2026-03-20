@@ -192,7 +192,7 @@ namespace board {
     }
 
     void ResetToStock() {
-        if(hosversionAtLeast(9,0,0)) {
+        if (hosversionAtLeast(9,0,0)) {
             std::uint32_t confId = 0;
             rc = apmExtGetCurrentPerformanceConfiguration(&confId);
             ASSERT_RESULT_OK(rc, "apmExtGetCurrentPerformanceConfiguration");
