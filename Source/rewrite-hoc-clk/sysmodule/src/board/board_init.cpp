@@ -118,9 +118,9 @@ namespace board {
         batteryInfoInitialize();
         FetchHardwareInfos();
 
-        if (hosversionAtLeast(6,0,0) && R_SUCCEEDED(pwmInitialize())) {
-            pwmCheck = pwmOpenSession2(&g_ICon, 0x3D000001);
-        }
+        // if (hosversionAtLeast(6,0,0) && R_SUCCEEDED(pwmInitialize())) {
+        //     pwmCheck = pwmOpenSession2(&g_ICon, 0x3D000001);
+        // }
 
         if (gConsoleType != HorizonOCConsoleType_Hoag) {
             u64 clkVirtAddr, dsiVirtAddr, outsize;
