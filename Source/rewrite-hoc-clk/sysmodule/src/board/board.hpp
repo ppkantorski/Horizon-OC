@@ -37,5 +37,7 @@ namespace board {
     void Exit();
     SysClkSocType GetSocType();
     HorizonOCConsoleType GetConsoleType();
+    u8 GetDramID();
+    bool isIsDram8GB();
 
 }
