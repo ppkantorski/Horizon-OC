@@ -783,6 +783,8 @@ void ClockManager::SetClocks(bool isBoost) {
                 Board::SetHz(HorizonOCModule_Display, targetHz);
                 this->context->freqs[HorizonOCModule_Display] = targetHz;
                 this->context->realFreqs[HorizonOCModule_Display] = targetHz;
+            } else {
+                HandleFreqReset(HorizonOCModule_Display, isBoost);
             }
 
         }
