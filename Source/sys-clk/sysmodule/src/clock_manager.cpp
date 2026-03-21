@@ -566,7 +566,7 @@ void ClockManager::VRRThread(void* arg) {
         if(++tick > 50) {
             Board::SetHz(HorizonOCModule_Display, maxDisplay);
             tick = 0;
-            svcSleepThread(25'000'000);
+            svcSleepThread(50'000'000);
         }
 
         svcSleepThread(POLL_NS);
