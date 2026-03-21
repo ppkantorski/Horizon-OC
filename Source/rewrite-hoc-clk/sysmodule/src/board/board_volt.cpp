@@ -40,6 +40,59 @@ namespace board {
     u64 cldvfs;
     CpuDfllData cachedTune;
 
+    /* ... This really needs some cleanup... */
+    namespace {
+        struct EristaCpuUvEntry {
+            u32 tune0;
+            u32 tune1;
+        } EristaCpuUvEntry;
+
+        struct MarikoCpuUvEntry {
+            u32 tune0_low;
+            u32 tune0_high;
+            u32 tune1_low;
+            u32 tune1_high;
+        } MarikoCpuUvEntry;
+
+        EristaCpuUvEntry eristaCpuUvTable[5] = {
+            {0xffff, 0x27007ff},
+            {0xefff, 0x27407ff},
+            {0xdfff, 0x27807ff},
+            {0xdfdf, 0x27a07ff},
+            {0xcfdf, 0x37007ff},
+        };
+
+        MarikoCpuUvEntry marikoCpuUvLow[12] = {
+            {0xffa0, 0xffff, 0x21107ff, 0},
+            {0x0, 0xffdf, 0x21107ff, 0x27207ff},
+            {0xffdf, 0xffdf, 0x21107ff, 0x27307ff},
+            {0xffff, 0xffdf, 0x21107ff, 0x27407ff},
+            {0x0, 0xffdf, 0x21607ff, 0x27707ff},
+            {0x0, 0xffdf, 0x21607ff, 0x27807ff},
+            {0x0, 0xdfff, 0x21607ff, 0x27b07ff},
+            {0xdfff, 0xdfff, 0x21707ff, 0x27b07ff},
+            {0xdfff, 0xdfff, 0x21707ff, 0x27c07ff},
+            {0xdfff, 0xdfff, 0x21707ff, 0x27d07ff},
+            {0xdfff, 0xdfff, 0x21707ff, 0x27e07ff},
+            {0xdfff, 0xdfff, 0x21707ff, 0x27f07ff},
+        };
+
+        MarikoCpuUvEntry marikoCpuUvHigh[12] = {
+            {0x0, 0xffff, 0, 0},
+            {0x0, 0xffdf, 0, 0x27207ff},
+            {0x0, 0xffdf, 0, 0x27307ff},
+            {0x0, 0xffdf, 0, 0x27407ff},
+            {0x0, 0xffdf, 0, 0x27707ff},
+            {0x0, 0xffdf, 0, 0x27807ff},
+            {0x0, 0xdfff, 0, 0x27b07ff},
+            {0x0, 0xdfff, 0, 0x27c07ff},
+            {0x0, 0xdfff, 0, 0x27d07ff},
+            {0x0, 0xdfff, 0, 0x27e07ff},
+            {0x0, 0xdfff, 0, 0x27f07ff},
+            {0x0, 0xdfff, 0, 0x27f07ff},
+        };
+    }
+
     void CacheDfllData() {
         u64 temp;
         rc = svcQueryMemoryMapping(&cldvfs, &temp, CLDVFS_REGION_BASE, CLDVFS_REGION_SIZE);
