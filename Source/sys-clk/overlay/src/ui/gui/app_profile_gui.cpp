@@ -350,7 +350,7 @@ void AppProfileGui::addProfileUI(SysClkProfile profile)
         ValueThresholds lcdThresholds(60, 65);
         if(configList.values[HorizonOCConfigValue_OverwriteRefreshRate]) {
             if(profile != SysClkProfile_Docked) {
-                this->addModuleListItemValue(profile, HorizonOCModule_Display, "Display", IsAula() ? 45 : 40, configList.values[HorizonOCConfigValue_EnableUnsafeDisplayFreqs] ? IsAula() ? 65 : 72 : 60, 1, " Hz", 1, 0, lcdThresholds);
+                this->addModuleListItemValue(profile, HorizonOCModule_Display, "Display", IsAula() ? 45 : 40, configList.values[HorizonOCConfigValue_EnableUnsafeDisplayFreqs] ? IsAula() ? 65 : 75 : 60, 1, " Hz", 1, 0, lcdThresholds);
             } else {
                 if(IsAula() && this->context->isSysDockInstalled) {
                     std::vector<NamedValue> dockedFreqs = {

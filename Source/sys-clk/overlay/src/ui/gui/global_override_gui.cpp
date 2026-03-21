@@ -355,7 +355,7 @@ void GlobalOverrideGui::listUI()
     #if IS_MINIMAL == 0
         ValueThresholds lcdThresholds(60, 65);
         if(configList.values[HorizonOCConfigValue_OverwriteRefreshRate])
-            this->addModuleListItemValue(HorizonOCModule_Display, "Display", IsAula() ? 45 : 40, configList.values[HorizonOCConfigValue_EnableUnsafeDisplayFreqs] ? IsAula() ? 65 : 72 : 60, 1, " Hz", 1, 0, lcdThresholds);
+            this->addModuleListItemValue(HorizonOCModule_Display, "Display", IsAula() ? 45 : 40, configList.values[HorizonOCConfigValue_EnableUnsafeDisplayFreqs] ? IsAula() ? 65 : 75 : 60, 1, " Hz", 1, 0, lcdThresholds);
     #endif
 
     this->addGovernorSection();
