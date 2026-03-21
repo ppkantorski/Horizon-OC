@@ -144,8 +144,8 @@ typedef enum {
 } GpuSchedulingOverrideMethod;
 typedef enum {
     ComponentGovernor_DoNotOverride = 0,
-    ComponentGovernor_Enabled       = 1,
-    ComponentGovernor_Disabled      = 2,
+    ComponentGovernor_Disabled      = 1,
+    ComponentGovernor_Enabled       = 2,
     ComponentGovernor_EnumMax,
 } ComponentGovernorState;
 typedef enum {

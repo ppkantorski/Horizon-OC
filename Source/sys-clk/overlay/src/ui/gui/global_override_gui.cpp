@@ -314,7 +314,7 @@ public:
         for (int i = 0; i < count; i++) {
             u8 cur = (this->packed >> kAll[i].shift) & 0xFF;
             auto* bar = new tsl::elm::NamedStepTrackBar(
-                "", {"Do Not Override", "Enabled", "Disabled"},
+                "", {"Do Not Override", "Disabled", "Enabled"},
                 true, kAll[i].label
             );
             bar->setProgress(cur);
