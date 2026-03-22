@@ -1,7 +1,7 @@
 {
     "Information": "Information",
     "IDDQ:": "IDDQ:",
-    "Module: ": "Module: ",
+    "Module: ": "Module:",
     "sys-dock status:": "sys-dock status:",
     "SaltyNX status:": "SaltyNX status:",
     "RR Display status:": "RR Display status:",
@@ -20,7 +20,7 @@
     "Do Not Override": "Do Not Override",
     "Disabled": "Disabled",
     "Enabled": "Enabled",
-    " \\ue0e3 Reset": " \\ue0e3 Reset",
+    " \\ue0e3 Reset": "\\ue0e3 Reset",
     "Display": "Display",
     "Application changed\\n\\n": "Application changed\\n\\n",
     "The running application changed\\n\\n": "The running application changed\\n\\n",
@@ -34,7 +34,7 @@
     "Please make sure everything is\\n\\n": "Please make sure everything is\\n\\n",
     "correctly installed and enabled.": "correctly installed and enabled.",
     "Fatal error": "Fatal error",
-    "Temporary Overrides ": "Temporary Overrides ",
+    "Temporary Overrides ": "Temporary Overrides",
     "Sleep Mode": "Sleep Mode",
     "Stock": "Stock",
     "Dev OC": "Dev OC",
@@ -69,7 +69,7 @@
     "Polling Interval": "Polling Interval",
     "CPU Governor Minimum Frequency": "CPU Governor Minimum Frequency",
     "refresh rates may cause stress": "refresh rates may cause stress",
-    "or damage to your display! ": "or damage to your display! ",
+    "or damage to your display! ": "or damage to your display!",
     "Proceed at your own risk!": "Proceed at your own risk!",
     "Max Handheld Display": "Max Handheld Display",
     "Display Clock": "Display Clock",
@@ -139,8 +139,8 @@
     "GPU Voltage Table": "GPU Voltage Table",
     "GPU Custom Table (mV)": "GPU Custom Table (mV)",
     "1075MHz without UV, 1152MHz on SLT": "1075MHz without UV, 1152MHz on SLT",
-    "or 1228MHz on HiOPT can cause ": "or 1228MHz on HiOPT can cause ",
+    "or 1228MHz on HiOPT can cause ": "or 1228MHz on HiOPT can cause",
     "permanent damage to your Switch!": "permanent damage to your Switch!",
     "921MHz without UV and 960MHz on": "921MHz without UV and 960MHz on",
-    "SLT or HiOPT can cause ": "SLT or HiOPT can cause "
+    "SLT or HiOPT can cause ": "SLT or HiOPT can cause"
 }
