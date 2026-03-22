@@ -56,13 +56,14 @@ FreqChoiceGui::~FreqChoiceGui()
 tsl::elm::ListItem* FreqChoiceGui::createFreqListItem(std::uint32_t hz, bool selected, int safety)
 {
     std::string text = formatListFreqHz(hz);
-    if (selected)
-        text += " \uE14B";
 
     std::string rightText = "";
     auto it = labels.find(hz);
     if (it != labels.end())
         rightText = it->second;
+
+    if (selected)
+        const_cast<std::string&>(rightText) = "\uE14B";
 
     tsl::elm::ListItem* listItem =
         new tsl::elm::ListItem(text, rightText, false);
@@ -84,8 +85,10 @@ tsl::elm::ListItem* FreqChoiceGui::createFreqListItem(std::uint32_t hz, bool sel
     }
 
     // Make annotation grey
-    if (!rightText.empty())
+    if (!rightText.empty() && !selected)
         listItem->setValueColor(tsl::Color(180, 180, 180, 255));
+    else if(selected)
+        listItem->setValueColor(tsl::infoTextColor);
 
     listItem->setClickListener([this, hz](u64 keys)
     {

@@ -83,14 +83,17 @@ int ValueChoiceGui::getSafetyLevel(std::uint32_t value)
 tsl::elm::ListItem* ValueChoiceGui::createValueListItem(std::uint32_t value, bool selected, int safety)
 {
     std::string text = formatValue(value);
-    if (selected) {
-        text += " \uE14B";
-    }
     std::string rightText = "";
+
     auto it = labels.find(value);
     if (it != labels.end()) {
         rightText = it->second;
     }
+
+    if (selected) {
+        const_cast<std::string&>(rightText) = "\uE14B";
+    }
+
     tsl::elm::ListItem* listItem = new tsl::elm::ListItem(text, rightText, false);
     switch (safety)
     {
@@ -107,8 +110,13 @@ tsl::elm::ListItem* ValueChoiceGui::createValueListItem(std::uint32_t value, boo
         listItem->setValueColor(tsl::Color(255, 0, 0, 255));
         break;
     }
-    if (!rightText.empty())
+
+    // Make annotation grey
+    if (!rightText.empty() && !selected)
         listItem->setValueColor(tsl::Color(180, 180, 180, 255));
+    else if(selected)
+        listItem->setValueColor(tsl::infoTextColor);    
+        
     listItem->setClickListener([this, value](u64 keys)
     {
         if ((keys & HidNpadButton_A) == HidNpadButton_A && this->listener) {
@@ -126,7 +134,7 @@ tsl::elm::ListItem* ValueChoiceGui::createNamedValueListItem(const NamedValue& n
 {
     std::string text = namedValue.name;
     if (selected) {
-        text += " \uE14B";
+        const_cast<std::string&>(namedValue.rightText) = "\uE14B";
     }
     
     tsl::elm::ListItem* listItem = new tsl::elm::ListItem(text, namedValue.rightText, false);
@@ -145,9 +153,12 @@ tsl::elm::ListItem* ValueChoiceGui::createNamedValueListItem(const NamedValue& n
         listItem->setValueColor(tsl::Color(255, 0, 0, 255));
         break;
     }
-    if (!namedValue.rightText.empty())
+
+    if (!namedValue.rightText.empty() && !selected)
         listItem->setValueColor(tsl::Color(180, 180, 180, 255));
-    
+    else if(selected)
+        listItem->setValueColor(tsl::infoTextColor);    
+
     listItem->setClickListener([this, value = namedValue.value](u64 keys)
     {
         if ((keys & HidNpadButton_A) == HidNpadButton_A && this->listener) {
