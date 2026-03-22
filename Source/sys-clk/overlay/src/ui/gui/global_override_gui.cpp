@@ -89,7 +89,8 @@ void GlobalOverrideGui::openValueChoiceGui(
         enableThresholds,
         labels,
         namedValues,
-        showDefaultValue
+        showDefaultValue,
+        true
     );
 }
 
