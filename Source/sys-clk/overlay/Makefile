@@ -55,6 +55,7 @@ CFLAGS	:=	-O2 -Wall -flto -fdata-sections -ffunction-sections -fno-rtti -fno-com
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 
 # Enable appearance overriding
+export MSYS2_ARG_CONV_EXCL := -DUI_OVERRIDE_PATH
 UI_OVERRIDE_PATH := /config/horizon-oc/
 CFLAGS += -DUI_OVERRIDE_PATH="\"$(UI_OVERRIDE_PATH)\""
 
