@@ -595,6 +595,28 @@ void ClockManager::HandleSafetyFeatures() {
 }
 
 void ClockManager::HandleMiscFeatures() {
+    static u32 prevBrightness = 100;
+    static bool wasPWMDimEnabled = false;
+    if(Board::GetConsoleType() == HorizonOCConsoleType_Aula && this->config->GetConfigValue(HorizonOCConfigValue_PWMDimming)) {
+        float out = 1.0;
+        Result rc = lblGetCurrentBrightnessSetting(&out);
+        ASSERT_RESULT_OK(rc, "lblGetCurrentBrightnessSetting");
+        u32 brightness = (u32)(out * 100);
+        Board::SetPWMDimEnabled(true);
+        Board::SetPWMDimBrightness(prevBrightness, brightness, true);
+        prevBrightness = brightness;
+        wasPWMDimEnabled = true;
+    } else if (Board::GetConsoleType() == HorizonOCConsoleType_Aula && wasPWMDimEnabled) {
+        Board::SetPWMDimEnabled(false);
+        Board::SetPWMDimBrightness(0, 0, false);
+        float out = 1.0;
+        Result rc = lblGetCurrentBrightnessSetting(&out);
+        ASSERT_RESULT_OK(rc, "lblGetCurrentBrightnessSetting");
+        rc = lblSetCurrentBrightnessSetting(out);
+        ASSERT_RESULT_OK(rc, "lblSetCurrentBrightnessSetting");
+        wasPWMDimEnabled = false;
+    }
+
     if(this->config->GetConfigValue(HorizonOCConfigValue_BatteryChargeCurrent)) {
         I2c_Bq24193_SetFastChargeCurrentLimit(this->config->GetConfigValue(HorizonOCConfigValue_BatteryChargeCurrent));
     }

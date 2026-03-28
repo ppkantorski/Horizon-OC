@@ -235,6 +235,30 @@
 				"is_ro": false,
 				"is_io": true
 			}
+		}, 	{
+			"type": "map",
+			"value": {
+				"address": "0x54200000",
+				"size": "0x40000",
+				"is_ro": false,
+				"is_io": true
+			}
+		}, 	{
+			"type": "map",
+			"value": {
+				"address": "0x54240000",
+				"size": "0x40000",
+				"is_ro": false,
+				"is_io": true
+			}
+		}, 	{
+			"type": "map",
+			"value": {
+				"address": "0x54400000",
+				"size": "0x40000",
+				"is_ro": false,
+				"is_io": true
+			}
 		}
 	]
 }

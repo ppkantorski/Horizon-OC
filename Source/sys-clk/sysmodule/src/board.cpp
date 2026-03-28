@@ -56,6 +56,30 @@
 #define NVSCHED_CTRL_ENABLE 0x00000601
 #define NVSCHED_CTRL_DISABLE 0x00000602
 
+#define PWM_CSC_COEFF_0 0xCA8 /* Blue / Channel 0  */
+#define PWM_CSC_COEFF_1 0xCB8 /* Green / Channel 1 */
+#define PWM_CSC_COEFF_2 0xCC8 /* Red / Channel 2   */
+#define PWM_CMD_STATE_CTRL 0xE4
+#define CSC_COEFF_MASK 0x3FF
+#define CSC_IDENTITY 0x100
+
+#define DISP_OUT_PWM_CTRL 0x138
+#define DISP_OUT_PWM_ENABLE 9
+#define DISP_OUT_PWM_DISABLE 0
+#define DISP_OUT_RESET_CTRL 0x04
+
+#define DSI_WR_DATA 0x28
+#define DSI_TRIGGER 0x4C
+#define DSI_TRIGGER_HOST 2
+
+#define DSI_PKT_SHORT_NO_PARAM 0x05
+#define DSI_PKT_SHORT_1_PARAM 0x15
+#define DSI_PKT_LONG_WRITE 0x39
+
+#define DCS_WRITE_DISPLAY_BRIGHTNESS 0x51
+#define DCS_WRITE_CTRL_DISPLAY 0x53
+#define DCS_CTRL_DISPLAY_PARAM 0x28
+
 constexpr u64 CpuTimeOutNs = 500'000'000;
 constexpr double Systemtickfrequency = 19200000.0 * (static_cast<double>(CpuTimeOutNs) / 1'000'000'000.0);
 Result nvInitialize_rc;
@@ -97,6 +121,21 @@ u8 g_dramID = 0;
 u64 cldvfs, cldvfs_temp;
 u32 cachedEristaUvLowTune0 = 0, cachedEristaUvLowTune1 = 0, cachedMarikoUvHighTune0 = 0;
 
+u64 g_clk_vaddr;
+u64 g_dca_vaddr;
+u64 g_dcb_vaddr;
+u64 g_dsi_vaddr;
+u64 g_unk_vaddr;
+
+bool g_pwmDimEnabled = false;
+bool g_pwmFirstApply = false;
+u32 g_cscR = CSC_IDENTITY;
+u32 g_cscG = CSC_IDENTITY;
+u32 g_cscB = CSC_IDENTITY;
+u32 g_cscR2 = CSC_IDENTITY;
+u32 g_cscG2 = CSC_IDENTITY;
+u32 g_cscB2 = CSC_IDENTITY;
+
 static const u32 ramBrackets[][22] = {
     { 2133, 2200, 2266, 2300, 2366, 2400, 2433, 2466, 2533, 2566, 2600, 2633, 2700, 2733, 2766, 2833, 2866, 2900, 2933, 3033, 3066, 3100, },
     { 2300, 2366, 2433, 2466, 2533, 2566, 2633, 2700, 2733, 2800, 2833, 2900, 2933, 2966, 3033, 3066, 3100, 3133, 3166, 3200, 3233, 3266, },
@@ -110,6 +149,70 @@ u32 dvfsTable[6][32] = {};
 u64 dvfsAddress;
 u32 ramVmin;
 bool isRetro = false;
+
+static const struct {
+    u16 clk_src;
+    u16 dc_div;
+} g_dispClkColorTable[78] = {
+    {0x0020, 0xF200}, {0x0020, 0xFF0C}, {0x0020, 0x0C16},
+
+    {0x0028, 0xF906}, {0x0028, 0x0610},
+
+    {0x0030, 0xF300}, {0x0030, 0x000B}, {0x0030, 0x0D16},
+
+    {0x0038, 0xFA06}, {0x0038, 0x0710},
+
+    {0x0040, 0xF400}, {0x0040, 0x010A}, {0x0040, 0x0E16},
+
+    {0x0048, 0xFB06}, {0x0048, 0x0810},
+
+    {0x0050, 0xF500}, {0x0050, 0x020A}, {0x0050, 0x0F16},
+
+    {0x0058, 0xFC06}, {0x0058, 0x0910},
+
+    {0x0060, 0xF600}, {0x0060, 0x030A}, {0x0060, 0x1016},
+
+    {0x0068, 0xFD06}, {0x0068, 0x0A10},
+
+    {0x0070, 0xF700}, {0x0070, 0x040A},
+
+    {0x0078, 0xF0FB}, {0x0078, 0xFE06}, {0x0078, 0x0B10},
+
+    {0x0080, 0xF800}, {0x0080, 0x050A},
+
+    {0x0088, 0xF1FB}, {0x0088, 0xFF06}, {0x0088, 0x0C10},
+
+    {0x0090, 0xF900}, {0x0090, 0x060A},
+
+    {0x0098, 0xF2FB}, {0x0098, 0x0005}, {0x0098, 0x0D10},
+
+    {0x00A0, 0xFA00}, {0x00A0, 0x070A},
+
+    {0x00A8, 0xF3FB}, {0x00A8, 0x0105}, {0x00A8, 0x0E10},
+
+    {0x00B0, 0xFB00}, {0x00B0, 0x080A},
+
+    {0x00B8, 0xF4FB}, {0x00B8, 0x0205}, {0x00B8, 0x0F10},
+
+    {0x00C0, 0xFC00}, {0x00C0, 0x090A},
+
+    {0x00C8, 0xF5FB}, {0x00C8, 0x0305}, {0x00C8, 0x1010},
+
+    {0x00D0, 0xFD00}, {0x00D0, 0x0A0A},
+
+    {0x00D8, 0xF6FA}, {0x00D8, 0x0405},
+
+    {0x00E0, 0xF0F5}, {0x00E0, 0xFE00}, {0x00E0, 0x0B0A},
+
+    {0x00E8, 0xF7FA}, {0x00E8, 0x0505},
+
+    {0x00F0, 0xEEB2}, {0x00F0, 0xFF00}, {0x00F0, 0x0C0A},
+
+    {0x00F8, 0xF8FA}, {0x00F8, 0x0605},
+    {0x00F8, 0x130F}, {0x00F8, 0x2019}, {0x00F8, 0x2D23},
+    {0x00F8, 0x3A2D}, {0x00F8, 0x4737}, {0x00F8, 0x5441},
+    {0x00F8, 0x614B}, {0x00F8, 0x6E55}, {0x00F8, 0x0000},
+};
 
 const char* Board::GetModuleName(SysClkModule module, bool pretty)
 {
@@ -250,6 +353,9 @@ void Board::Initialize()
     rc = pmdmntInitialize();
     ASSERT_RESULT_OK(rc, "pmdmntInitialize");
 
+    rc = lblInitialize();
+    ASSERT_RESULT_OK(rc, "lblInitialize");
+
     threadCreate(&gpuLThread, gpuLoadThread, NULL, NULL, 0x1000, 0x3F, -2);
 	threadStart(&gpuLThread);
     leventClear(&threadexit);
@@ -274,13 +380,13 @@ void Board::Initialize()
     struct stat st = {0};
     isRetro = (stat("sdmc:/" FILE_CONFIG_DIR "/retro.flag", &st) == 0);
 
-    u64 clkVirtAddr, dsiVirtAddr, outsize;
-    rc = svcQueryMemoryMapping(&clkVirtAddr, &outsize, 0x60006000, 0x1000);
+    u64 outsize;
+    rc = svcQueryMemoryMapping(&g_clk_vaddr, &outsize, 0x60006000, 0x1000);
     ASSERT_RESULT_OK(rc, "svcQueryMemoryMapping (clk)");
-    rc = svcQueryMemoryMapping(&dsiVirtAddr, &outsize, 0x54300000, 0x40000);
+    rc = svcQueryMemoryMapping(&g_dsi_vaddr, &outsize, 0x54300000, 0x40000);
     ASSERT_RESULT_OK(rc, "svcQueryMemoryMapping (dsi)");
 
-    DisplayRefreshConfig cfg = {.clkVirtAddr = clkVirtAddr, .dsiVirtAddr = dsiVirtAddr, .isLite = IsHoag(), .isRetroSUPER = isRetro, .isPossiblySpoofedRetro = isRetro};
+    DisplayRefreshConfig cfg = {.clkVirtAddr = g_clk_vaddr, .dsiVirtAddr = g_dsi_vaddr, .isLite = IsHoag(), .isRetroSUPER = isRetro, .isPossiblySpoofedRetro = isRetro};
 
     DisplayRefresh_Initialize(&cfg);
 
@@ -296,7 +402,17 @@ void Board::Initialize()
         Board::ResetToStockCpu();
     }
 
+    rc = svcQueryMemoryMapping(&g_dca_vaddr, &outsize, 0x54200000, 0x40000);
+    ASSERT_RESULT_OK(rc, "svcQueryMemoryMapping (dca)");
+    rc = svcQueryMemoryMapping(&g_dcb_vaddr, &outsize, 0x54240000, 0x40000);
+    ASSERT_RESULT_OK(rc, "svcQueryMemoryMapping (dcb)");
+    rc = svcQueryMemoryMapping(&g_unk_vaddr, &outsize, 0x54400000, 0x40000);
+    ASSERT_RESULT_OK(rc, "svcQueryMemoryMapping (unk)");
+}
 
+bool Board::IsDisplayClockActive()
+{
+    return (*(volatile uint32_t *) (g_clk_vaddr + 0x10) >> 27) & 1;
 }
 
 bool Board::IsUsingRetroSuperDisplay() {
@@ -429,6 +545,7 @@ void Board::Exit()
     batteryInfoExit();
     pmdmntExit();
     nvExit();
+    lblExit();
 
 }
 
@@ -1319,4 +1436,250 @@ u32 Board::CalculateTbreak(u32 table) {
 
 bool Board::IsHoag() {
     return Board::GetConsoleType() == HorizonOCConsoleType_Hoag;
+}
+
+void Board::SetPWMDimEnabled(bool enabled)
+{
+    g_pwmDimEnabled = enabled;
+}
+
+static void WritePWMRegister(uint32_t offset, uint32_t value)
+{
+    bool is_dc_a = (*(volatile uint32_t *) (g_clk_vaddr + 0x10) >> 27) & 1;
+    u64 base = is_dc_a ? g_dca_vaddr : g_dcb_vaddr;
+    *(volatile uint32_t *) (base + offset) = value;
+}
+
+static uint32_t ReadPWMRegister(uint32_t offset) {
+    bool is_dc_a = (*(volatile uint32_t *)(g_clk_vaddr + 0x10) >> 27) & 1;
+    u64 base = is_dc_a ? g_dca_vaddr : g_dcb_vaddr;
+    return *(volatile uint32_t *)(base + offset);
+}
+
+static u64 GetDisplayOutputBase()
+{
+    return Board::IsDisplayClockActive() ? g_dsi_vaddr : g_unk_vaddr;
+}
+
+static void WriteDisplayOutputRegister(uint32_t offset, uint32_t value)
+{
+    *(volatile uint32_t *) (GetDisplayOutputBase() + offset) = value;
+}
+
+static int GetDisplayClockColorOffset(void)
+{
+    if (g_clk_vaddr == 0)
+        return 60;
+
+    u8 clkSrc = (*(volatile u32 *) (g_clk_vaddr + 0xD0) >> 8) & 0xFF;
+    u16 dcDiv = (u16) * (volatile u32 *) (g_clk_vaddr + 0xDC);
+
+    for (int i = 0; i < 78; i++) {
+        if (g_dispClkColorTable[i].clk_src == clkSrc &&
+            g_dispClkColorTable[i].dc_div == dcDiv)
+            return i + 10;
+    }
+
+    return 60; /* default */
+}
+
+static void DSIWait(uint32_t us)
+{
+    svcSleepThread((s64) us * 1000);
+}
+
+static void PWMTriggerStateControl(uint32_t bits)
+{
+    u32 val = ReadPWMRegister(PWM_CMD_STATE_CTRL);
+    WritePWMRegister(PWM_CMD_STATE_CTRL, val | bits);
+}
+
+static void PWMClearStateControl(uint32_t bits)
+{
+    u32 val = ReadPWMRegister(PWM_CMD_STATE_CTRL);
+    WritePWMRegister(PWM_CMD_STATE_CTRL, val & ~bits);
+    WritePWMRegister(0xDC, bits);
+}
+
+static void PWMFlushAndWait(uint32_t bits)
+{
+    WritePWMRegister(0xDC, bits);
+    for (int i = 0; i < 40000; i++) {
+        if (ReadPWMRegister(0xDC) & bits)
+            return;
+    }
+}
+
+static void DSISetHostControl(bool enable)
+{
+    if (enable) {
+        PWMTriggerStateControl(2);
+        WriteDisplayOutputRegister(DISP_OUT_PWM_CTRL, DISP_OUT_PWM_ENABLE);
+        PWMFlushAndWait(2);
+    } else {
+        PWMFlushAndWait(2);
+        DSIWait(14);
+        WriteDisplayOutputRegister(DISP_OUT_RESET_CTRL, 1);
+        DSIWait(300);
+        WriteDisplayOutputRegister(DISP_OUT_RESET_CTRL, 0);
+        DSIWait(300);
+        WriteDisplayOutputRegister(DISP_OUT_PWM_CTRL, DISP_OUT_PWM_DISABLE);
+        PWMClearStateControl(2);
+    }
+}
+
+static void SendDSIShortWrite(uint8_t type, int data, uint32_t wait)
+{
+    if (!Board::IsDisplayClockActive())
+        return;
+    uint32_t cmd = (type & 0xFF) | (data << 8);
+    WriteDisplayOutputRegister(DSI_WR_DATA, cmd);
+    WriteDisplayOutputRegister(DSI_TRIGGER, DSI_TRIGGER_HOST);
+    if (wait != 0)
+        DSIWait(wait);
+}
+
+static void SendDSIPacket(uint8_t cmd, uint32_t len, void *payload)
+{
+    static uint32_t *dsiCmdBuf = nullptr;
+    static uint32_t *dsiCmdBufHead = nullptr;
+
+    if (dsiCmdBuf == nullptr) {
+        dsiCmdBuf = (uint32_t *) malloc(0x3E0);
+        dsiCmdBufHead = dsiCmdBuf;
+    }
+
+    DSISetHostControl(true);
+
+    if (len == 0) {
+        uint32_t word = ((uint32_t) cmd << 8) | DSI_PKT_SHORT_NO_PARAM;
+        WriteDisplayOutputRegister(DSI_WR_DATA, word);
+    } else if (len == 1) {
+        uint8_t param = *(uint8_t *) payload;
+        uint32_t word = ((uint32_t) param << 16) | ((uint32_t) cmd << 8) |
+                        DSI_PKT_SHORT_1_PARAM;
+        WriteDisplayOutputRegister(DSI_WR_DATA, word);
+    } else {
+        memcpy((uint8_t *) dsiCmdBuf + 5, payload, len);
+        memset((uint8_t *) dsiCmdBuf + 5 + len, 0, len & 3);
+        uint32_t headerWord = ((len + 1) << 8) | DSI_PKT_LONG_WRITE;
+        *dsiCmdBufHead = headerWord;
+        *((uint8_t *) (dsiCmdBuf + 1)) = cmd;
+        uint32_t numWords = (len + 5 + 3) >> 2;
+        for (uint32_t i = 0; i < numWords; i++)
+            WriteDisplayOutputRegister(
+            DSI_WR_DATA, ((uint32_t *) dsiCmdBufHead)[i]);
+        DSISetHostControl(false);
+        return;
+    }
+
+    DSISetHostControl(false);
+}
+
+void Board::SetPWMDimBrightness(u32 prevBrightness, u32 targetBrightness, bool applyAllChannels) {
+    if (!g_pwmDimEnabled) {
+        g_cscR = g_cscG = g_cscB = CSC_IDENTITY;
+        g_cscR2 = g_cscG2 = g_cscB2 = CSC_IDENTITY;
+        if (Board::IsDisplayClockActive()) {
+            WritePWMRegister(PWM_CSC_COEFF_0, CSC_IDENTITY);
+            WritePWMRegister(PWM_CSC_COEFF_1, CSC_IDENTITY);
+            WritePWMRegister(PWM_CSC_COEFF_2, CSC_IDENTITY);
+        }
+        return;
+    }
+        
+
+    u32 prevPct = prevBrightness & 0xFF;
+    u32 targetPct = targetBrightness & 0xFF;
+
+    if (!Board::IsDisplayClockActive())
+        return;
+
+    bool autoBrightness = false;
+    lblIsAutoBrightnessControlEnabled(&autoBrightness);
+
+    if (autoBrightness) {
+        FileUtils::LogLine(
+        "[pwmDim] Auto-brightness enabled, applying default CSC values");
+        g_cscR = g_cscG = g_cscB = CSC_IDENTITY;
+        g_cscR2 = g_cscG2 = g_cscB2 = CSC_IDENTITY;
+        if (Board::IsDisplayClockActive()) {
+            WritePWMRegister(PWM_CSC_COEFF_0, CSC_IDENTITY);
+            WritePWMRegister(PWM_CSC_COEFF_1, CSC_IDENTITY);
+            WritePWMRegister(PWM_CSC_COEFF_2, CSC_IDENTITY);
+        }
+        g_pwmFirstApply = false;
+        return;
+    }
+
+    u32 cscValue;
+    if (targetPct < 50)
+        cscValue = CSC_IDENTITY - (((targetPct << 8) / 0x31) * 0x85 >> 8);
+    else
+        cscValue = ((((targetPct - 50) * 0x100) / 50) * 0x85 >> 8) + 0x7B;
+
+    if (applyAllChannels) {
+        g_cscR2 = g_cscG2 = g_cscB2 = cscValue;
+        g_cscR = g_cscG = g_cscB = cscValue;
+        if (Board::IsDisplayClockActive()) {
+            WritePWMRegister(PWM_CSC_COEFF_0, cscValue & CSC_COEFF_MASK);
+            WritePWMRegister(PWM_CSC_COEFF_2, cscValue & CSC_COEFF_MASK);
+            int colorOffset = GetDisplayClockColorOffset();
+            WritePWMRegister(
+            PWM_CSC_COEFF_1, ((cscValue & CSC_COEFF_MASK) - 0x40 + colorOffset) &
+                            CSC_COEFF_MASK);
+        }
+        g_pwmFirstApply = false;
+    } else {
+        g_cscB2 = cscValue;
+        if (!g_pwmFirstApply) {
+            if (Board::IsDisplayClockActive()) {
+                g_cscB = ReadPWMRegister(PWM_CSC_COEFF_0) & CSC_COEFF_MASK;
+                g_cscG = ReadPWMRegister(PWM_CSC_COEFF_1) & CSC_COEFF_MASK;
+                g_cscR = ReadPWMRegister(PWM_CSC_COEFF_2) & CSC_COEFF_MASK;
+            } else {
+                g_pwmFirstApply = true;
+            }
+        }
+        g_cscR2 = g_cscB2;
+        g_cscG2 = g_cscB2;
+    }
+
+    int pwmLevel;
+    if (targetPct >= 50)
+        pwmLevel = 0xFF;
+    else {
+        pwmLevel = (targetPct * 0xFF / 100) << 1;
+        if (pwmLevel < 5)
+            pwmLevel = 5;
+    }
+
+    if (!Board::IsDisplayClockActive())
+        return;
+
+    WriteDisplayOutputRegister(DISP_OUT_PWM_CTRL, DISP_OUT_PWM_ENABLE);
+
+    SendDSIShortWrite(DSI_PKT_SHORT_1_PARAM,
+    (DCS_CTRL_DISPLAY_PARAM << 8) | DCS_WRITE_CTRL_DISPLAY, 0);
+
+    u32 pwm11bit = (pwmLevel * 0x7FF) / 0xFF;
+    u16 pwmSwapped = (u16) ((pwm11bit >> 8) | ((pwm11bit & 0xFF) << 8));
+
+    if (!Board::IsDisplayClockActive())
+        return;
+
+    SendDSIPacket(DCS_WRITE_DISPLAY_BRIGHTNESS, 2, &pwmSwapped);
+
+    if (Board::IsDisplayClockActive()) {
+        u32 stateCtrl = ReadPWMRegister(PWM_CMD_STATE_CTRL);
+        WritePWMRegister(PWM_CMD_STATE_CTRL, stateCtrl | 2);
+    }
+
+    if (Board::IsDisplayClockActive())
+        WriteDisplayOutputRegister(DISP_OUT_PWM_CTRL, DISP_OUT_PWM_DISABLE);
+
+    if (prevPct == targetPct)
+        FileUtils::LogLine("[pwmDim] PWM Brightness: %u%%", targetPct);
+    else
+        FileUtils::LogLine("[pwmDim] PWM Brightness: %u%% -> %u%%", prevPct, targetPct);
 }

@@ -650,6 +650,9 @@ protected:
                 false
             );
         }
+        if(IsAula()) {
+            addConfigToggle(HorizonOCConfigValue_PWMDimming, nullptr);
+        }
     }
 };
 
