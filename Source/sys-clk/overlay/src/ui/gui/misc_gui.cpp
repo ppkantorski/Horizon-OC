@@ -652,6 +652,12 @@ protected:
         }
         if(IsAula()) {
             addConfigToggle(HorizonOCConfigValue_PWMDimming, nullptr);
+            tsl::elm::CustomDrawer* sleepWakeInfo = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                renderer->drawString("\uE152 Changing this setting", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
+                renderer->drawString("requires a sleep/wake or", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
+                renderer->drawString("a reboot", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
+            });
+            sleepWakeInfo->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 90);
         }
     }
 };
@@ -676,7 +682,7 @@ protected:
                 ValueThresholds tdpThresholdsLite(6400, 7500);
                 addConfigButton(
                     HocClkConfigValue_LiteTDPLimit,
-                    "TDP Threshold",
+                    "TDP Threshold",e
                     ValueRange(4000, 8000, 100, "mW", 1),
                     "Power",
                     &tdpThresholdsLite,

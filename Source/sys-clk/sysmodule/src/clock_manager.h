@@ -140,7 +140,11 @@ class ClockManager
      * @param isBoost Is in boost mode
      */
     void SetClocks(bool isBoost);
-    
+    /**
+     * Handle PWM dimming
+     *
+     */
+    void HandlePWMDimming();
     /**
      * Main function, runs every 5s in sleep mode, and a user specified amount when awake
      *
