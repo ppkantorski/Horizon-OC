@@ -39,6 +39,7 @@
 #include "board_load.hpp"
 #include "board_volt.hpp"
 #include "board_misc.hpp"
+#include "../soctherm.hpp"
 
 namespace board {
 
@@ -133,6 +134,8 @@ namespace board {
 
         batteryInfoInitialize();
         FetchHardwareInfos();
+
+        soctherm::Initialize();
 
         Result pwmCheck = 1;
         if (hosversionAtLeast(6,0,0) && R_SUCCEEDED(pwmInitialize())) {

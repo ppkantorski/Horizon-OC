@@ -3,7 +3,7 @@
 	"title_id": "0x00FF0000636C6BFF",
 	"title_id_range_min": "0x00FF0000636C6BFF",
 	"title_id_range_max": "0x00FF0000636C6BFF",
-	"main_thread_stack_size": "0x0000C000",
+	"main_thread_stack_size": "0x0000D000",
 	"main_thread_priority": 16,
 	"default_cpu_id": 3,
 	"process_category": 1,
@@ -29,44 +29,63 @@
 				"lowest_cpu_id": 0,
 				"highest_cpu_id": 3
 			}
-		},
-		{
-			"type": "map",
-			"value": {
-				"address": "0x60006000",
-				"size": "0x1000",
-				"is_ro": false,
-				"is_io": true
+		}, {
+			"type":	"map",
+			"value":	{
+				"address":	"0x60006000",
+				"is_ro":	false,
+				"size":	"0x00001000",
+				"is_io":	true
 			}
-		},
-		{
-			"type": "map",
-			"value": {
-				"address": "0x57000000",
-				"size": "0x1000000",
-				"is_ro": false,
-				"is_io": true
+		}, {
+			"type":	"map",
+			"value":	{
+				"address":	"0x57000000",
+				"is_ro":	false,
+				"size":	"0x01000000",
+				"is_io":	true
 			}
-		},
-		{
-			"type": "map",
-			"value": {
-				"address": "0x6000C000",
-				"size": "0x1000",
-				"is_ro": false,
-				"is_io": true
+		}, {
+			"type":	"map",
+			"value":	{
+				"address":	"0x6000c000",
+				"is_ro":	false,
+				"size":	"0x00001000",
+				"is_io":	true
 			}
-		},
-		{
-			"type": "map",
-			"value": {
-				"address": "0x70110000",
-				"size": "0x1000",
-				"is_ro": false,
-				"is_io": true
+		}, {
+			"type":	"map",
+			"value":	{
+				"address":	"0x7000f000",
+				"is_ro":	false,
+				"size":	"0x00001000",
+				"is_io":	true
 			}
-		},
-		{
+		}, {
+			"type":	"map",
+			"value":	{
+				"address":	"0x700e2000",
+				"is_ro":	false,
+				"size":	"0x00001000",
+				"is_io":	true
+			}
+		}, {
+			"type":	"map",
+			"value":	{
+				"address":	"0x70110000",
+				"is_ro":	false,
+				"size":	"0x00001000",
+				"is_io":	true
+			}
+		}, {
+            "type": "map",
+            "value": {
+                "address": "0x54300000",
+                "size": "0x40000",
+                "is_ro": false,
+                "is_io": true
+            }
+        }, {
 			"type": "syscalls",
 			"value": {
 				"svcUnknown":	"0x00",
@@ -210,30 +229,6 @@
 				"allow_debug":	false,
 				"force_debug_prod":	false,
 				"force_debug":	true
-			}
-		}, 	{
-			"type": "map",
-			"value": {
-				"address": "0x60006000",
-				"size": "0x1000",
-				"is_ro": false,
-				"is_io": true
-			}
-		}, 	{
-			"type": "map",
-			"value": {
-				"address": "0x54300000",
-				"size": "0x40000",
-				"is_ro": false,
-				"is_io": true
-			}
-		}, 	{
-			"type": "map",
-			"value": {
-				"address": "0x7001b000",
-				"size": "0x1000",
-				"is_ro": false,
-				"is_io": true
 			}
 		}
 	]

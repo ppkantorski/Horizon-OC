@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2014 - 2019, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * Author:
+ *	Mikko Perttunen <mperttunen@nvidia.com>
+ *
  * Copyright (c) Souldbminer, Lightos_ and Horizon OC Contributors
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -24,33 +29,18 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
-#include <cstdint>
-#include <switch.h> // include libnx
-#ifdef __cplusplus
-#include "cpp_util.hpp"
-extern "C" {
-#endif
 
-// typedef std::uint32_t Result;
-// typedef std::uint32_t u32;
-// typedef std::int32_t s32;
-// typedef std::uint64_t u64;
-// typedef std::int64_t s64;
-// typedef std::uint8_t u8;
-// typedef std::int16_t s16;
-// typedef std::uint16_t u16;
+#include <switch.h>
+#include <sysclk.h>
 
-#include "sysclk/ipc.h"
-#include "sysclk/board.h"
-#include "sysclk/clock_manager.h"
-#include "sysclk/apm.h"
-#include "sysclk/config.h"
-#include "sysclk/errors.h"
-#include "sysclk/psm_ext.h"
-#include "sysclk/soctherm.hpp"
+namespace soctherm {
 
-#ifdef __cplusplus
+    struct TSensorTemps {
+        s32 cpu;
+        s32 gpu;
+        s32 mem;
+        s32 pllx;
+    };
+
 }
-#endif
