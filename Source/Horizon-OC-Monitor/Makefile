@@ -38,11 +38,11 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
 APP_TITLE	:=	Horizon OC Monitor
-APP_VERSION	:=	1.3.2+r4-hoc-r2
+APP_VERSION	:=	1.3.2+r4-hoc-r3
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 SOURCES		:=	source
-INCLUDES	:=	include lib/Atmosphere-libs/libstratosphere/source/dmnt lib/Atmosphere-libs/libstratosphere/source ../sys-clk/common/include/
+INCLUDES	:=	include lib/Atmosphere-libs/libstratosphere/source/dmnt lib/Atmosphere-libs/libstratosphere/source ../hoc-clk/common/include/
 NO_ICON		:=  1
 #ROMFS       :=  romfs
 

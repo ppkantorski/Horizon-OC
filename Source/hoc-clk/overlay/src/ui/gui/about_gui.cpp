@@ -1,0 +1,309 @@
+/*
+ * Copyright (c) Souldbminer, Lightos_ and Horizon OC Contributors
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+#include "about_gui.h"
+#include "../format.h"
+#include <tesla.hpp>
+#include <string>
+#include "cat.h"
+#include "ult_ext.h"
+
+tsl::elm::ListItem* SpeedoItem = NULL;
+tsl::elm::ListItem* IddqItem = NULL;
+tsl::elm::ListItem* DramModule = NULL;
+tsl::elm::ListItem* sysdockStatusItem = NULL;
+tsl::elm::ListItem* saltyNXStatusItem = NULL;
+tsl::elm::ListItem* RETROStatusItem = NULL;
+tsl::elm::ListItem* waferCordsItem = NULL;
+
+ImageElement* CatImage = NULL;
+HideableCategoryHeader* CatHeader = NULL;
+HideableCustomDrawer* CatSpacer = NULL;
+int lightosClickCount = 0;
+
+AboutGui::AboutGui()
+{
+    memset(strings, 0, sizeof(strings));
+}
+
+AboutGui::~AboutGui()
+{
+}
+
+void AboutGui::listUI()
+{
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("Information")
+    );
+
+    SpeedoItem =
+        new tsl::elm::ListItem("Speedo:");
+    this->listElement->addItem(SpeedoItem);
+
+    IddqItem =
+        new tsl::elm::ListItem("IDDQ:");
+    this->listElement->addItem(IddqItem);
+
+    DramModule =
+        new tsl::elm::ListItem("Module: ");
+    this->listElement->addItem(DramModule);
+
+    if(!IsHoag()) {
+        sysdockStatusItem =
+            new tsl::elm::ListItem("sys-dock status:");
+        this->listElement->addItem(sysdockStatusItem);
+    }
+
+    saltyNXStatusItem =
+        new tsl::elm::ListItem("SaltyNX status:");
+    this->listElement->addItem(saltyNXStatusItem);
+    
+    if(IsHoag()) {
+        RETROStatusItem =
+            new tsl::elm::ListItem("RR Display status:");
+        this->listElement->addItem(RETROStatusItem);
+    }
+
+    waferCordsItem =
+        new tsl::elm::ListItem("Wafer Position:");
+    this->listElement->addItem(waferCordsItem);
+
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("Credits")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("Developers")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Souldbminer")
+    );
+
+    // Create special clickable item for Lightos
+    auto lightosItem = new tsl::elm::ListItem("Lightos_");
+    lightosItem->setClickListener([this](u64 keys) -> bool {
+        if (keys & HidNpadButton_A) {
+            lightosClickCount++;
+            if (lightosClickCount >= 10) {
+                if (CatImage != NULL) CatImage->setVisible(true);
+                if (CatHeader != NULL) CatHeader->setVisible(true);
+                if (CatSpacer != NULL) CatSpacer->setVisible(true);
+            }
+            return true;
+        }
+        return false;
+    });
+    this->listElement->addItem(lightosItem);
+
+    // ---- Contributors ----
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("Contributors")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Dom")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Blaise25")
+    );
+
+    // ---- Testers ----
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("Testers")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Dom")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Samybigio2011")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Delta")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Miki1305")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Happy")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Flopsider")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Winnerboi77")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Blaise25")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("WE1ZARD")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Alvise")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("TDRR")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("agjeococh")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Xenshen")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("Frost")
+    );
+
+    // ---- Special Thanks ----
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("Special Thanks")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("ScriesM - Atmosphere CFW")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("KazushiMe - Switch OC Suite")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("hanai3bi - Switch OC Suite & EOS")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("NaGaa95 - L4T-OC-Kernel")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("B3711 - EOS")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("RetroNX - sys-clk")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("b0rd2death - Ultrahand")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("MasaGratoR - Status Monitor")
+    );
+
+    // Create cat elements but hide them initially
+    CatHeader = new HideableCategoryHeader("Cat");
+    CatHeader->setVisible(false);
+    this->listElement->addItem(CatHeader);
+
+    CatImage = new ImageElement(CAT_DATA, CAT_WIDTH, CAT_HEIGHT);
+    CatImage->setVisible(false);
+    this->listElement->addItem(CatImage);
+
+    CatSpacer = new HideableCustomDrawer(75);
+    CatSpacer->setVisible(false);
+    this->listElement->addItem(CatSpacer);
+}
+
+std::string AboutGui::formatRamModule() {
+    switch (this->context->dramID) {
+        case 0: return "HB-MGCH 4GB";
+        case 4: return "HM-MGCH 6GB";
+        case 7: return "HM-MGXX 8GB";
+
+        case 1: return "NLE 4GB";
+        case 2: return "WT:C 4GB";
+
+        case 3:
+        case 5 ... 6: return "NEE 4GB";
+
+        case 8:
+        case 12: return "AM-MGCJ 4GB";
+        case 9:
+        case 13: return "AM-MGCJ 8GB";
+
+        case 10:
+        case 14: return "NME 4GB";
+
+        case 11:
+        case 15: return "WT:E 4GB";
+
+        case 17:
+        case 19:
+        case 24: return "AA-MGCL 4GB";
+
+        case 18:
+        case 23:
+        case 28: return "AA-MGCL 8GB";
+
+        case 20 ... 22: return "AB-MGCL 4GB";
+
+        case 25 ... 27: return "WT:F 4GB";
+
+        case 29 ... 31: return "x267 4GB";
+
+        case 32 ... 34: return "WT:B 4GB";
+
+        default: return "Unknown";
+    }
+}
+
+void AboutGui::update()
+{
+    BaseMenuGui::update();
+}
+
+void AboutGui::refresh()
+{
+    BaseMenuGui::refresh();
+
+    if (!this->context)
+        return;
+    // Format strings once per refresh
+    sprintf(strings[0], "%u/%u/%u", this->context->speedos[HorizonOCSpeedo_CPU], this->context->speedos[HorizonOCSpeedo_GPU], this->context->speedos[HorizonOCSpeedo_SOC]);
+    // This is how hekate does it
+    sprintf(strings[1], "%u/%u/%u", this->context->iddq[HorizonOCSpeedo_CPU], this->context->iddq[HorizonOCSpeedo_GPU], this->context->iddq[HorizonOCSpeedo_SOC]);
+    SpeedoItem->setValue(strings[0]);
+    IddqItem->setValue(strings[1]);
+    DramModule->setValue(formatRamModule());
+    if(!IsHoag())
+        sysdockStatusItem->setValue(this->context->isSysDockInstalled ? "Installed" : "Not Installed");
+
+    saltyNXStatusItem->setValue(this->context->isSaltyNXInstalled ? "Installed" : "Not Installed");
+    
+    if(IsHoag())
+        RETROStatusItem->setValue(this->context->isUsingRetroSuper ? "Installed" : "Not Installed");
+
+    sprintf(strings[2], "X: %u Y: %u", this->context->waferX, this->context->waferY);
+    waferCordsItem->setValue(strings[2]);
+}

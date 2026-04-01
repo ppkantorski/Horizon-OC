@@ -13,7 +13,7 @@ hactool -t kip1 out/nintendo_nx_arm64_armv8a/release/loader.kip --uncompress=hoc
 cd ../../../ # exit
 cp build/stratosphere/loader/hoc.kip dist/atmosphere/kips/hoc.kip
 
-cd Source/sys-clk/
+cd Source/hoc-clk/
 ./build.sh
 cp -r dist/ ../../
 
