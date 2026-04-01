@@ -6,7 +6,3 @@
 	path = Source/Horizon-OC-Monitor/lib/libultrahand
 	url = https://github.com/ppkantorski/libultrahand
 	branch = main
-[submodule "Source/sys-clk/overlay/lib/libultrahand"]
-	path = Source/sys-clk/overlay/lib/libultrahand
-	url = https://github.com/ppkantorski/libultrahand
-	branch = main
