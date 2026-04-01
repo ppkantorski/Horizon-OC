@@ -53,46 +53,6 @@ namespace board {
 
     u32 fd = 0, fd2 = 0;
 
-    constexpr u32 pscDependencies[] = {PscPmModuleId_Display};    // Our dependencies
-    constexpr PscPmModuleId pscModuleId = (PscPmModuleId)692;   // Our ID
-    static PscPmModule pscModule;                               // Module to listen for events with
-
-    Thread SleepWakeListener;
-
-    void SleepWakeEventListener(void *ptr) {
-        while (true) {
-            Result rc = eventWait(&pscModule.event, 10'000'000);
-            if (R_VALUE(rc) == KERNELRESULT(TimedOut))
-                continue;
-            if (R_VALUE(rc) == KERNELRESULT(Cancelled))
-                break;
-
-            PscPmState eventState;
-            u32 flags;
-            if (R_FAILED(pscPmModuleGetRequest(&pscModule, &eventState, &flags)))
-                break;
-
-            switch (eventState) {
-                case PscPmState_ReadySleep:
-                    fileUtils::LogLine("Sleep");
-                    soctherm::StopSensors();
-                    break;
-                case PscPmState_ReadyAwaken:
-                    fileUtils::LogLine("Wake");
-                    soctherm::StartSensors();
-                    break;
-                case PscPmState_ReadyShutdown:
-                    fileUtils::LogLine("Shutdown");
-                    soctherm::StopSensors();
-                    break;
-                default:
-                    break;
-            }
-
-            pscPmModuleAcknowledge(&pscModule, eventState);
-        }
-    }
-
     void FetchHardwareInfos() {
         ReadFuses(fuseData);
         SetGpuBracket(fuseData.gpuSpeedo, speedoBracket);
@@ -171,16 +131,6 @@ namespace board {
         rc = pmdmntInitialize();
         ASSERT_RESULT_OK(rc, "pmdmntInitialize");
 
-        rc = pscmInitialize();
-        ASSERT_RESULT_OK(rc, "pscmInitialize");
-
-        rc = pscmGetPmModule(&pscModule, pscModuleId, pscDependencies, sizeof(pscDependencies)/sizeof(u32), true);
-        ASSERT_RESULT_OK(rc, "pscmGetPmModule");
-
-        threadCreate(&SleepWakeListener, SleepWakeEventListener, NULL, NULL, 0x1000, 0x0, 3);
-
-        threadStart(&SleepWakeListener);
-
         StartLoad(nvCheck, fd);
 
         batteryInfoInitialize();
@@ -211,7 +161,7 @@ namespace board {
 
     void Exit() {
 
-        soctherm::StopSensors();
+        //soctherm::StopSensors();
 
         if (HOSSVC_HAS_CLKRST) {
             clkrstExit();
@@ -240,10 +190,6 @@ namespace board {
         pmdmntExit();
         display::Shutdown();
         nvExit();
-        threadClose(&SleepWakeListener);
-        pscPmModuleFinalize(&pscModule);
-        pscPmModuleClose(&pscModule);
-        pscmExit();
     }
 
     SysClkSocType GetSocType() {
@@ -290,4 +236,5 @@ namespace board {
     bool IsUsingRetroSuperDisplay() {
         return false; /* stub for now. */
     }
+
 }

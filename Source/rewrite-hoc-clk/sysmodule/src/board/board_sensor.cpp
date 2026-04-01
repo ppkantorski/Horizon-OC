@@ -39,7 +39,7 @@ namespace board {
         s32 millis = 0;
         BatteryChargeInfo info;
 
-        soctherm::TSensorTemps temps;
+        soctherm::TSensorTemps temps = {};
         soctherm::ReadSensors(temps);
 
         switch(sensor) {

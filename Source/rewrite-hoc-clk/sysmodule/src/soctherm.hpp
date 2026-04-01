@@ -130,8 +130,6 @@ namespace soctherm {
     };
 
     void Initialize();
-    void StartSensors();
-    void StopSensors();
     void ReadSensors(TSensorTemps &temps);
 
 }

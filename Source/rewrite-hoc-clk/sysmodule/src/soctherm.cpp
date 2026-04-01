@@ -44,6 +44,12 @@ namespace soctherm {
         #define CAR_CLK_SOURCE_TSENSOR 0x3B8
         #define CAR_CLK_OUT_ENB_V 0x360
 
+        #define CLK_RST_CONTROLLER_RST_DEVICES 0xC
+        #define SWR_SOC_THERM_RST 1 << 14
+
+        #define CLK_RST_CONTROLLER_CLK_OUT_ENB 0x18
+        #define CLK_ENB_SOC_THERM 1 << 14
+
         #define CAR_CLK_SOURCE_TSENSOR_VAL 0x8000005E
 
         #define NOMINAL_CALIB_FT 105
@@ -470,6 +476,14 @@ namespace soctherm {
         return r >> 16;
     }
 
+    bool IsDisabledThroughSleep() {
+        return (ReadReg(carVa, CLK_RST_CONTROLLER_RST_DEVICES) & SWR_SOC_THERM_RST) || !(ReadReg(carVa, CLK_RST_CONTROLLER_CLK_OUT_ENB) & CLK_ENB_SOC_THERM);
+    }
+
+    bool IsSensorEnabled() {
+        return ReadReg(socthermVa, TSENSOR_TSENSOR_CLKEN);
+    }
+
     void EnableSensor(const TSensor *sensor, u32 sensorIdx) {
         u32 val = sensor->config->tall << SENSOR_CONFIG0_TALL_SHIFT;
         WriteReg(socthermVa, sensor->base + SENSOR_CONFIG0, val);
@@ -497,7 +511,42 @@ namespace soctherm {
         return t;
     }
 
+    void StartSensors() {
+        u32 pdiv, hotspot;
+
+        if (isMariko) {
+            for (u32 i = 0; i < std::size(marikoTSensors); ++i) {
+                EnableSensor(&marikoTSensors[i], i);
+            }
+
+            pdiv    = (ReadReg(socthermVa, SENSOR_PDIV) & PDIV_MASK_T210B0) | PDIV_RATE_T210B0;
+            hotspot = (ReadReg(socthermVa, SENSOR_HOTSPOT_OFF) & HOTSPOT_MASK_T210B0) | HOTSPOT_VAL;
+        } else {
+            for (u32 i = 0; i < std::size(eristaTSensors); ++i) {
+                EnableSensor(&eristaTSensors[i], i);
+            }
+
+            pdiv    = (ReadReg(socthermVa, SENSOR_PDIV) & PDIV_MASK_T210) | PDIV_RATE_T210;
+            hotspot = (ReadReg(socthermVa, SENSOR_HOTSPOT_OFF) & HOTSPOT_MASK_T210) | HOTSPOT_VAL;
+
+            EnableSensor(&eristaTSensors[SocthermTSensor_MEM0], SocthermTSensor_MEM0);
+            EnableSensor(&eristaTSensors[SocthermTSensor_MEM1], SocthermTSensor_MEM1);
+        }
+
+        WriteReg(socthermVa, SENSOR_PDIV, pdiv);
+        WriteReg(socthermVa, SENSOR_HOTSPOT_OFF, hotspot);
+        WriteReg(socthermVa, TSENSOR_TSENSOR_CLKEN, TSENSOR_TSENSOR_ENABLE);
+    }
+
     void ReadSensors(TSensorTemps &temps) {
+        if (IsDisabledThroughSleep()) {
+            return;
+        }
+
+        if (!IsSensorEnabled()) {
+            StartSensors();
+        }
+
         temps.cpu  = TranslateTemp(ReadReg(socthermVa, SENSOR_TEMP1) >> 16);
         temps.gpu  = TranslateTemp(ReadReg(socthermVa, SENSOR_TEMP1) & SENSOR_TEMP1_GPU_TEMP_MASK);
         temps.pllx = TranslateTemp(ReadReg(socthermVa, SENSOR_TEMP2) & SENSOR_TEMP2_PLLX_TEMP_MASK);
@@ -506,51 +555,6 @@ namespace soctherm {
             temps.mem = TranslateTemp(ReadReg(socthermVa, SENSOR_TEMP2) >> 16);
         } else {
             temps.mem = -1;
-        }
-    }
-
-    void StopSensors() {
-        const TSensor *sensors = isMariko ? marikoTSensors : eristaTSensors;
-        u32 count = isMariko ? std::size(marikoTSensors) : std::size(eristaTSensors);
-
-        for (u32 i = 0; i < count; ++i) {
-            SetBits(socthermVa, sensors[i].base + SENSOR_CONFIG0, SENSOR_CONFIG0_STOP);
-            ClearBits(socthermVa, sensors[i].base + SENSOR_CONFIG1, SENSOR_CONFIG1_TEMP_ENABLE);
-            WriteReg(socthermVa, sensors[i].base + SENSOR_CONFIG2, 0);
-        }
-
-        WriteReg(socthermVa, TSENSOR_TSENSOR_CLKEN, 0);
-        WriteReg(carVa, CAR_CLK_SOURCE_TSENSOR, 0);
-        SetBits(carVa, CAR_CLK_OUT_ENB_V, 0);
-
-    }
-
-    void StartSensors() {
-        if (!ReadReg(socthermVa, TSENSOR_TSENSOR_CLKEN)) {
-            u32 pdiv, hotspot;
-
-            if (isMariko) {
-                for (u32 i = 0; i < std::size(marikoTSensors); ++i) {
-                    EnableSensor(&marikoTSensors[i], i);
-                }
-
-                pdiv    = (ReadReg(socthermVa, SENSOR_PDIV) & PDIV_MASK_T210B0) | PDIV_RATE_T210B0;
-                hotspot = (ReadReg(socthermVa, SENSOR_HOTSPOT_OFF) & HOTSPOT_MASK_T210B0) | HOTSPOT_VAL;
-            } else {
-                for (u32 i = 0; i < std::size(eristaTSensors); ++i) {
-                    EnableSensor(&eristaTSensors[i], i);
-                }
-
-                pdiv    = (ReadReg(socthermVa, SENSOR_PDIV) & PDIV_MASK_T210) | PDIV_RATE_T210;
-                hotspot = (ReadReg(socthermVa, SENSOR_HOTSPOT_OFF) & HOTSPOT_MASK_T210) | HOTSPOT_VAL;
-
-                EnableSensor(&eristaTSensors[SocthermTSensor_MEM0], SocthermTSensor_MEM0);
-                EnableSensor(&eristaTSensors[SocthermTSensor_MEM1], SocthermTSensor_MEM1);
-            }
-
-            WriteReg(socthermVa, SENSOR_PDIV, pdiv);
-            WriteReg(socthermVa, SENSOR_HOTSPOT_OFF, hotspot);
-            WriteReg(socthermVa, TSENSOR_TSENSOR_CLKEN, TSENSOR_TSENSOR_ENABLE);
         }
     }
 
