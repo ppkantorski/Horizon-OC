@@ -257,8 +257,8 @@ namespace config {
 
         std::vector<std::string> keys;
         std::vector<std::string> values;
-        keys.reserve(HocClkProfile_EnumMax * HocClkModule_EnumMax);
-        values.reserve(HocClkProfile_EnumMax * HocClkModule_EnumMax);
+        keys.reserve(+HocClkProfile_EnumMax * +HocClkModule_EnumMax);
+        values.reserve(+HocClkProfile_EnumMax * +HocClkModule_EnumMax);
 
         std::uint32_t* mhz = &profiles->mhz[0];
 

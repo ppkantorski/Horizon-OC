@@ -17,7 +17,8 @@ include $(DEVKITPRO)/libnx/switch_rules
 # INCLUDES is a list of directories containing header files
 # EXEFS_SRC is the optional input directory containing data copied into exefs, if anything this normally should only contain "main.npdm".
 #---------------------------------------------------------------------------------
-TARGET		:=	horizon-oc
+TARGET		:=	hoc-clk
+CONFIG_DIR	:=	horizon-oc
 BUILD		:=	build
 OUTDIR		:=	out
 RESOURCES	:=	res
@@ -35,7 +36,7 @@ TARGET_VERSION	:= $(shell git describe --dirty --always --tags)
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-DEFINES	:=	-DDISABLE_IPC -DTARGET="\"$(TARGET)\"" -DTARGET_VERSION="\"$(TARGET_VERSION)\""
+DEFINES	:=	-DDISABLE_IPC -DTARGET="\"$(TARGET)\"" -DTARGET_VERSION="\"$(TARGET_VERSION)\"" -DCONFIG_DIR="\"$(CONFIG_DIR)\""
 
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
@@ -44,7 +45,7 @@ CFLAGS	:=	-g -Wall -Os -ffunction-sections \
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++17
+CXXFLAGS	:= $(CFLAGS) -fno-rtti -std=gnu++23
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)

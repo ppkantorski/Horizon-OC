@@ -64,7 +64,7 @@ CFLAGS += -DUI_OVERRIDE_PATH="\"$(UI_OVERRIDE_PATH)\""
 #CFLAGS += -DNO_FSTREAM_DIRECTIVE=$(NO_FSTREAM_DIRECTIVE)
 
 
-CXXFLAGS	:= $(CFLAGS) -fno-exceptions -std=gnu++20
+CXXFLAGS	:= $(CFLAGS) -fno-exceptions -std=gnu++23
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
