@@ -90,38 +90,6 @@ namespace ams::ldr::hoc::pcv {
         static const u32 gpuVoltThermalPattern[] = { 800, 1120, 0, 610, 1120, 20000, 610, 1120, 30000, 610, 1120, 50000, 610, 1120, 70000, 610, 1120, 90000, };
         static_assert(sizeof(gpuVoltThermalPattern) == 72, "Invalid gpuVoltThermalPattern");
 
-        struct SpeedoVminTable {
-            u32 speedo;
-            u32 voltage;
-        };
-
-        struct RamVminOffsetTable {
-            u32 maxClock;
-            u32 offset;
-        };
-
-        static const SpeedoVminTable vminTable[] {
-            {1400,       610}, // LOW SPEEDO -> use stock vmin
-            {1560,       590},
-            {1583,       570},
-            {1620,       565},
-            {1670,       560},
-            {1694,       555},
-            {1731,       550},
-            {1750,       540},
-            {0xFFFFFFFF, 530},
-        };
-
-        static const RamVminOffsetTable ramOffset[] {
-            {2400000,     5},
-            {2533000,    10},
-            {2666000,    15},
-            {2800000,    20},
-            {2933000,    25},
-            {3200000,    30},
-            {0xFFFFFFFF, 35},
-        };
-
         /* GPU Max Clock asm Pattern:
          *
          * MOV W11, #0x1000 MOV (wide immediate)                0x1000                              0xB (11)

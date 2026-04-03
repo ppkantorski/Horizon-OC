@@ -643,9 +643,9 @@ protected:
                 "Max Handheld Display",
                 ValueRange(60, IsAula() ? 65 : 75, 1, " Hz", 1),
                 "Display Clock",
-                &displayThresholds, 
-                {}, 
-                {}, 
+                &displayThresholds,
+                {},
+                {},
                 false
             );
         }
@@ -1266,7 +1266,6 @@ protected:
         };
 
         std::vector<NamedValue> mGpuVoltsVmin = {
-            NamedValue("Auto", 0),
             NamedValue("480mV", 480), NamedValue("485mV", 485), NamedValue("490mV", 490),
             NamedValue("495mV", 495), NamedValue("500mV", 500), NamedValue("505mV", 505),
             NamedValue("510mV", 510), NamedValue("515mV", 515), NamedValue("520mV", 520),

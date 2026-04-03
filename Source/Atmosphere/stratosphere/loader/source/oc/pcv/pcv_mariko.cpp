@@ -24,46 +24,6 @@
 
 namespace ams::ldr::hoc::pcv::mariko {
 
-    u32 GetGpuVminVoltage() {
-        for (auto e : vminTable) {
-            if (C.gpuSpeedo <= e.speedo) {
-                return e.voltage;
-            }
-        }
-
-        return 530;
-    }
-
-    u32 GetRamVminAdjustment(u32 vmin) {
-        if (C.marikoEmcMaxClock < 2133000) {
-            return vmin;
-        }
-
-        const u32 ramScale = (((C.marikoEmcMaxClock / 1000) - 2133) / 33) * 5 + vmin;
-
-        for (auto r : ramOffset) {
-            if (C.marikoEmcMaxClock < r.maxClock) {
-                return ramScale + r.offset;
-            }
-        }
-
-        return ramScale;
-    }
-
-    /* Note: EOS (probably?) has a bug in this function that always results in high vmin, this is fixed here. */
-    u32 GetAutoVoltage() {
-        u32 voltage = GetGpuVminVoltage();
-        voltage = GetRamVminAdjustment(voltage);
-
-        u32 voltageOffset = 590 - C.commonGpuVoltOffset;
-
-        if (voltageOffset < voltage) {
-            voltage = voltageOffset;
-        }
-
-        return voltage;
-    }
-
     Result GpuVoltDVFS(u32 *ptr) {
         /* Check for valid pattern. */
         for (size_t i = 0; i < std::size(gpuDVFSPattern); ++i) {
@@ -77,15 +37,10 @@ namespace ams::ldr::hoc::pcv::mariko {
             PATCH_OFFSET(ptr + 1, C.marikoGpuVmax);
         }
 
-        /* C.marikoGpuVmin is non zero, user sets manual voltage. */
         if (C.marikoGpuVmin) {
             PATCH_OFFSET(ptr, C.marikoGpuVmin);
-            R_SUCCEED();
         }
 
-        /* C.marikoGpuVmin is zero, auto voltage is applied. */
-        u32 autoVmin = GetAutoVoltage();
-        PATCH_OFFSET(ptr, autoVmin);
         R_SUCCEED();
     }
 
@@ -94,24 +49,15 @@ namespace ams::ldr::hoc::pcv::mariko {
             R_THROW(ldr::ResultInvalidGpuDvfs());
         }
 
-        u32 vmin = C.marikoGpuVmin;
-
-        /* Automatic voltage. */
         if (!C.marikoGpuVmin) {
-            vmin = GetAutoVoltage();
-            PATCH_OFFSET(ptr,     vmin);
-            PATCH_OFFSET(ptr + 3, vmin);
-            PATCH_OFFSET(ptr + 6, vmin);
-            PATCH_OFFSET(ptr + 9, vmin);
-        } else {
-            /* Manual voltage. */
-            PATCH_OFFSET(ptr,     vmin);
-            PATCH_OFFSET(ptr + 3, vmin);
-            PATCH_OFFSET(ptr + 6, vmin);
-            PATCH_OFFSET(ptr + 9, vmin);
+            R_SKIP();
         }
 
-        PATCH_OFFSET(ptr + 12, vmin);
+        PATCH_OFFSET(ptr +  0, C.marikoGpuVmin);
+        PATCH_OFFSET(ptr +  3, C.marikoGpuVmin);
+        PATCH_OFFSET(ptr +  6, C.marikoGpuVmin);
+        PATCH_OFFSET(ptr +  9, C.marikoGpuVmin);
+        PATCH_OFFSET(ptr + 12, C.marikoGpuVmin);
 
         R_SUCCEED();
     }

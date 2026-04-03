@@ -34,7 +34,7 @@ volatile CustomizeTable C = {
 /* Disables RAM powerdown */
 .hpMode = DISABLED,
 
-.commonEmcMemVolt  = 1175000, /* LPDDR4X JEDEC Specification */
+.commonEmcMemVolt  = 1175000, /* LPDDR4(X) JEDEC Specification */
 .eristaEmcMaxClock = 1600000, /* Maximum HB-MGCH ram rating */
 .eristaEmcMaxClock1 = 1600000,
 .eristaEmcMaxClock2 = 1600000,
@@ -103,10 +103,8 @@ volatile CustomizeTable C = {
 
 .marikoGpuUV = 0,
 
-/* For automatic vmin detection, set this to AUTO. */
-/* vmin past 795mV won't work due to HOS limitation */
-/* Vmin is automatically set to 800mV when SoC temperature is below 20C */
-.marikoGpuVmin = AUTO,
+/* Vmin past 795mV won't work due boot voltage being 800mV. */
+.marikoGpuVmin = 610,
 
 .marikoGpuVmax = 800,
 
