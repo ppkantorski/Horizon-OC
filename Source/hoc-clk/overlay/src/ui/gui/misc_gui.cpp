@@ -1260,9 +1260,9 @@ protected:
         this->listElement->addItem(new tsl::elm::CategoryHeader("GPU Settings"));
 
         std::vector<NamedValue> gpuUvConf = {
-            NamedValue("No Undervolt", 0),
-            NamedValue("SLT Table", 1),
-            NamedValue("HiOPT Table", 2),
+            NamedValue("HiOPT", 0),
+            NamedValue("HiOPT - 15mV", 1),
+            NamedValue("High UV Table", 2),
         };
 
         std::vector<NamedValue> mGpuVoltsVmin = {
