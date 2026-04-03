@@ -225,7 +225,8 @@ uint32_t realRAM_Hz = 0;
 uint32_t partLoad[HocClkPartLoad_EnumMax];
 uint32_t realCPU_mV = 0;
 uint32_t realGPU_mV = 0;
-uint32_t realRAM_mV = 0;
+uint32_t realVDD2_mV = 0;
+uint32_t realVDDQ_mV = 0;
 uint32_t realSOC_mV = 0;
 uint8_t refreshRate = 0;
 
@@ -591,12 +592,9 @@ void Misc(void*) {
 
                 realCPU_mV = hocclkCTX.voltages[HocClkVoltage_CPU];
                 realGPU_mV = hocclkCTX.voltages[HocClkVoltage_GPU];
-                realRAM_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDD2];
                 realSOC_mV = hocclkCTX.voltages[HocClkVoltage_SOC];
-                const u32 vdd2_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDD2] / 1000;  // µV to mV
-                const u32 vddq_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDDQ] / 1000;  // µV to mV
-                realRAM_mV = vdd2_mV * 100000 + vddq_mV * 10;
-
+                realVDD2_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDD2];
+                realVDDQ_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDDQ];
             }
         }
 
@@ -726,11 +724,9 @@ void Misc3(void*) {
 
                 realCPU_mV = hocclkCTX.voltages[HocClkVoltage_CPU];
                 realGPU_mV = hocclkCTX.voltages[HocClkVoltage_GPU];
-                realRAM_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDD2];
                 realSOC_mV = hocclkCTX.voltages[HocClkVoltage_SOC];
-                const u32 vdd2_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDD2] / 1000;  // µV to mV
-                const u32 vddq_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDDQ] / 1000;  // µV to mV
-                realRAM_mV = vdd2_mV * 100000 + vddq_mV * 10;
+                realVDD2_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDD2];
+                realVDDQ_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDDQ];
 
             }
         }

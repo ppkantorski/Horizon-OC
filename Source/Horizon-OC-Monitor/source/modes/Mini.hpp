@@ -1190,9 +1190,9 @@ public:
             }
 
             if (settings.realVolts) {
-                const float mv_vdd2_f = (realRAM_mV % 100000) / 10.0f;   // VDD2
-                const uint32_t mv_vddq = (realRAM_mV / 10000) / 10;   // VDDQ
-                const uint32_t mv_vdd2_i = (realRAM_mV % 100000) / 10;
+                const float mv_vdd2_f = realVDD2_mV / 1000.0f;   // VDD2
+                const uint32_t mv_vddq = realVDDQ_mV / 1000;   // VDDQ
+                const uint32_t mv_vdd2_i = realVDD2_mV / 1000;
 
                 if (isMariko) {
                     if (settings.showVDDQ && settings.showVDD2) {

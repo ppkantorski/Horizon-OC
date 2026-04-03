@@ -1003,8 +1003,8 @@ public:
             /* realRAM_mV packs VDD2 | VDDQ in 10-µV units        *
              * → split, convert to mV
                                     */
-            const float mv_vdd2 = (realRAM_mV % 100000) / 10.0f;   // VDD2
-            const uint32_t mv_vddq = (realRAM_mV / 10000) / 10;   // VDDQ
+            const float mv_vdd2 = realVDD2_mV / 1000.0f;   // VDD2
+            const uint32_t mv_vddq = realVDDQ_mV / 1000;   // VDDQ
 
             // Build voltage string based on settings
             RAM_volt_c[0] = '\0'; // Start with empty string
