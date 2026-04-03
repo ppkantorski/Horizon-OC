@@ -1,3 +1,5 @@
+** FOR DEVELOPERS UTILIZING SYSCLK API ONLY **
+
 Ensure you include the latest hoc-clk ipc and header files in your project before proceeding
 
 Before running migration replacements, change every reference to sys-clk's ramload api to this
