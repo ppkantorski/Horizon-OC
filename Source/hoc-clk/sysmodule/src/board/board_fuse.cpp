@@ -22,7 +22,7 @@
 
 namespace board {
 
-    void SetGpuBracket(u8 speedo, u8 &gpuBracket) {
+    void SetGpuBracket(u16 speedo, u8 &gpuBracket) {
         if (speedo <= 1624) {
             gpuBracket = 0;
             return;

@@ -35,6 +35,6 @@ namespace board {
     };
 
     void ReadFuses(FuseData &speedo);
-    void SetGpuBracket(u8 gpuSpeedo, u8 &gpuBracket);
+    void SetGpuBracket(u16 gpuSpeedo, u8 &gpuBracket);
 
 }
