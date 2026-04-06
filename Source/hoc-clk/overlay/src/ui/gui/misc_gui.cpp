@@ -1065,7 +1065,7 @@ protected:
             std::vector<NamedValue> maxClkOptions = {
                 NamedValue("1785 MHz", 1785),
                 NamedValue("1887 MHz", 1887),
-                NamedValue("1963 MHz", 1963),
+                NamedValue("1989 MHz", 1989),
                 NamedValue("2091 MHz", 2091),
                 NamedValue("2193 MHz", 2193),
                 NamedValue("2295 MHz", 2295),
@@ -1123,9 +1123,7 @@ protected:
             );
 
             std::vector<NamedValue> maxClkOptions = {
-                NamedValue("1785 MHz", 1785000),
-                NamedValue("1887 MHz", 1887000),
-                NamedValue("1963 MHz", 1963000),
+                NamedValue("1963 MHz", 1963500),
                 NamedValue("2091 MHz", 2091000),
                 NamedValue("2193 MHz", 2193000),
                 NamedValue("2295 MHz", 2295000),
@@ -1361,7 +1359,7 @@ protected:
                 false
             );
         }
-        
+
         std::vector<NamedValue> gpuOffset = {
             NamedValue("-50 mV", 50),
             NamedValue("-45 mV", 45),
