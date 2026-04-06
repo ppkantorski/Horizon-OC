@@ -25,7 +25,8 @@
 #include "soctherm.hpp"
 #include "board/board.hpp"
 #include "file_utils.hpp"
-#include "globals.hpp"
+#include "mem_map.hpp"
+
 namespace soctherm {
 
     namespace {

@@ -15,7 +15,7 @@
  *
  */
 
-#include "globals.hpp"
+#include <switch.h>
 
 Result QueryMemoryMapping(u64* virtaddr, u64 physaddr, u64 size) {
     if(hosversionAtLeast(10,0,0))

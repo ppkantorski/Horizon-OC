@@ -35,7 +35,7 @@
 #include "board_sensor.hpp"
 #include "board_volt.hpp"
 #include "board_profile.hpp"
-#include "../globals.hpp"
+#include "../mem_map.hpp"
 #define HOSSVC_HAS_CLKRST (hosversionAtLeast(8,0,0))
 #define HOSSVC_HAS_TC (hosversionAtLeast(5,0,0))
 
