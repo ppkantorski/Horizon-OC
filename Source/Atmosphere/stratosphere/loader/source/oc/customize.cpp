@@ -86,17 +86,17 @@ volatile CustomizeTable C = {
 /* 1120mV is NVIDIA rating */
 .marikoCpuMaxVolt = 1120,
 
-/* Supported values: 1963000, 2091000, 2193000, 2295000, 2397000, 2499000, 2601000, 2703000. */
-/* 1963000 is official rating of T214/Mariko, fully safe. */
+/* Supported values: 1963500, 2091000, 2193000, 2295000, 2397000, 2499000, 2601000, 2703000. */
+/* 1963500 is official rating of T214/Mariko, fully safe. */
 /* 2091000-2295000 is a slight OC which should work on all units, but no guarantees. */
 /* 2397000 is the max safe OC for most average units with tuned undervolt. */
 /* 2499000 should be used with caution. */
 /* 2601000 exceeds pmic limit on most consoles. */
 /* 2703000 is potentially dangerous and not advised. */
-.marikoCpuMaxClock = 1963000,
+.marikoCpuMaxClock = 1963500,
 
 .eristaCpuBoostClock = 1785000, // Default boost clock
-.marikoCpuBoostClock = 1963000, // Default boost clock
+.marikoCpuBoostClock = 1963500, // Default boost clock
 
 .eristaGpuUV = 0,
 .eristaGpuVmin = 810,
