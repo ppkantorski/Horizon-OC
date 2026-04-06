@@ -1111,7 +1111,7 @@ protected:
             );
 
             std::vector<NamedValue> maxClkOptions = {
-                NamedValue("1963 MHz", 1963000),
+                NamedValue("1963 MHz", 1963500),
                 NamedValue("2091 MHz", 2091000),
                 NamedValue("2193 MHz", 2193000),
                 NamedValue("2295 MHz", 2295000),
