@@ -603,7 +603,7 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_BatteryChargeCurrent:
             return ((input >= 1024) && (input <= 3072)) || !input;
         case HocClkConfigValue_DisplayVoltage:
-            return ((input >= 900) && (input <= 1325));
+            return ((input >= 800) && (input <= 1325));
 
         default:
             return false;

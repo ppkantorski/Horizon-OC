@@ -731,7 +731,7 @@ protected:
         addConfigButton(
             HocClkConfigValue_DisplayVoltage,
             "Display Voltage",
-            ValueRange(900, 1200, 25, " mV", 1),
+            ValueRange(800, 1200, 25, " mV", 1),
             "Display Voltage",
             &thresholdsDisabled,
             {},
