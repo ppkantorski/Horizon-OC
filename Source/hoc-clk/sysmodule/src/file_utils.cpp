@@ -82,7 +82,12 @@ namespace fileUtils {
                 FILE* file = fopen(FILE_LOG_FILE_PATH, "a");
 
                 if (file) {
-                    fprintf(file, "[%lu] ", armGetSystemTick());
+                    struct timespec now;
+                    struct tm *timeInfo;
+                    clock_gettime(CLOCK_REALTIME, &now);
+                    timeInfo = localtime(&now.tv_sec);
+
+                    fprintf(file, "[%02d:%02d:%02d] ", timeInfo->tm_hour, timeInfo->tm_min, timeInfo->tm_sec);
                     vfprintf(file, format, args);
                     fprintf(file, "\n");
                     fclose(file);

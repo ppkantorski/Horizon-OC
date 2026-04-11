@@ -56,19 +56,19 @@ extern "C"
 
     // Ty to MasaGratoR for this!
     // This is done to save some space as they have no practical use in our case
-    __attribute__((used)) void* __real___cxa_throw(void *thrown_exception, void *pvar, void (*dest)(void *));
-    __attribute__((used)) void* __real__Unwind_Resume();
-    __attribute__((used)) void* __real___gxx_personality_v0();
+    void* __real___cxa_throw(void *thrown_exception, void *pvar, void (*dest)(void *));
+    void* __real__Unwind_Resume();
+    void* __real___gxx_personality_v0();
 
-    __attribute__((used)) void __wrap___cxa_throw(void *thrown_exception, void *pvar, void (*dest)(void *)) {
+    void __wrap___cxa_throw(void *thrown_exception, void *pvar, void (*dest)(void *)) {
         abort();
     }
 
-    __attribute__((used)) void __wrap__Unwind_Resume() {
+    void __wrap__Unwind_Resume() {
         return;
     }
 
-    __attribute__((used)) void __wrap___gxx_personality_v0() {
+    void __wrap___gxx_personality_v0() {
         return;
     }
 
