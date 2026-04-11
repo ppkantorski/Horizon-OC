@@ -268,7 +268,7 @@ namespace ams::ldr::hoc::pcv::mariko {
     Result GpuFreqMaxAsm(u32 *ptr32) {
         // Check if both two instructions match the pattern
         u32 ins1 = *ptr32, ins2 = *(ptr32 + 1);
-        if (!(asm_compare_no_rd(ins1, asm_pattern[0]) && asm_compare_no_rd(ins2, asm_pattern[1]))) {
+        if (!(asm_compare_no_rd(ins1, GpuAsmPattern[0]) && asm_compare_no_rd(ins2, GpuAsmPattern[1]))) {
             R_THROW(ldr::ResultInvalidGpuFreqMaxPattern());
         }
 
@@ -301,8 +301,8 @@ namespace ams::ldr::hoc::pcv::mariko {
         }
 
         u32 asm_patch[2] = {
-            asm_set_rd(asm_set_imm16(asm_pattern[0], max_clock), rd),
-            asm_set_rd(asm_set_imm16(asm_pattern[1], max_clock >> 16), rd)
+            asm_set_rd(asm_set_imm16(GpuAsmPattern[0], max_clock), rd),
+            asm_set_rd(asm_set_imm16(GpuAsmPattern[1], max_clock >> 16), rd)
         };
 
         PATCH_OFFSET(ptr32, asm_patch[0]);

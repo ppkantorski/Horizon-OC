@@ -173,11 +173,14 @@ namespace ams::ldr::hoc::pcv {
     void Patch(uintptr_t mapped_nso, size_t nso_size) {
         #ifdef ATMOSPHERE_IS_STRATOSPHERE
         SafetyCheck();
+
         bool isMariko = (spl::GetSocType() == spl::SocType_Mariko);
-        if (isMariko)
+        if (isMariko) {
             mariko::Patch(mapped_nso, nso_size);
-        else
+        } else {
             erista::Patch(mapped_nso, nso_size);
+        }
+
         #endif
     }
 

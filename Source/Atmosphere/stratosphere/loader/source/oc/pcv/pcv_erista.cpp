@@ -134,13 +134,19 @@ namespace ams::ldr::hoc::pcv::erista {
     Result GpuFreqMaxAsm(u32 *ptr32) {
         // Check if both two instructions match the pattern
         u32 ins1 = *ptr32, ins2 = *(ptr32 + 1);
-        if (!(asm_compare_no_rd(ins1, asm_pattern[0]) && asm_compare_no_rd(ins2, asm_pattern[1])))
+        if (!(asm_compare_no_rd(ins1, GpuAsmPattern[0]) && asm_compare_no_rd(ins2, GpuAsmPattern[1])))
             R_THROW(ldr::ResultInvalidGpuFreqMaxPattern());
 
         // Both instructions should operate on the same register
         u8 rd = asm_get_rd(ins1);
         if (rd != asm_get_rd(ins2))
             R_THROW(ldr::ResultInvalidGpuFreqMaxPattern());
+
+        /* Verify the limit. */
+        /* TODO: Make this a little bit cleaner at some point. */
+        if (AsmGetImm16(ins1) != (GpuClkOsLimit & 0xFFFF) || AsmGetImm16(ins2) != (GpuClkOsLimit >> 16)) {
+            R_THROW(ldr::ResultInvalidGpuFreqMaxPattern());
+        }
 
         u32 max_clock;
         switch (C.eristaGpuUV) {
@@ -158,8 +164,8 @@ namespace ams::ldr::hoc::pcv::erista {
             break;
         }
         u32 asm_patch[2] = {
-            asm_set_rd(asm_set_imm16(asm_pattern[0], max_clock), rd),
-            asm_set_rd(asm_set_imm16(asm_pattern[1], max_clock >> 16), rd)};
+            asm_set_rd(asm_set_imm16(GpuAsmPattern[0], max_clock), rd),
+            asm_set_rd(asm_set_imm16(GpuAsmPattern[1], max_clock >> 16), rd)};
         PATCH_OFFSET(ptr32, asm_patch[0]);
         PATCH_OFFSET(ptr32 + 1, asm_patch[1]);
 
