@@ -31,7 +31,7 @@
 #include "board.h"
 #include "clock_manager.h"
 
-#define HOCCLK_IPC_API_VERSION 1
+#define HOCCLK_IPC_API_VERSION 2
 #define HOCCLK_IPC_SERVICE_NAME "hoc:clk"
 
 enum HocClkIpcCmd

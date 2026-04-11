@@ -39,6 +39,9 @@ u32 t210ClkMemFreq(void);
 u32 t210ClkGpuFreq(void);
 u32 t210EmcLoadAll(void);
 u32 t210EmcLoadCpu(void);
+u32 t210EmcBwAll(void);
+u32 t210EmcBwCpu(void);
+u32 t210EmcBwGpu(void);
 
 #ifdef __cplusplus
 }

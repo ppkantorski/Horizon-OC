@@ -32,6 +32,9 @@ tsl::elm::ListItem* waferCordsItem = NULL;
 tsl::elm::ListItem* ramVoltItem = NULL;
 tsl::elm::ListItem* eristaPLLXItem = NULL;
 tsl::elm::ListItem* dispVoltItem = NULL;
+tsl::elm::ListItem* ramBWItemAll = NULL;
+tsl::elm::ListItem* ramBWItemCpu = NULL;
+tsl::elm::ListItem* ramBWItemGpu = NULL;
 
 ImageElement* CatImage = NULL;
 HideableCategoryHeader* CatHeader = NULL;
@@ -50,7 +53,7 @@ AboutGui::~AboutGui()
 void AboutGui::listUI()
 {
     this->listElement->addItem(
-        new tsl::elm::CategoryHeader("Voltages and Temperatures")
+        new tsl::elm::CategoryHeader("Voltages and Temps")
     );
 
     ramVoltItem =
@@ -59,7 +62,6 @@ void AboutGui::listUI()
     if(IsMariko()) {
         this->listElement->addItem(ramVoltItem);
     }
-
     dispVoltItem =
         new tsl::elm::ListItem("Display Voltage:");
     this->listElement->addItem(dispVoltItem);
@@ -69,6 +71,23 @@ void AboutGui::listUI()
     if(IsErista()) {
         this->listElement->addItem(eristaPLLXItem);
     }
+
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("RAM Bandwidth")
+    );
+    
+    ramBWItemAll =
+        new tsl::elm::ListItem("Ram BW (All):");
+    this->listElement->addItem(ramBWItemAll);
+
+    ramBWItemCpu =
+        new tsl::elm::ListItem("Ram BW (CPU):");
+    this->listElement->addItem(ramBWItemCpu);
+    
+    ramBWItemGpu =
+        new tsl::elm::ListItem("Ram BW (GPU):");
+    this->listElement->addItem(ramBWItemGpu);
+    
 
     this->listElement->addItem(
         new tsl::elm::CategoryHeader("HW Info")
@@ -345,5 +364,15 @@ void AboutGui::refresh()
     
     sprintf(strings[5], "%u.%u mV", context->voltages[HocClkVoltage_Display] / 1000U, (context->voltages[HocClkVoltage_Display] % 1000U) / 100U);
     dispVoltItem->setValue(strings[5]);
+
+    sprintf(strings[6], "%u MB/s", context->partLoad[HocClkPartLoad_RamBWAll]);
+    ramBWItemAll->setValue(strings[6]);
+
+    sprintf(strings[7], "%u MB/s", context->partLoad[HocClkPartLoad_RamBWCpu]);
+    ramBWItemCpu->setValue(strings[7]);
+
+    sprintf(strings[8], "%u MB/s", context->partLoad[HocClkPartLoad_RamBWGpu]);
+    ramBWItemGpu->setValue(strings[8]);
+
 
 }

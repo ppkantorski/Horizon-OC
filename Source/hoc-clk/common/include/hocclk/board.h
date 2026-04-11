@@ -109,6 +109,9 @@ typedef enum
     HocClkPartLoad_CPUMax,
     HocClkPartLoad_BAT,
     HocClkPartLoad_FAN,
+    HocClkPartLoad_RamBWAll,
+    HocClkPartLoad_RamBWCpu,
+    HocClkPartLoad_RamBWGpu,
     HocClkPartLoad_EnumMax
 } HocClkPartLoad;
 

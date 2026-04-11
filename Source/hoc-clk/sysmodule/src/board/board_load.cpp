@@ -120,6 +120,12 @@ namespace board {
                 return info.RawBatteryCharge;
             case HocClkPartLoad_FAN:
                 return GetFanLevel();
+            case HocClkPartLoad_RamBWAll:
+                return t210EmcBwAll();
+            case HocClkPartLoad_RamBWCpu:
+                return t210EmcBwCpu();
+            case HocClkPartLoad_RamBWGpu:
+                return t210EmcBwGpu();
             default:
                 ASSERT_ENUM_VALID(HocClkPartLoad, loadSource);
         }
