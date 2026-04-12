@@ -241,7 +241,6 @@ void BaseMenuGui::refresh()
     else if(unit == MemDisplayUnit_Both) {
         hz = context->realFreqs[HocClkModule_MEM];
         mhz = hz / 1000000U;
-        mhz * 2;
         tenth = (hz / 100000U) % 10U;
         sprintf(displayStrings[4], "%u.%u MHz", mhz, tenth);
     }
@@ -254,10 +253,10 @@ void BaseMenuGui::refresh()
     sprintf(displayStrings[6], "%u.%u MHz", hz / 1000000U, (hz / 100000U) % 10U);
 
     hz = context->realFreqs[HocClkModule_MEM]; // MEM
-    std::uint32_t unit = configList.values[HocClkConfigValue_MemDisplayUnit];
-    std::uint32_t mhz = hz / 1000000U;
-    std::uint32_t mts = mhz * 2;
-    std::uint32_t tenth = (hz / 100000U) % 10U;
+    unit = configList.values[HocClkConfigValue_MemDisplayUnit];
+    mhz = hz / 1000000U;
+    mts = mhz * 2;
+    tenth = (hz / 100000U) % 10U;
     if(unit == MemDisplayUnit_MTs || unit == MemDisplayUnit_Both)
         sprintf(displayStrings[7], "%u MT/s", mts);
     else
