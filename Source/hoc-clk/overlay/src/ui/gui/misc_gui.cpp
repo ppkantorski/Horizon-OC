@@ -953,8 +953,7 @@ protected:
 
             MemDisplayUnit unit = (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit];
             for (auto& nv : marikoMaxEmcClock)
-                if (nv.name != "Disabled")
-                    nv.name = formatMemClockKhzLabel(nv.value, unit);
+                nv.name = formatMemClockKhzLabel(nv.value, unit);
 
             addConfigButton(KipConfigValue_marikoEmcMaxClock, "Ram Max Clock", ValueRange(0, 1, 1, "", 1), "Ram Max Clock", &thresholdsDisabled, {}, marikoMaxEmcClock, false, true);
         }
@@ -1867,7 +1866,7 @@ void MiscGui::refresh() {
             auto it = this->configNamedValues.find(key);
             if (it != this->configNamedValues.end()) {
                 for (auto& nv : it->second)
-                    if (nv.value != 1600000)
+                    if(nv.name != "Disabled")
                         nv.name = formatMemClockKhzLabel(nv.value, unit);
             }
         }
