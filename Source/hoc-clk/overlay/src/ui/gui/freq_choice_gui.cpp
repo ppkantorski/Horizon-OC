@@ -57,7 +57,7 @@ tsl::elm::ListItem* FreqChoiceGui::createFreqListItem(std::uint32_t hz, bool sel
 {
     std::string text;
     if(module == HocClkModule_MEM)
-        text = formatListFreqHzMem(hz, (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit]);
+        text = formatListFreqHzMem(hz, (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit]);
     else
         text = formatListFreqHz(hz);
 

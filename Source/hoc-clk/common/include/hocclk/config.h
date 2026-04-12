@@ -261,10 +261,10 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "Display Voltage" : "display_voltage";
 
         case HocClkConfigValue_MemoryFrequencyMeasurementMode:
-            return pretty ? "Memory Frequency Measurement Mode" : "mem_freq_measurement_mode";
+            return pretty ? "RAM Frequency Measurement Mode" : "mem_freq_measurement_mode";
 
         case HocClkConfigValue_RamDisplayUnit:
-            return pretty ? "Memory Frequency Display Unit" : "mem_display_unit";
+            return pretty ? "RAM Frequency Display Unit" : "RAM_display_unit";
 
         // KIP config values
         case KipConfigValue_custRev:
