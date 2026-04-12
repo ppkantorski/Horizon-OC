@@ -28,6 +28,7 @@
 #endif
 
 #include "customize.hpp"
+#include "oc_log.hpp"
 
 #define PATCH_OFFSET(offset, value) \
     static_assert(sizeof(__typeof__(offset)) <= sizeof(u64)); \
