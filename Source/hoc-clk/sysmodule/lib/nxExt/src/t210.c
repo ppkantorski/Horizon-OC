@@ -260,8 +260,8 @@ static void _clock_update_freqs(void)
     g_emc_lall = (u64)_actmon_dev_get_count_avg(ACTMON_DEV_MC_ALL) * 10 * 100 / (emc_freq * ACTMON_PERIOD_MS);
     g_emc_lcpu = (u64)_actmon_dev_get_count_avg(ACTMON_DEV_MC_CPU) * 10 * 100 / (emc_freq * ACTMON_PERIOD_MS);
 
-    g_emc_bw_all = (u64)emc_freq * 8 * g_emc_lall / 1000 / 1000;
-    g_emc_bw_cpu = (u64)emc_freq * 8 * g_emc_lcpu / 1000 / 1000;
+    g_emc_bw_all = (u64)emc_freq * 16 * g_emc_lall / 1000000;
+    g_emc_bw_cpu = (u64)emc_freq * 16 * g_emc_lcpu / 1000000;
     g_emc_bw_gpu = g_emc_bw_all > g_emc_bw_cpu ? g_emc_bw_all - g_emc_bw_cpu : 0;
 }
 
@@ -312,4 +312,10 @@ u32 t210EmcBwGpu()
 {
     _clock_update_freqs();
     return g_emc_bw_gpu;
+}
+
+u32 t210EmcBwPeak()
+{
+    _clock_update_freqs();
+    return ((u64)g_mem_freq * 16) / 1000000;
 }

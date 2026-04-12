@@ -30,6 +30,7 @@
 #include <cstdio>
 #include <string>
 #include <cstdint>
+#include <hocclk/board.h>
 
 #define FREQ_DEFAULT_TEXT "Do not override"
 
@@ -44,4 +45,53 @@ static inline std::string formatListFreqMHz(std::uint32_t mhz)
     return std::string(buf, snprintf(buf, sizeof(buf), "%u MHz", mhz));
 }
 
-static inline std::string formatListFreqHz(std::uint32_t hz) { return formatListFreqMHz(hz / 1000000); }
+static inline std::string formatListFreqHz(uint32_t hz) { return formatListFreqMHz(hz / 1000000); }
+
+static inline std::string formatListFreqMem(uint32_t mhz, MemDisplayUnit unit)
+{
+    if(mhz == 0)
+        return FREQ_DEFAULT_TEXT;
+
+    uint32_t mts = mhz * 2;
+    char buf[24];
+    switch(unit)
+    {
+        case MemDisplayUnit_MHz:
+            snprintf(buf, sizeof(buf), "%u MHz", mhz);
+            break;
+        case MemDisplayUnit_Both:
+            snprintf(buf, sizeof(buf), "%u MHz (%u MT/s)", mhz, mts);
+            break;
+        case MemDisplayUnit_MTs:
+        default:
+            snprintf(buf, sizeof(buf), "%u MT/s", mts);
+            break;
+    }
+    return buf;
+}
+
+static inline std::string formatListFreqHzMem(uint32_t hz, MemDisplayUnit unit)
+{
+    return formatListFreqMem(hz / 1000000, unit);
+}
+
+static inline std::string formatMemClockKhzLabel(uint32_t khz, MemDisplayUnit unit)
+{
+    uint32_t mhz = khz / 1000;
+    uint32_t mts = khz / 500;
+    char buf[32];
+    switch(unit)
+    {
+        case MemDisplayUnit_MHz:
+            snprintf(buf, sizeof(buf), "%u MHz", mhz);
+            break;
+        case MemDisplayUnit_Both:
+            snprintf(buf, sizeof(buf), "%u MHz (%u MT/s)", mhz, mts);
+            break;
+        case MemDisplayUnit_MTs:
+        default:
+            snprintf(buf, sizeof(buf), "%u MT/s", mts);
+            break;
+    }
+    return buf;
+}

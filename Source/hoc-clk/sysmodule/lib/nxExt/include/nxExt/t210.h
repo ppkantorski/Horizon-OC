@@ -42,6 +42,7 @@ u32 t210EmcLoadCpu(void);
 u32 t210EmcBwAll(void);
 u32 t210EmcBwCpu(void);
 u32 t210EmcBwGpu(void);
+u32 t210EmcBwPeak(void);
 
 #ifdef __cplusplus
 }

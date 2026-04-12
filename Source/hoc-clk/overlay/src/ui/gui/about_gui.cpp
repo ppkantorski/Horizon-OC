@@ -35,6 +35,7 @@ tsl::elm::ListItem* dispVoltItem = NULL;
 tsl::elm::ListItem* ramBWItemAll = NULL;
 tsl::elm::ListItem* ramBWItemCpu = NULL;
 tsl::elm::ListItem* ramBWItemGpu = NULL;
+tsl::elm::ListItem* ramBWItemMax = NULL;
 
 ImageElement* CatImage = NULL;
 HideableCategoryHeader* CatHeader = NULL;
@@ -75,17 +76,21 @@ void AboutGui::listUI()
     this->listElement->addItem(
         new tsl::elm::CategoryHeader("RAM Bandwidth")
     );
-    
+
+    ramBWItemMax =
+        new tsl::elm::ListItem("RAM BW (Peak):");
+    this->listElement->addItem(ramBWItemMax);
+
     ramBWItemAll =
-        new tsl::elm::ListItem("Ram BW (All):");
+        new tsl::elm::ListItem("RAM BW (All):");
     this->listElement->addItem(ramBWItemAll);
 
     ramBWItemCpu =
-        new tsl::elm::ListItem("Ram BW (CPU):");
+        new tsl::elm::ListItem("RAM BW (CPU):");
     this->listElement->addItem(ramBWItemCpu);
     
     ramBWItemGpu =
-        new tsl::elm::ListItem("Ram BW (GPU):");
+        new tsl::elm::ListItem("RAM BW (GPU):");
     this->listElement->addItem(ramBWItemGpu);
     
 
@@ -374,5 +379,7 @@ void AboutGui::refresh()
     sprintf(strings[8], "%u MB/s", context->partLoad[HocClkPartLoad_RamBWGpu]);
     ramBWItemGpu->setValue(strings[8]);
 
+    sprintf(strings[9], "%u MB/s", context->partLoad[HocClkPartLoad_RamBWPeak]);
+    ramBWItemMax->setValue(strings[9]);
 
 }

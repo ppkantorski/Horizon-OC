@@ -126,6 +126,8 @@ namespace board {
                 return t210EmcBwCpu();
             case HocClkPartLoad_RamBWGpu:
                 return t210EmcBwGpu();
+            case HocClkPartLoad_RamBWPeak:
+                return t210EmcBwPeak();
             default:
                 ASSERT_ENUM_VALID(HocClkPartLoad, loadSource);
         }

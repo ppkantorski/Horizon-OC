@@ -27,6 +27,7 @@
 
 #include "base_menu_gui.h"
 #include "fatal_gui.h"
+#include "../format.h"
 
 // Cache hardware model to avoid repeated syscalls
 
@@ -229,7 +230,21 @@ void BaseMenuGui::refresh()
     sprintf(displayStrings[3], "%u.%u MHz", hz / 1000000U, (hz / 100000U) % 10U);
 
     hz = context->freqs[HocClkModule_MEM]; // MEM
-    sprintf(displayStrings[4], "%u.%u MHz", hz / 1000000U, (hz / 100000U) % 10U);
+    std::uint32_t unit = configList.values[HocClkConfigValue_MemDisplayUnit];
+    std::uint32_t mhz = hz / 1000000U;
+    std::uint32_t mts = mhz * 2;
+    std::uint32_t tenth = (hz / 100000U) % 10U;
+    if(unit == MemDisplayUnit_MTs)
+        sprintf(displayStrings[4], "%u MT/s", mts);
+    else if(unit == MemDisplayUnit_MHz)
+        sprintf(displayStrings[4], "%u.%u MHz", mhz, tenth);
+    else if(unit == MemDisplayUnit_Both) {
+        hz = context->realFreqs[HocClkModule_MEM];
+        mhz = hz / 1000000U;
+        mhz * 2;
+        tenth = (hz / 100000U) % 10U;
+        sprintf(displayStrings[4], "%u.%u MHz", mhz, tenth);
+    }
 
     // Real frequencies
     hz = context->realFreqs[HocClkModule_CPU]; // CPU
@@ -239,7 +254,14 @@ void BaseMenuGui::refresh()
     sprintf(displayStrings[6], "%u.%u MHz", hz / 1000000U, (hz / 100000U) % 10U);
 
     hz = context->realFreqs[HocClkModule_MEM]; // MEM
-    sprintf(displayStrings[7], "%u.%u MHz", hz / 1000000U, (hz / 100000U) % 10U);
+    std::uint32_t unit = configList.values[HocClkConfigValue_MemDisplayUnit];
+    std::uint32_t mhz = hz / 1000000U;
+    std::uint32_t mts = mhz * 2;
+    std::uint32_t tenth = (hz / 100000U) % 10U;
+    if(unit == MemDisplayUnit_MTs || unit == MemDisplayUnit_Both)
+        sprintf(displayStrings[7], "%u MT/s", mts);
+    else
+        sprintf(displayStrings[7], "%u.%u MHz", mhz, tenth);
 
     // Voltages
     sprintf(displayStrings[8], "%.1f mV", context->voltages[HocClkVoltage_CPU] / 1000.0);

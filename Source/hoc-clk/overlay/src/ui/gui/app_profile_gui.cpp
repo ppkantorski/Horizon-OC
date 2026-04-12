@@ -59,9 +59,11 @@ void AppProfileGui::openFreqChoiceGui(tsl::elm::ListItem* listItem, HocClkProfil
     } else if (module == HocClkModule_GPU) {
         labels = IsMariko() ? *(marikoUV[configList.values[KipConfigValue_marikoGpuUV]]) : *(eristaUV[configList.values[KipConfigValue_eristaGpuUV]]);
     }
-    tsl::changeTo<FreqChoiceGui>(this->profileList->mhzMap[profile][module] * 1000000, hzList, hzCount, module, [this, listItem, profile, module](std::uint32_t hz) {
+    MemDisplayUnit memUnit = (MemDisplayUnit)configList.values[HocClkConfigValue_MemDisplayUnit];
+    tsl::changeTo<FreqChoiceGui>(this->profileList->mhzMap[profile][module] * 1000000, hzList, hzCount, module, [this, listItem, profile, module, memUnit](std::uint32_t hz) {
         this->profileList->mhzMap[profile][module] = hz / 1000000;
-        listItem->setValue(formatListFreqMHz(this->profileList->mhzMap[profile][module]));
+        std::uint32_t mhz = this->profileList->mhzMap[profile][module];
+        listItem->setValue(module == HocClkModule_MEM ? formatListFreqMem(mhz, memUnit) : formatListFreqMHz(mhz));
         Result rc = hocclkIpcSetProfiles(this->applicationId, this->profileList);
         if(R_FAILED(rc))
         {
@@ -104,8 +106,10 @@ void AppProfileGui::openValueChoiceGui(
 void AppProfileGui::addModuleListItem(HocClkProfile profile, HocClkModule module)
 {
     tsl::elm::ListItem* listItem = new tsl::elm::ListItem(hocclkFormatModule(module, true));
-    listItem->setValue(formatListFreqMHz(this->profileList->mhzMap[profile][module]));
-    listItem->setClickListener([this, listItem, profile, module](u64 keys) {
+    MemDisplayUnit memUnit = (MemDisplayUnit)configList.values[HocClkConfigValue_MemDisplayUnit];
+    std::uint32_t mhz = this->profileList->mhzMap[profile][module];
+    listItem->setValue(module == HocClkModule_MEM ? formatListFreqMem(mhz, memUnit) : formatListFreqMHz(mhz));
+    listItem->setClickListener([this, listItem, profile, module, memUnit](u64 keys) {
         if((keys & HidNpadButton_A) == HidNpadButton_A)
         {
             this->openFreqChoiceGui(listItem, profile, module);
@@ -115,7 +119,7 @@ void AppProfileGui::addModuleListItem(HocClkProfile profile, HocClkModule module
         {
             // Reset to "Default" (0 MHz)
             this->profileList->mhzMap[profile][module] = 0;
-            listItem->setValue(formatListFreqMHz(0));
+            listItem->setValue(module == HocClkModule_MEM ? formatListFreqMem(0, memUnit) : formatListFreqMHz(0));
             
             Result rc = hocclkIpcSetProfiles(this->applicationId, this->profileList);
             if(R_FAILED(rc))

@@ -147,12 +147,17 @@ void MiscGui::addConfigButton(HocClkConfigValue configVal,
     ValueThresholds thresholdsCopy = (thresholds ? *thresholds : ValueThresholds{});
 
     listItem->setClickListener(
-        [this, configVal, range, categoryName, thresholdsCopy, labels, namedValues, showDefaultValue, kip](u64 keys)
+        [this, configVal, range, categoryName, thresholdsCopy, labels, showDefaultValue, kip](u64 keys)
         {
             if ((keys & HidNpadButton_A) == 0)
                 return false;
 
             std::uint32_t currentValue = this->configList->values[configVal];
+
+            // Look up live namedValues so relabeling in refresh() is reflected
+            auto nvIt = this->configNamedValues.find(configVal);
+            const std::vector<NamedValue>& liveNamedValues = (nvIt != this->configNamedValues.end())
+                ? nvIt->second : std::vector<NamedValue>();
 
             if (thresholdsCopy.warning != 0 || thresholdsCopy.danger != 0) {
 
@@ -176,7 +181,7 @@ void MiscGui::addConfigButton(HocClkConfigValue configVal,
                     thresholdsCopy,
                     true,
                     labels,
-                    namedValues,
+                    liveNamedValues,
                     showDefaultValue
                 );
             } else {
@@ -201,7 +206,7 @@ void MiscGui::addConfigButton(HocClkConfigValue configVal,
                     ValueThresholds(),
                     false,
                     labels,
-                    namedValues,
+                    liveNamedValues,
                     showDefaultValue
                 );
             }
@@ -260,12 +265,17 @@ void MiscGui::addConfigButtonS(HocClkConfigValue configVal,
     ValueThresholds thresholdsCopy = (thresholds ? *thresholds : ValueThresholds{});
 
     listItem->setClickListener(
-        [this, configVal, range, categoryName, thresholdsCopy, labels, namedValues, showDefaultValue, kip](u64 keys)
+        [this, configVal, range, categoryName, thresholdsCopy, labels, showDefaultValue, kip](u64 keys)
         {
             if ((keys & HidNpadButton_A) == 0)
                 return false;
 
             std::uint32_t currentValue = this->configList->values[configVal];
+
+            // Look up live namedValues so relabeling in refresh() is reflected
+            auto nvIt = this->configNamedValues.find(configVal);
+            const std::vector<NamedValue>& liveNamedValues = (nvIt != this->configNamedValues.end())
+                ? nvIt->second : std::vector<NamedValue>();
 
             if (thresholdsCopy.warning != 0 || thresholdsCopy.danger != 0) {
 
@@ -289,7 +299,7 @@ void MiscGui::addConfigButtonS(HocClkConfigValue configVal,
                     thresholdsCopy,
                     true,
                     labels,
-                    namedValues,
+                    liveNamedValues,
                     showDefaultValue
                 );
             } else {
@@ -314,7 +324,7 @@ void MiscGui::addConfigButtonS(HocClkConfigValue configVal,
                     ValueThresholds(),
                     false,
                     labels,
-                    namedValues,
+                    liveNamedValues,
                     showDefaultValue
                 );
             }
@@ -530,6 +540,22 @@ protected:
             addConfigButton(HocClkConfigValue_RAMVoltDisplayMode, "RAM Voltage Display Mode", ValueRange(0, 12, 1, "", 0), "RAM Voltage Display Mode", &thresholdsDisabled, {}, ramVoltDispModes, false);
         }
 
+        std::vector<NamedValue> memDisplayUnitValues = {
+            NamedValue("MHz", MemDisplayUnit_MHz),
+            NamedValue("MT/s", MemDisplayUnit_MTs),
+            NamedValue("Both", MemDisplayUnit_Both),
+        };
+        addConfigButton(
+            HocClkConfigValue_MemDisplayUnit,
+            "RAM Display Unit",
+            ValueRange(0, 0, 2, "", 0),
+            "RAM Display Unit",
+            &thresholdsDisabled,
+            {},
+            memDisplayUnitValues,
+            false
+            
+        );
         addConfigButton(
             HocClkConfigValue_PollingIntervalMs,
             "Polling Interval",
@@ -593,7 +619,6 @@ protected:
             ramRFMeasurementMethods,
             false
         );
-
 
         tsl::elm::CustomDrawer* chargeWarningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150 Overriding the charge current", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
@@ -865,7 +890,7 @@ protected:
             this->listElement->addItem(freqSubmenu);
         } else {
             std::vector<NamedValue> marikoMaxEmcClock = {
-                NamedValue("Disabled", 1600000),
+                NamedValue("1600 MHz", 1600000),
                 NamedValue("1633 MHz", 1633000),
                 NamedValue("1666 MHz", 1666000),
                 NamedValue("1700 MHz", 1700000),
@@ -925,6 +950,11 @@ protected:
                 // NamedValue("3466MHz (Needs ridiculous Speedo/PLL)", 3466000),
                 // NamedValue("3500MHz (Needs ridiculous Speedo/PLL)", 3500000),
             };
+
+            MemDisplayUnit unit = (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit];
+            for (auto& nv : marikoMaxEmcClock)
+                if (nv.name != "Disabled")
+                    nv.name = formatMemClockKhzLabel(nv.value, unit);
 
             addConfigButton(KipConfigValue_marikoEmcMaxClock, "Ram Max Clock", ValueRange(0, 1, 1, "", 1), "Ram Max Clock", &thresholdsDisabled, {}, marikoMaxEmcClock, false, true);
         }
@@ -1291,21 +1321,13 @@ protected:
 
         ValueThresholds thresholdsDisabled(0, 0);
         // 1600000, 1331200, 1065600, 800000, 665600, 408000, 204000
+        MemDisplayUnit unit = (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit];
 
-        tsl::elm::ListItem* ramItem665 = new tsl::elm::ListItem("665 MHz");
-        this->listElement->addItem(ramItem665);
-
-        tsl::elm::ListItem* ramItem800 = new tsl::elm::ListItem("800 MHz");
-        this->listElement->addItem(ramItem800);
-
-        tsl::elm::ListItem* ramItem1065 = new tsl::elm::ListItem("1065 MHz");
-        this->listElement->addItem(ramItem1065);
-
-        tsl::elm::ListItem* ramItem1331 = new tsl::elm::ListItem("1331 MHz");
-        this->listElement->addItem(ramItem1331);
-
-        tsl::elm::ListItem* ramItem1600 = new tsl::elm::ListItem("1600 MHz");
-        this->listElement->addItem(ramItem1600);
+        this->listElement->addItem(new tsl::elm::ListItem(formatMemClockKhzLabel(665600, unit)));
+        this->listElement->addItem(new tsl::elm::ListItem(formatMemClockKhzLabel(800000, unit)));
+        this->listElement->addItem(new tsl::elm::ListItem(formatMemClockKhzLabel(1065600, unit)));
+        this->listElement->addItem(new tsl::elm::ListItem(formatMemClockKhzLabel(1331200, unit)));
+        this->listElement->addItem(new tsl::elm::ListItem(formatMemClockKhzLabel(1600000, unit)));
 
         ValueThresholds eristaRamThresholds(2208000, 2304000);
 
@@ -1349,6 +1371,10 @@ protected:
             NamedValue("2400 MHz", 2400000, "JEDEC."),
         };
 
+        for (auto& nv : eristaMaxEmcClock)
+            if (nv.name != "Disabled")
+                nv.name = formatMemClockKhzLabel(nv.value, unit);
+                
         addConfigButtonS(KipConfigValue_eristaEmcMaxClock, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN, true);
         addConfigButtonS(KipConfigValue_eristaEmcMaxClock1, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN, true);
         addConfigButtonS(KipConfigValue_eristaEmcMaxClock2, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN, true);
@@ -1828,6 +1854,23 @@ void MiscGui::refresh() {
             return;
         }
         updateConfigToggles();
+
+        // relabel when display unit changes
+        MemDisplayUnit unit = (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit];
+        constexpr HocClkConfigValue emcKeys[] = {
+            KipConfigValue_marikoEmcMaxClock,
+            KipConfigValue_eristaEmcMaxClock,
+            KipConfigValue_eristaEmcMaxClock1,
+            KipConfigValue_eristaEmcMaxClock2,
+        };
+        for (auto key : emcKeys) {
+            auto it = this->configNamedValues.find(key);
+            if (it != this->configNamedValues.end()) {
+                for (auto& nv : it->second)
+                    if (nv.value != 1600000)
+                        nv.name = formatMemClockKhzLabel(nv.value, unit);
+            }
+        }
 
         for (const auto& [configVal, button] : this->configButtons) {
             uint64_t currentValue = this->configList->values[configVal];

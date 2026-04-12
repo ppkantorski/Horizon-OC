@@ -246,7 +246,8 @@ void GlobalOverrideGui::addModuleListItem(HocClkModule module)
 {
     tsl::elm::ListItem *listItem =
     new tsl::elm::ListItem(hocclkFormatModule(module, true));
-    listItem->setValue(formatListFreqMHz(0));
+    MemDisplayUnit memUnit = (MemDisplayUnit)configList.values[HocClkConfigValue_MemDisplayUnit];
+    listItem->setValue(module == HocClkModule_MEM ? formatListFreqMem(0, memUnit) : formatListFreqMHz(0));
     listItem->setClickListener([this, module](u64 keys) {
         if ((keys & HidNpadButton_A) == HidNpadButton_A) {
             this->openFreqChoiceGui(module);
@@ -262,7 +263,7 @@ void GlobalOverrideGui::addModuleListItem(HocClkModule module)
             this->context->overrideFreqs[module] = 0;
             this->listHz[module] = 0;
 
-            this->listItems[module]->setValue(formatListFreqHz(0));
+            this->listItems[module]->setValue(module == HocClkModule_MEM ? formatListFreqMem(0, (MemDisplayUnit)configList.values[HocClkConfigValue_MemDisplayUnit]) : formatListFreqHz(0));
 
             return true;
         }
@@ -409,7 +410,9 @@ void GlobalOverrideGui::refresh()
                 }
             } else {
                 this->listItems[m]->setValue(
-                    formatListFreqHz(this->context->overrideFreqs[m]));
+                    m == HocClkModule_MEM
+                        ? formatListFreqHzMem(this->context->overrideFreqs[m], (MemDisplayUnit)configList.values[HocClkConfigValue_MemDisplayUnit])
+                        : formatListFreqHz(this->context->overrideFreqs[m]));
             }
             
             this->listHz[m] = this->context->overrideFreqs[m];

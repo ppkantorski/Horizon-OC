@@ -55,10 +55,11 @@ FreqChoiceGui::~FreqChoiceGui()
 
 tsl::elm::ListItem* FreqChoiceGui::createFreqListItem(std::uint32_t hz, bool selected, int safety)
 {
-    std::string text = formatListFreqHz(hz);
-
-    if(module == HocClkModule_MEM && hz != 0)
-        text += " (" + std::to_string(hz / 500000) + " MT/s)";
+    std::string text;
+    if(module == HocClkModule_MEM)
+        text = formatListFreqHzMem(hz, (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit]);
+    else
+        text = formatListFreqHz(hz);
 
     std::string rightText = "";
     auto it = labels.find(hz);

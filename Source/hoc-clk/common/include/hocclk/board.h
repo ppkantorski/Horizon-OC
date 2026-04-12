@@ -112,6 +112,7 @@ typedef enum
     HocClkPartLoad_RamBWAll,
     HocClkPartLoad_RamBWCpu,
     HocClkPartLoad_RamBWGpu,
+    HocClkPartLoad_RamBWPeak,
     HocClkPartLoad_EnumMax
 } HocClkPartLoad;
 
@@ -166,6 +167,13 @@ typedef enum {
     MemoryFrequencyMeasurementMode_PLL,
     MemoryFrequencyMeasurementMode_EnumMax,
 } MemoryFrequencyMeasurementMode;
+
+typedef enum {
+    MemDisplayUnit_MHz = 0,
+    MemDisplayUnit_MTs,
+    MemDisplayUnit_Both,
+    MemDisplayUnit_EnumMax,
+} MemDisplayUnit;
 
 #define HOCCLK_ENUM_VALID(n, v) ((v) < n##_EnumMax)
 

@@ -41,6 +41,7 @@ protected:
     std::map<HocClkConfigValue, std::tuple<tsl::elm::TrackBar*, tsl::elm::ListItem*, std::vector<uint64_t>>> configTrackbars;
     std::set<HocClkConfigValue> configButtonSKeys;
     std::map<HocClkConfigValue, std::string> configButtonSSubtext;
+    std::set<HocClkConfigValue> emcClockConfigs;
     
     void addConfigToggle(HocClkConfigValue configVal, const char* altName, bool kip = false);
     void addConfigButton(HocClkConfigValue configVal,
