@@ -364,6 +364,30 @@ public:
 						    if (settings.realTemps) {
 								width += renderer->getTextDimensions(" 888.8°C", false, fontsize).first;
 							}
+                    } else if (key == "RAM" && settings.ramInfoMode == "Bandwidth" && R_SUCCEEDED(hocclkCheck)) {
+                        width = renderer->getTextDimensions("99.9GB/s@4444.4", false, fontsize).first;
+                        if (settings.realVolts) {
+                            if (isMariko) {
+                                if (settings.showVDD2 && settings.decimalVDD2 && settings.showVDDQ)
+                                    width += renderer->getTextDimensions("4444.4444 mV4444 mV", false, fontsize).first;
+                                else if (settings.showVDD2 && !settings.decimalVDD2 && settings.showVDDQ)
+                                    width += renderer->getTextDimensions("4444 mV4444 mV", false, fontsize).first;
+                                else if (settings.showVDD2 && settings.decimalVDD2)
+                                    width += renderer->getTextDimensions("4444.4444 mV", false, fontsize).first;
+                                else if (settings.showVDD2 && !settings.decimalVDD2)
+                                    width += renderer->getTextDimensions("4444 mV", false, fontsize).first;
+                                else if (settings.showVDDQ)
+                                    width += renderer->getTextDimensions("4444 mV", false, fontsize).first;
+                            } else {
+                                if (settings.decimalVDD2)
+                                    width += renderer->getTextDimensions("4444.4444 mV", false, fontsize).first;
+                                else
+                                    width += renderer->getTextDimensions("4444 mV", false, fontsize).first;
+                            }
+                        }
+                        if (settings.realTemps) {
+                            width += renderer->getTextDimensions(" 88.8°C", false, fontsize).first;
+                        }
                     } else if (key == "GPU" || (key == "RAM" && settings.showpartLoad && R_SUCCEEDED(hocclkCheck))) {
                         //dimensions = renderer->drawString("100.0%@4444.4", false, 0, 0, fontsize, renderer->a(0x0000));
 
@@ -1142,53 +1166,64 @@ public:
                              RAM_Hz / 1000000, (RAM_Hz / 100000) % 10);
                 }
             } else {
-                unsigned partLoadInt;
-
-                if (R_SUCCEEDED(hocclkCheck)) {
-                    partLoadInt = partLoad[HocClkPartLoad_EMC] / 10;
-
-                    if (settings.showpartLoadCPUGPU) {
-                        unsigned ramCpuLoadInt = partLoad[HocClkPartLoad_EMCCpu] / 10;
-                        int RAM_GPU_Load = partLoad[HocClkPartLoad_EMC] - partLoad[HocClkPartLoad_EMCCpu];
-                        unsigned ramGpuLoadInt = RAM_GPU_Load / 10;
-
-                        if (settings.realFrequencies && realRAM_Hz) {
-                            snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
-                                     "%u%%[%u%%,%u%%]@%hu.%hhu",
-                                     partLoadInt, ramCpuLoadInt, ramGpuLoadInt,
-                                     realRAM_Hz / 1000000, (realRAM_Hz / 100000) % 10);
-                        } else {
-                            snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
-                                     "%u%%[%u%%,%u%%]@%hu.%hhu",
-                                     partLoadInt, ramCpuLoadInt, ramGpuLoadInt,
-                                     RAM_Hz / 1000000, (RAM_Hz / 100000) % 10);
-                        }
-                    } else {
-                        if (settings.realFrequencies && realRAM_Hz) {
-                            snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
-                                     "%u%%@%hu.%hhu", partLoadInt,
-                                     realRAM_Hz / 1000000, (realRAM_Hz / 100000) % 10);
-                        } else {
-                            snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
-                                     "%u%%@%hu.%hhu", partLoadInt,
-                                     RAM_Hz / 1000000, (RAM_Hz / 100000) % 10);
-                        }
-                    }
+                if (settings.ramInfoMode == "Bandwidth" && R_SUCCEEDED(hocclkCheck)) {
+                    // Bandwidth mode: show GB/s from context (partLoad values are in MB/s)
+                    const uint32_t ramFreq = settings.realFrequencies && realRAM_Hz ? realRAM_Hz : RAM_Hz;
+                    const unsigned bwAll  = partLoad[HocClkPartLoad_RamBWAll]  / 1000;
+                    const unsigned bwAllD = (partLoad[HocClkPartLoad_RamBWAll]  % 1000) / 100;
+                    snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
+                             "%u.%uGB/s@%hu.%hhu",
+                             bwAll, bwAllD,
+                             ramFreq / 1000000, (ramFreq / 100000) % 10);
                 } else {
-                    const uint64_t RAM_Total_all = RAM_Total_application_u + RAM_Total_applet_u +
-                                                   RAM_Total_system_u + RAM_Total_systemunsafe_u;
-                    const uint64_t RAM_Used_all = RAM_Used_application_u + RAM_Used_applet_u +
-                                                  RAM_Used_system_u + RAM_Used_systemunsafe_u;
-                    partLoadInt = (RAM_Total_all > 0) ? (unsigned)((RAM_Used_all * 100) / RAM_Total_all) : 0;
+                    unsigned partLoadInt;
 
-                    if (settings.realFrequencies && realRAM_Hz) {
-                        snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
-                                 "%u%%@%hu.%hhu", partLoadInt,
-                                 realRAM_Hz / 1000000, (realRAM_Hz / 100000) % 10);
+                    if (R_SUCCEEDED(hocclkCheck)) {
+                        partLoadInt = partLoad[HocClkPartLoad_EMC] / 10;
+
+                        if (settings.showpartLoadCPUGPU) {
+                            unsigned ramCpuLoadInt = partLoad[HocClkPartLoad_EMCCpu] / 10;
+                            int RAM_GPU_Load = partLoad[HocClkPartLoad_EMC] - partLoad[HocClkPartLoad_EMCCpu];
+                            unsigned ramGpuLoadInt = RAM_GPU_Load / 10;
+
+                            if (settings.realFrequencies && realRAM_Hz) {
+                                snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
+                                         "%u%%[%u%%,%u%%]@%hu.%hhu",
+                                         partLoadInt, ramCpuLoadInt, ramGpuLoadInt,
+                                         realRAM_Hz / 1000000, (realRAM_Hz / 100000) % 10);
+                            } else {
+                                snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
+                                         "%u%%[%u%%,%u%%]@%hu.%hhu",
+                                         partLoadInt, ramCpuLoadInt, ramGpuLoadInt,
+                                         RAM_Hz / 1000000, (RAM_Hz / 100000) % 10);
+                            }
+                        } else {
+                            if (settings.realFrequencies && realRAM_Hz) {
+                                snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
+                                         "%u%%@%hu.%hhu", partLoadInt,
+                                         realRAM_Hz / 1000000, (realRAM_Hz / 100000) % 10);
+                            } else {
+                                snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
+                                         "%u%%@%hu.%hhu", partLoadInt,
+                                         RAM_Hz / 1000000, (RAM_Hz / 100000) % 10);
+                            }
+                        }
                     } else {
-                        snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
-                                 "%u%%@%hu.%hhu", partLoadInt,
-                                 RAM_Hz / 1000000, (RAM_Hz / 100000) % 10);
+                        const uint64_t RAM_Total_all = RAM_Total_application_u + RAM_Total_applet_u +
+                                                       RAM_Total_system_u + RAM_Total_systemunsafe_u;
+                        const uint64_t RAM_Used_all = RAM_Used_application_u + RAM_Used_applet_u +
+                                                      RAM_Used_system_u + RAM_Used_systemunsafe_u;
+                        partLoadInt = (RAM_Total_all > 0) ? (unsigned)((RAM_Used_all * 100) / RAM_Total_all) : 0;
+
+                        if (settings.realFrequencies && realRAM_Hz) {
+                            snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
+                                     "%u%%@%hu.%hhu", partLoadInt,
+                                     realRAM_Hz / 1000000, (realRAM_Hz / 100000) % 10);
+                        } else {
+                            snprintf(MINI_RAM_var_compressed_c, sizeof(MINI_RAM_var_compressed_c),
+                                     "%u%%@%hu.%hhu", partLoadInt,
+                                     RAM_Hz / 1000000, (RAM_Hz / 100000) % 10);
+                        }
                     }
                 }
             }

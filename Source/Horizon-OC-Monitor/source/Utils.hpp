@@ -583,8 +583,12 @@ void Misc(void*) {
                 realCPU_Hz = hocclkCTX.realFreqs[HocClkModule_CPU];
                 realGPU_Hz = hocclkCTX.realFreqs[HocClkModule_GPU];
                 realRAM_Hz = hocclkCTX.realFreqs[HocClkModule_MEM];
-                partLoad[HocClkPartLoad_EMC] = hocclkCTX.partLoad[HocClkPartLoad_EMC];
-                partLoad[HocClkPartLoad_EMCCpu] = hocclkCTX.partLoad[HocClkPartLoad_EMCCpu];
+                partLoad[HocClkPartLoad_EMC]       = hocclkCTX.partLoad[HocClkPartLoad_EMC];
+                partLoad[HocClkPartLoad_EMCCpu]    = hocclkCTX.partLoad[HocClkPartLoad_EMCCpu];
+                partLoad[HocClkPartLoad_RamBWAll]  = hocclkCTX.partLoad[HocClkPartLoad_RamBWAll];
+                partLoad[HocClkPartLoad_RamBWCpu]  = hocclkCTX.partLoad[HocClkPartLoad_RamBWCpu];
+                partLoad[HocClkPartLoad_RamBWGpu]  = hocclkCTX.partLoad[HocClkPartLoad_RamBWGpu];
+                partLoad[HocClkPartLoad_RamBWPeak] = hocclkCTX.partLoad[HocClkPartLoad_RamBWPeak];
 				realCPU_Temp = hocclkCTX.temps[HocClkThermalSensor_CPU];
 				realGPU_Temp = hocclkCTX.temps[HocClkThermalSensor_GPU];
 				realPLLX_Temp = hocclkCTX.temps[HocClkThermalSensor_PLLX];
@@ -714,8 +718,12 @@ void Misc3(void*) {
         if (R_SUCCEEDED(hocclkCheck)) {
             HocClkContext hocclkCTX;
             if (R_SUCCEEDED(hocclkIpcGetCurrentContext(&hocclkCTX))) {
-                partLoad[HocClkPartLoad_EMC] = hocclkCTX.partLoad[HocClkPartLoad_EMC];
-                partLoad[HocClkPartLoad_EMCCpu] = hocclkCTX.partLoad[HocClkPartLoad_EMCCpu];
+                partLoad[HocClkPartLoad_EMC]       = hocclkCTX.partLoad[HocClkPartLoad_EMC];
+                partLoad[HocClkPartLoad_EMCCpu]    = hocclkCTX.partLoad[HocClkPartLoad_EMCCpu];
+                partLoad[HocClkPartLoad_RamBWAll]  = hocclkCTX.partLoad[HocClkPartLoad_RamBWAll];
+                partLoad[HocClkPartLoad_RamBWCpu]  = hocclkCTX.partLoad[HocClkPartLoad_RamBWCpu];
+                partLoad[HocClkPartLoad_RamBWGpu]  = hocclkCTX.partLoad[HocClkPartLoad_RamBWGpu];
+                partLoad[HocClkPartLoad_RamBWPeak] = hocclkCTX.partLoad[HocClkPartLoad_RamBWPeak];
 
 				realCPU_Temp = hocclkCTX.temps[HocClkThermalSensor_CPU];
 				realGPU_Temp = hocclkCTX.temps[HocClkThermalSensor_GPU];
@@ -1274,6 +1282,7 @@ struct FullSettings {
     bool showFPS;
     bool showRES;
     bool showRDSD;
+    std::string ramInfoMode;
     bool useDynamicColors;
     bool disableScreenshots;
     uint16_t separatorColor;
@@ -1309,6 +1318,7 @@ struct MiniSettings {
     std::string show;
     bool showpartLoad;
     bool showpartLoadCPUGPU;
+    std::string ramInfoMode;
     bool invertBatteryDisplay;
     bool disableScreenshots;
     bool sleepExit;
@@ -1343,6 +1353,7 @@ struct MicroSettings {
     uint16_t textColor;
     std::string show;
     bool showpartLoad;
+    std::string ramInfoMode;
     bool setPosBottom;
     bool disableScreenshots;
     bool sleepExit;
@@ -1430,6 +1441,7 @@ ALWAYS_INLINE void GetConfigSettings(MiniSettings* settings) {
     settings->show = "DTC+BAT+CPU+GPU+RAM+TMP+FPS+RES";
     settings->showpartLoad = true;
     settings->showpartLoadCPUGPU = false;
+    settings->ramInfoMode = "LOAD";
     settings->invertBatteryDisplay = true;
     settings->refreshRate = 1;
     settings->disableScreenshots = false;
@@ -1639,6 +1651,12 @@ ALWAYS_INLINE void GetConfigSettings(MiniSettings* settings) {
         settings->showpartLoadCPUGPU = (key != "FALSE");
     }
 
+    // Process RAM info mode
+    it = section.find("ram_info_mode");
+    if (it != section.end()) {
+        settings->ramInfoMode = it->second;
+    }
+
     // Invert the battery display value
     it = section.find("invert_battery_display");
     if (it != section.end()) {
@@ -1727,6 +1745,7 @@ ALWAYS_INLINE void GetConfigSettings(MicroSettings* settings) {
     convertStrToRGBA4444("#FFFF", &(settings->textColor));
     settings->show = "FPS+CPU+GPU+RAM+SOC+BAT+DTC";
     settings->showpartLoad = true;
+    settings->ramInfoMode = "LOAD";
     settings->setPosBottom = false;
     settings->disableScreenshots = false;
     settings->sleepExit = false;
@@ -1924,6 +1943,12 @@ ALWAYS_INLINE void GetConfigSettings(MicroSettings* settings) {
         key = it->second;
         convertToUpper(key);
         settings->showpartLoad = (key != "FALSE");
+    }
+
+    // Process RAM info mode
+    it = section.find("ram_info_mode");
+    if (it != section.end()) {
+        settings->ramInfoMode = it->second;
     }
 
     // Process show string
@@ -2257,6 +2282,7 @@ ALWAYS_INLINE void GetConfigSettings(FullSettings* settings) {
     settings->showFPS = true;
     settings->showRES = true;
     settings->showRDSD = true;
+    settings->ramInfoMode = "LOAD";
     settings->useDynamicColors = true;
     settings->disableScreenshots = false;
     convertStrToRGBA4444("#888F", &(settings->separatorColor));
@@ -2350,6 +2376,11 @@ ALWAYS_INLINE void GetConfigSettings(FullSettings* settings) {
         key = it->second;
         convertToUpper(key);
         settings->showRDSD = !(key == "FALSE");
+    }
+
+    it = section.find("ram_info_mode");
+    if (it != section.end()) {
+        settings->ramInfoMode = it->second;
     }
 
     it = section.find("use_dynamic_colors");

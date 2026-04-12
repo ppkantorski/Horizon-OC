@@ -377,6 +377,21 @@ public:
             });
             list->addItem(showRDSD);
 
+            {
+                const std::string curRamInfoMode = getCurrentRamInfoMode("full");
+                auto* ramInfoModeItem = new tsl::elm::ListItem("RAM Info Mode");
+                ramInfoModeItem->setValue(curRamInfoMode);
+                ramInfoModeItem->setClickListener([this, ramInfoModeItem](u64 keys) -> bool {
+                    if (!(keys & KEY_A)) return false;
+                    const std::string cur = ult::parseValueFromIniSection(configIniPath, "full", "ram_info_mode");
+                    const std::string next = cur == "Bandwidth" ? "Load" : "Bandwidth";
+                    ult::setIniFileValue(configIniPath, "full", "ram_info_mode", next);
+                    ramInfoModeItem->setValue(next);
+                    return true;
+                });
+                list->addItem(ramInfoModeItem);
+            }
+
             auto* dynamicColors = new tsl::elm::ToggleListItem("Use Dynamic Colors", getCurrentUseDynamicColors());
             dynamicColors->setStateChangedListener([this](bool state) {
                 ult::setIniFileValue(configIniPath, "fps-graph", "use_dynamic_colors", state ? "true" : "false");
@@ -447,6 +462,21 @@ public:
                     ult::setIniFileValue(configIniPath, section, "show_RAM_load_CPU_GPU", state ? "true" : "false");
                 });
                 list->addItem(partLoadCPUGPU);
+            }
+
+            if (isMiniMode || isMicroMode) {
+                const std::string curRamInfoMode = getCurrentRamInfoMode(section);
+                auto* ramInfoModeItem = new tsl::elm::ListItem("RAM Info Mode");
+                ramInfoModeItem->setValue(curRamInfoMode);
+                ramInfoModeItem->setClickListener([this, section, ramInfoModeItem](u64 keys) -> bool {
+                    if (!(keys & KEY_A)) return false;
+                    const std::string cur = ult::parseValueFromIniSection(configIniPath, section, "ram_info_mode");
+                    const std::string next = cur == "Bandwidth" ? "Load" : "Bandwidth";
+                    ult::setIniFileValue(configIniPath, section, "ram_info_mode", next);
+                    ramInfoModeItem->setValue(next);
+                    return true;
+                });
+                list->addItem(ramInfoModeItem);
             }
 
             if (isMiniMode || isMicroMode) {
@@ -614,6 +644,11 @@ private:
         if (value.empty()) return false; // Default: false for mini, true for micro
         convertToUpper(value);
         return value != "FALSE";
+    }
+
+    std::string getCurrentRamInfoMode(const std::string& section) {
+        const std::string value = ult::parseValueFromIniSection(configIniPath, section, "ram_info_mode");
+        return (value == "Bandwidth") ? "Bandwidth" : "Load";
     }
 
     bool getCurrentInvertBatteryDisplay() {

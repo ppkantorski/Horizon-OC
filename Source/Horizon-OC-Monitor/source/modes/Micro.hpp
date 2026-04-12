@@ -955,6 +955,11 @@ public:
             const float RAM_Total_all_f = (RAM_Total_application_u + RAM_Total_applet_u + RAM_Total_system_u + RAM_Total_systemunsafe_u) / (1024.0f * 1024.0f * 1024.0f);
             const float RAM_Used_all_f = (RAM_Used_application_u + RAM_Used_applet_u + RAM_Used_system_u + RAM_Used_systemunsafe_u) / (1024.0f * 1024.0f * 1024.0f);
             snprintf(MICRO_RAM_all_c, sizeof(MICRO_RAM_all_c), "%.0f%.0fGB", RAM_Used_all_f, RAM_Total_all_f);
+        } else if (settings.ramInfoMode == "Bandwidth" && R_SUCCEEDED(hocclkCheck)) {
+            // Bandwidth mode: show GB/s from context (partLoad values are in MB/s)
+            const unsigned bwAll  = partLoad[HocClkPartLoad_RamBWAll] / 1000;
+            const unsigned bwAllD = (partLoad[HocClkPartLoad_RamBWAll] % 1000) / 100;
+            snprintf(MICRO_RAM_all_c, sizeof(MICRO_RAM_all_c), "%u.%uG", bwAll, bwAllD);
         } else {
             // User wants percentage display
             if (R_SUCCEEDED(hocclkCheck)) {

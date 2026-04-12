@@ -26,6 +26,7 @@ private:
     char BatteryDraw_c[64] = "";
     char FPS_var_compressed_c[64] = "";
     char RAM_load_c[64] = "";
+    char RAM_load2_c[64] = "";
     char Resolutions_c[64] = "";
     char readSpeed_c[32] = "";
     
@@ -237,17 +238,24 @@ public:
                         renderer->drawString(DeltaRAM_c, false, COMMON_MARGIN +  deltaOffset, height_offset, 15, (settings.textColor));
                     }
                     if (R_SUCCEEDED(hocclkCheck)) {
-                        static std::vector<std::string> partLoadColoredChars = {"CPU", "GPU"};
-                        //static auto loadLabelWidth = renderer->getTextDimensions("Load: ", false, 15).first;
-                        renderer->drawString("Load", false, COMMON_MARGIN, height_offset+15, 15, (settings.catColor2));
-                        renderer->drawStringWithColoredSections(RAM_load_c, false, partLoadColoredChars, COMMON_MARGIN + valueOffset, height_offset+15, 15, (settings.textColor), settings.catColor2);
+                        if (settings.ramInfoMode == "Bandwidth") {
+                            static std::vector<std::string> bwTotalColoredChars = {"Total", "Peak"};
+                            static std::vector<std::string> bwCpuColoredChars   = {"CPU", "GPU"};
+                            renderer->drawStringWithColoredSections(RAM_load_c,  false, bwTotalColoredChars, COMMON_MARGIN, height_offset+15, 15, (settings.textColor), settings.catColor2);
+                            renderer->drawStringWithColoredSections(RAM_load2_c, false, bwCpuColoredChars,   COMMON_MARGIN, height_offset+30, 15, (settings.textColor), settings.catColor2);
+                        } else {
+                            static std::vector<std::string> partLoadColoredChars = {"CPU", "GPU"};
+                            renderer->drawString("Load", false, COMMON_MARGIN, height_offset+15, 15, (settings.catColor2));
+                            renderer->drawStringWithColoredSections(RAM_load_c, false, partLoadColoredChars, COMMON_MARGIN + valueOffset, height_offset+15, 15, (settings.textColor), settings.catColor2);
+                        }
                     }
                 }
                 if (R_SUCCEEDED(Hinted)) {
+                    const uint32_t ramUsageOffset = (R_SUCCEEDED(hocclkCheck) && settings.ramInfoMode == "Bandwidth") ? height_offset + 50 : height_offset + 40;
                     //static auto textWidth = renderer->getTextDimensions("Total \nApplication \nApplet \nSystem \nSystem Unsafe ", false, 15).first;
-                    renderer->drawString("Total\nApplication\nApplet\nSystem\nSystem Unsafe", false, COMMON_MARGIN, height_offset + 40, 15, (settings.catColor2));
-                    renderer->drawString(RAM_var_compressed_c, false, COMMON_MARGIN + valueOffset, height_offset + 40, 15, (settings.textColor));
-                    renderer->drawString(RAM_percentage_var_compressed_c, false, ramPercentageOffset, height_offset + 40, 15, (settings.textColor));
+                    renderer->drawString("Total\nApplication\nApplet\nSystem\nSystem Unsafe", false, COMMON_MARGIN, ramUsageOffset, 15, (settings.catColor2));
+                    renderer->drawString(RAM_var_compressed_c, false, COMMON_MARGIN + valueOffset, ramUsageOffset, 15, (settings.textColor));
+                    renderer->drawString(RAM_percentage_var_compressed_c, false, ramPercentageOffset, ramUsageOffset, 15, (settings.textColor));
                 }
             }
             
@@ -484,12 +492,29 @@ public:
         );
         
         if (R_SUCCEEDED(hocclkCheck)) {
-            const int RAM_GPU_Load = partLoad[HocClkPartLoad_EMC] - partLoad[HocClkPartLoad_EMCCpu];
-            snprintf(RAM_load_c, sizeof RAM_load_c, 
-                "%u.%u%%    CPU  %u.%u%%   GPU  %u.%u%%",
-                partLoad[HocClkPartLoad_EMC] / 10, partLoad[HocClkPartLoad_EMC] % 10,
-                partLoad[HocClkPartLoad_EMCCpu] / 10, partLoad[HocClkPartLoad_EMCCpu] % 10,
-                RAM_GPU_Load / 10, RAM_GPU_Load % 10);
+            if (settings.ramInfoMode == "Bandwidth") {
+                const unsigned bwAll  = partLoad[HocClkPartLoad_RamBWAll]  / 1000;
+                const unsigned bwAllD = (partLoad[HocClkPartLoad_RamBWAll]  % 1000) / 100;
+                const unsigned bwPeak = partLoad[HocClkPartLoad_RamBWPeak] / 1000;
+                const unsigned bwPeakD= (partLoad[HocClkPartLoad_RamBWPeak]% 1000) / 100;
+                const unsigned bwCpu  = partLoad[HocClkPartLoad_RamBWCpu]  / 1000;
+                const unsigned bwCpuD = (partLoad[HocClkPartLoad_RamBWCpu]  % 1000) / 100;
+                const unsigned bwGpu  = partLoad[HocClkPartLoad_RamBWGpu]  / 1000;
+                const unsigned bwGpuD = (partLoad[HocClkPartLoad_RamBWGpu]  % 1000) / 100;
+                snprintf(RAM_load_c, sizeof RAM_load_c,
+                    "Total  %u.%u GB/s   Peak  %u.%u GB/s",
+                    bwAll, bwAllD, bwPeak, bwPeakD);
+                snprintf(RAM_load2_c, sizeof RAM_load2_c,
+                    "CPU  %u.%u GB/s   GPU  %u.%u GB/s",
+                    bwCpu, bwCpuD, bwGpu, bwGpuD);
+            } else {
+                const int RAM_GPU_Load = partLoad[HocClkPartLoad_EMC] - partLoad[HocClkPartLoad_EMCCpu];
+                snprintf(RAM_load_c, sizeof RAM_load_c,
+                    "%u.%u%%    CPU  %u.%u%%   GPU  %u.%u%%",
+                    partLoad[HocClkPartLoad_EMC] / 10, partLoad[HocClkPartLoad_EMC] % 10,
+                    partLoad[HocClkPartLoad_EMCCpu] / 10, partLoad[HocClkPartLoad_EMCCpu] % 10,
+                    RAM_GPU_Load / 10, RAM_GPU_Load % 10);
+            }
         }
         ///Thermal
         snprintf(SOC_temperature_c, sizeof SOC_temperature_c, "%.1f\u00B0C", SOC_temperatureF);
