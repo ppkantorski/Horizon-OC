@@ -540,19 +540,19 @@ protected:
             addConfigButton(HocClkConfigValue_RAMVoltDisplayMode, "RAM Voltage Display Mode", ValueRange(0, 12, 1, "", 0), "RAM Voltage Display Mode", &thresholdsDisabled, {}, ramVoltDispModes, false);
         }
 
-        std::vector<NamedValue> memDisplayUnitValues = {
-            NamedValue("MHz", MemDisplayUnit_MHz),
-            NamedValue("MT/s", MemDisplayUnit_MTs),
-            NamedValue("Both", MemDisplayUnit_Both),
+        std::vector<NamedValue> RamDisplayUnitValues = {
+            NamedValue("MHz", RamDisplayUnit_MHz),
+            NamedValue("MT/s", RamDisplayUnit_MTs),
+            NamedValue("MHz and MT/s", RamDisplayUnit_MHzMTs),
         };
         addConfigButton(
-            HocClkConfigValue_MemDisplayUnit,
+            HocClkConfigValue_RamDisplayUnit,
             "RAM Display Unit",
             ValueRange(0, 0, 2, "", 0),
             "RAM Display Unit",
             &thresholdsDisabled,
             {},
-            memDisplayUnitValues,
+            RamDisplayUnitValues,
             false
             
         );
@@ -951,7 +951,7 @@ protected:
                 // NamedValue("3500MHz (Needs ridiculous Speedo/PLL)", 3500000),
             };
 
-            MemDisplayUnit unit = (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit];
+            RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
             for (auto& nv : marikoMaxEmcClock)
                 nv.name = formatMemClockKhzLabel(nv.value, unit);
 
@@ -1320,7 +1320,7 @@ protected:
 
         ValueThresholds thresholdsDisabled(0, 0);
         // 1600000, 1331200, 1065600, 800000, 665600, 408000, 204000
-        MemDisplayUnit unit = (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit];
+        RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
 
         this->listElement->addItem(new tsl::elm::ListItem(formatMemClockKhzLabel(665600, unit)));
         this->listElement->addItem(new tsl::elm::ListItem(formatMemClockKhzLabel(800000, unit)));
@@ -1855,7 +1855,7 @@ void MiscGui::refresh() {
         updateConfigToggles();
 
         // relabel when display unit changes
-        MemDisplayUnit unit = (MemDisplayUnit)this->configList->values[HocClkConfigValue_MemDisplayUnit];
+        RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
         constexpr HocClkConfigValue emcKeys[] = {
             KipConfigValue_marikoEmcMaxClock,
             KipConfigValue_eristaEmcMaxClock,

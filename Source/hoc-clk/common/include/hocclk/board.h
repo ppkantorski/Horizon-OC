@@ -169,11 +169,11 @@ typedef enum {
 } MemoryFrequencyMeasurementMode;
 
 typedef enum {
-    MemDisplayUnit_MHz = 0,
-    MemDisplayUnit_MTs,
-    MemDisplayUnit_Both,
-    MemDisplayUnit_EnumMax,
-} MemDisplayUnit;
+    RamDisplayUnit_MHz = 0,
+    RamDisplayUnit_MTs,
+    RamDisplayUnit_MHzMTs,
+    RamDisplayUnit_EnumMax,
+} RamDisplayUnit;
 
 #define HOCCLK_ENUM_VALID(n, v) ((v) < n##_EnumMax)
 

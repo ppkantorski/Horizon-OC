@@ -59,7 +59,7 @@ void AppProfileGui::openFreqChoiceGui(tsl::elm::ListItem* listItem, HocClkProfil
     } else if (module == HocClkModule_GPU) {
         labels = IsMariko() ? *(marikoUV[configList.values[KipConfigValue_marikoGpuUV]]) : *(eristaUV[configList.values[KipConfigValue_eristaGpuUV]]);
     }
-    MemDisplayUnit memUnit = (MemDisplayUnit)configList.values[HocClkConfigValue_MemDisplayUnit];
+    RamDisplayUnit memUnit = (RamDisplayUnit)configList.values[HocClkConfigValue_RamDisplayUnit];
     tsl::changeTo<FreqChoiceGui>(this->profileList->mhzMap[profile][module] * 1000000, hzList, hzCount, module, [this, listItem, profile, module, memUnit](std::uint32_t hz) {
         this->profileList->mhzMap[profile][module] = hz / 1000000;
         std::uint32_t mhz = this->profileList->mhzMap[profile][module];
@@ -106,7 +106,7 @@ void AppProfileGui::openValueChoiceGui(
 void AppProfileGui::addModuleListItem(HocClkProfile profile, HocClkModule module)
 {
     tsl::elm::ListItem* listItem = new tsl::elm::ListItem(hocclkFormatModule(module, true));
-    MemDisplayUnit memUnit = (MemDisplayUnit)configList.values[HocClkConfigValue_MemDisplayUnit];
+    RamDisplayUnit memUnit = (RamDisplayUnit)configList.values[HocClkConfigValue_RamDisplayUnit];
     std::uint32_t mhz = this->profileList->mhzMap[profile][module];
     listItem->setValue(module == HocClkModule_MEM ? formatListFreqMem(mhz, memUnit) : formatListFreqMHz(mhz));
     listItem->setClickListener([this, listItem, profile, module, memUnit](u64 keys) {

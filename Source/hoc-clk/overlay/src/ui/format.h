@@ -47,7 +47,7 @@ static inline std::string formatListFreqMHz(std::uint32_t mhz)
 
 static inline std::string formatListFreqHz(uint32_t hz) { return formatListFreqMHz(hz / 1000000); }
 
-static inline std::string formatListFreqMem(uint32_t mhz, MemDisplayUnit unit)
+static inline std::string formatListFreqMem(uint32_t mhz, RamDisplayUnit unit)
 {
     if(mhz == 0)
         return FREQ_DEFAULT_TEXT;
@@ -56,13 +56,13 @@ static inline std::string formatListFreqMem(uint32_t mhz, MemDisplayUnit unit)
     char buf[24];
     switch(unit)
     {
-        case MemDisplayUnit_MHz:
+        case RamDisplayUnit_MHz:
             snprintf(buf, sizeof(buf), "%u MHz", mhz);
             break;
-        case MemDisplayUnit_Both:
+        case RamDisplayUnit_MHzMTs:
             snprintf(buf, sizeof(buf), "%u MHz (%u MT/s)", mhz, mts);
             break;
-        case MemDisplayUnit_MTs:
+        case RamDisplayUnit_MTs:
         default:
             snprintf(buf, sizeof(buf), "%u MT/s", mts);
             break;
@@ -70,25 +70,25 @@ static inline std::string formatListFreqMem(uint32_t mhz, MemDisplayUnit unit)
     return buf;
 }
 
-static inline std::string formatListFreqHzMem(uint32_t hz, MemDisplayUnit unit)
+static inline std::string formatListFreqHzMem(uint32_t hz, RamDisplayUnit unit)
 {
     return formatListFreqMem(hz / 1000000, unit);
 }
 
-static inline std::string formatMemClockKhzLabel(uint32_t khz, MemDisplayUnit unit)
+static inline std::string formatMemClockKhzLabel(uint32_t khz, RamDisplayUnit unit)
 {
     uint32_t mhz = khz / 1000;
     uint32_t mts = khz / 500;
     char buf[32];
     switch(unit)
     {
-        case MemDisplayUnit_MHz:
+        case RamDisplayUnit_MHz:
             snprintf(buf, sizeof(buf), "%u MHz", mhz);
             break;
-        case MemDisplayUnit_Both:
+        case RamDisplayUnit_MHzMTs:
             snprintf(buf, sizeof(buf), "%u MHz (%u MT/s)", mhz, mts);
             break;
-        case MemDisplayUnit_MTs:
+        case RamDisplayUnit_MTs:
         default:
             snprintf(buf, sizeof(buf), "%u MT/s", mts);
             break;
