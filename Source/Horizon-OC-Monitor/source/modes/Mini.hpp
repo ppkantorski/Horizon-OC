@@ -362,31 +362,31 @@ public:
                                 width = renderer->getTextDimensions("100%@4444.4444 mV", false, fontsize).first;
                         }
 						    if (settings.realTemps) {
-								width += renderer->getTextDimensions(" 888.8°C", false, fontsize).first;
+								width += renderer->getTextDimensions(" 88.8°C ", false, fontsize).first;
 							}
                     } else if (key == "RAM" && settings.ramInfoMode == "Bandwidth" && R_SUCCEEDED(hocclkCheck)) {
                         width = renderer->getTextDimensions("99.9GB/s@4444.4", false, fontsize).first;
                         if (settings.realVolts) {
                             if (isMariko) {
                                 if (settings.showVDD2 && settings.decimalVDD2 && settings.showVDDQ)
-                                    width += renderer->getTextDimensions("4444.4444 mV4444 mV", false, fontsize).first;
+                                    width += renderer->getTextDimensions("4444.4444 mV  4444 mV", false, fontsize).first;
                                 else if (settings.showVDD2 && !settings.decimalVDD2 && settings.showVDDQ)
-                                    width += renderer->getTextDimensions("4444 mV4444 mV", false, fontsize).first;
+                                    width += renderer->getTextDimensions("4444 mV  4444 mV", false, fontsize).first;
                                 else if (settings.showVDD2 && settings.decimalVDD2)
-                                    width += renderer->getTextDimensions("4444.4444 mV", false, fontsize).first;
+                                    width += renderer->getTextDimensions("4444.4 mV", false, fontsize).first;
                                 else if (settings.showVDD2 && !settings.decimalVDD2)
                                     width += renderer->getTextDimensions("4444 mV", false, fontsize).first;
                                 else if (settings.showVDDQ)
                                     width += renderer->getTextDimensions("4444 mV", false, fontsize).first;
                             } else {
                                 if (settings.decimalVDD2)
-                                    width += renderer->getTextDimensions("4444.4444 mV", false, fontsize).first;
+                                    width += renderer->getTextDimensions("4444.44 mV", false, fontsize).first;
                                 else
                                     width += renderer->getTextDimensions("4444 mV", false, fontsize).first;
                             }
                         }
                         if (settings.realTemps) {
-                            width += renderer->getTextDimensions(" 88.8°C", false, fontsize).first;
+                            width += renderer->getTextDimensions("   88.8°C   ", false, fontsize).first;
                         }
                     } else if (key == "GPU" || (key == "RAM" && settings.showpartLoad && R_SUCCEEDED(hocclkCheck))) {
                         //dimensions = renderer->drawString("100.0%@4444.4", false, 0, 0, fontsize, renderer->a(0x0000));
@@ -404,15 +404,15 @@ public:
                                 width = renderer->getTextDimensions("100%[100%,100%]@4444.4444 mV", false, fontsize).first;
                             }
                         }
-						    if (key == "GPU" && settings.realTemps) {
-								width += renderer->getTextDimensions(" 88.8°C", false, fontsize).first;
-							}
+                        if (settings.realTemps) {
+                            width += renderer->getTextDimensions("   88.8°C   ", false, fontsize).first;
+                        }
                     } else if (key == "RAM" && (!settings.showpartLoad || R_FAILED(hocclkCheck))) {
                         //dimensions = renderer->drawString("44444444MB@4444.4", false, 0, 0, fontsize, renderer->a(0x0000));
                         if (!settings.realVolts) {
                             width = renderer->getTextDimensions("100%@4444.4", false, fontsize).first;
 						if (settings.realTemps) {
-							width += renderer->getTextDimensions(" 88.8°C", false, fontsize).first;
+							width += renderer->getTextDimensions("  88.8°C  ", false, fontsize).first;
 							}
                         } else {
                             if (isMariko) {
