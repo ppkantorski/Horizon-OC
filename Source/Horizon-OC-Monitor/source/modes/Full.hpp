@@ -27,6 +27,10 @@ private:
     char FPS_var_compressed_c[64] = "";
     char RAM_load_c[64] = "";
     char RAM_load2_c[64] = "";
+    char RAM_bw_peak_c[16]  = "";
+    char RAM_bw_total_c[16] = "";
+    char RAM_bw_gpu_c[16]   = "";
+    char RAM_bw_cpu_c[16]   = "";
     char Resolutions_c[64] = "";
     char readSpeed_c[32] = "";
     
@@ -239,10 +243,26 @@ public:
                     }
                     if (R_SUCCEEDED(hocclkCheck)) {
                         if (settings.ramInfoMode == "Bandwidth") {
-                            static std::vector<std::string> bwTotalColoredChars = {"Total", "Peak"};
-                            static std::vector<std::string> bwCpuColoredChars   = {"CPU", "GPU"};
-                            renderer->drawStringWithColoredSections(RAM_load_c,  false, bwTotalColoredChars, COMMON_MARGIN, height_offset+15, 15, (settings.textColor), settings.catColor2);
-                            renderer->drawStringWithColoredSections(RAM_load2_c, false, bwCpuColoredChars,   COMMON_MARGIN, height_offset+30, 15, (settings.textColor), settings.catColor2);
+                            // Fixed column layout: labels at fixed x, values at fixed x after max label width
+                            // Col1: Peak/GPU labels, Col2: Total/CPU labels
+                            // Values start at a fixed offset so columns don't shift with different digit counts
+                            static const uint32_t bwLbl1W = renderer->getTextDimensions("Peak  ", false, 15).first;
+                            static const uint32_t bwLbl2W = renderer->getTextDimensions("Total  ", false, 15).first;
+                            static const uint32_t bwValW  = renderer->getTextDimensions("99.9 GB/s", false, 15).first;
+                            static const uint32_t bwGap   = renderer->getTextDimensions("   ", false, 15).first;
+                            const uint32_t xV1 = COMMON_MARGIN + bwLbl1W;
+                            const uint32_t xL2 = xV1 + bwValW + bwGap;
+                            const uint32_t xV2 = xL2 + bwLbl2W;
+                            // Row 1: Peak ... Total
+                            renderer->drawString("Peak",  false, COMMON_MARGIN, height_offset+15, 15, settings.catColor2);
+                            renderer->drawString(RAM_bw_peak_c,  false, xV1, height_offset+15, 15, settings.textColor);
+                            renderer->drawString("Total", false, xL2, height_offset+15, 15, settings.catColor2);
+                            renderer->drawString(RAM_bw_total_c, false, xV2, height_offset+15, 15, settings.textColor);
+                            // Row 2: GPU ... CPU
+                            renderer->drawString("GPU",   false, COMMON_MARGIN, height_offset+30, 15, settings.catColor2);
+                            renderer->drawString(RAM_bw_gpu_c,   false, xV1, height_offset+30, 15, settings.textColor);
+                            renderer->drawString("CPU",   false, xL2, height_offset+30, 15, settings.catColor2);
+                            renderer->drawString(RAM_bw_cpu_c,   false, xV2, height_offset+30, 15, settings.textColor);
                         } else {
                             static std::vector<std::string> partLoadColoredChars = {"CPU", "GPU"};
                             renderer->drawString("Load", false, COMMON_MARGIN, height_offset+15, 15, (settings.catColor2));
@@ -501,12 +521,10 @@ public:
                 const unsigned bwCpuD = (partLoad[HocClkPartLoad_RamBWCpu]  % 1000) / 100;
                 const unsigned bwGpu  = partLoad[HocClkPartLoad_RamBWGpu]  / 1000;
                 const unsigned bwGpuD = (partLoad[HocClkPartLoad_RamBWGpu]  % 1000) / 100;
-                snprintf(RAM_load_c, sizeof RAM_load_c,
-                    "Total  %u.%u GB/s   Peak  %u.%u GB/s",
-                    bwAll, bwAllD, bwPeak, bwPeakD);
-                snprintf(RAM_load2_c, sizeof RAM_load2_c,
-                    "CPU  %u.%u GB/s   GPU  %u.%u GB/s",
-                    bwCpu, bwCpuD, bwGpu, bwGpuD);
+                snprintf(RAM_bw_peak_c,  sizeof RAM_bw_peak_c,  "%u.%u GB/s", bwPeak, bwPeakD);
+                snprintf(RAM_bw_total_c, sizeof RAM_bw_total_c, "%u.%u GB/s", bwAll,  bwAllD);
+                snprintf(RAM_bw_gpu_c,   sizeof RAM_bw_gpu_c,   "%u.%u GB/s", bwGpu,  bwGpuD);
+                snprintf(RAM_bw_cpu_c,   sizeof RAM_bw_cpu_c,   "%u.%u GB/s", bwCpu,  bwCpuD);
             } else {
                 const int RAM_GPU_Load = partLoad[HocClkPartLoad_EMC] - partLoad[HocClkPartLoad_EMCCpu];
                 snprintf(RAM_load_c, sizeof RAM_load_c,
