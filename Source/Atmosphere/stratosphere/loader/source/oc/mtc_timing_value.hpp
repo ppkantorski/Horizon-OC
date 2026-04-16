@@ -111,6 +111,8 @@ namespace ams::ldr::hoc {
         const std::array<u32,      10>  tWTR_values   = { 10, 9, 8, 7, 6, 5, 4, 3, 2, 1 };
         const std::array<u32,       6>  tREFpb_values = { 3900, 5850, 7800, 11700, 15600, 99999 };
 
+        const double tCK_avg = 1000'000.0 / C.marikoEmcMaxClock;
+
         const u32 tRCD    = tRCD_values[C.t1_tRCD];
         const u32 tRPpb   = tRP_values[C.t2_tRP];
         const u32 tRAS    = tRAS_values[C.t3_tRAS];
@@ -126,39 +128,43 @@ namespace ams::ldr::hoc {
         const u32 tFAW     = static_cast<u32>(tRRD * 4.0);
         const double tRPab = tRPpb + 3;
 
-        inline u32 tR2P;
-        inline u32 tR2W;
-        inline u32 tRTM;
-        inline u32 tRATM;
+        const u32 tR2P   = CEIL((RL * 0.426) - 2.0);
+        const u32 tR2W = FLOOR(FLOOR((5.0 / tCK_avg) + ((FLOOR(48.0 / WL) - 0.478) * 3.0)) / 1.501) + RL - (C.t6_tRTW * 3) + finetRTW;
+        const u32 tRTM   = FLOOR((10.0 + RL) + (3.502 / tCK_avg)) + FLOOR(7.489 / tCK_avg);
+        const u32 tRATM  = CEIL((tRTM - 10.0) + (RL * 0.426));
         inline u32 rext;
 
-        inline u32 rdv;
-        inline u32 qpop;
-        inline u32 quse_width;
-        inline u32 quse;
-        inline u32 einput_duration;
-        inline u32 einput;
-        inline u32 qrst;
-        inline u32 ibdly;
-        inline u32 qsafe;
+        const u32 rdv             = RL + FLOOR((5.105 / tCK_avg) + 17.017);
+        const u32 qpop            = rdv - 14;
+        const u32 quse_width      = CEIL(((4.897 / tCK_avg) - FLOOR(2.538 / tCK_avg)) + 3.782);
+        const u32 quse            = FLOOR(RL + ((5.082 / tCK_avg) + FLOOR(2.560 / tCK_avg))) - CEIL(4.820 / tCK_avg);
+        const u32 einput_duration = FLOOR(9.936 / tCK_avg) + 5.0 + quse_width;
+        const u32 einput          = quse - CEIL(9.928 / tCK_avg);
+        const u32 qrst_duration   = FLOOR(8.399 - tCK_avg);
+        const u32 qrstLow         = MAX(static_cast<s32>(einput - qrst_duration - 2), static_cast<s32>(0));
+        const u32 qrst            = PACK_U32(qrst_duration, qrstLow);
+        const u32 ibdly           = PACK_U32_NIBBLE_HIGH_BYTE_LOW(1, quse - qrst_duration - 2.0);
+        const u32 qsafe           = (einput_duration + 3) + MAX(MIN(qrstLow * rdv, qrst_duration + qrst_duration), einput);
+        const u32 tW2P            = (CEIL(WL * 1.7303) * 2) - 5;
+        const u32 tWTPDEN         = CEIL(((1.803 / tCK_avg) + MAX(RL + (2.694 / tCK_avg), static_cast<double>(tW2P))) + (BL / 2));
+        const u32 tW2R            = FLOOR(MAX((5.020 / tCK_avg) + 1.130, WL - MAX(-CEIL(0.258 * (WL - RL)), 1.964)) * 1.964) + WL - CEIL(tWTR / tCK_avg) + finetWTR;
+        const u32 tWTM            = CEIL(WL + ((7.570 / tCK_avg) + 8.753));
+        const u32 tWATM           = (tWTM + (FLOOR(WL / 0.816) * 2.0)) - 4.0;
 
-        inline u32 tW2P;
-        inline u32 tWTPDEN;
-        inline u32 tW2R;
-        inline u32 tWTM;
-        inline u32 tWATM;
+        const u32 wdv = WL;
+        const u32 wsv = WL - 2;
+        const u32 wev = 0xA + (WL - 14);
 
-        inline u32 wdv;
-        inline u32 wsv;
-        inline u32 wev;
+        const u32 obdlyHigh = 3 / FLOOR(MIN(static_cast<double>(2), tCK_avg * (WL - 7)));
+        const u32 obdlyLow = MAX(WL - FLOOR((126.0 / CEIL(tCK_avg + 8.601))), 0.0);
+        const u32 obdly = PACK_U32_NIBBLE_HIGH_BYTE_LOW(obdlyHigh, obdlyLow);
 
-        inline u32 obdly;
+        const u32 pdex2rw = CEIL((CEIL(12.335 - tCK_avg) + (7.430 / tCK_avg) - CEIL(tCK_avg * 11.361)));
 
-        inline u32 pdex2rw;
+        const u32 tCLKSTOP = FLOOR(MIN(8.488 / tCK_avg, 23.0)) + 8.0;
 
-        inline u32 tCLKSTOP;
-
-        inline u32 pdex2mrr;
+        const double tMMRI    = tRCD + (tCK_avg * 3);
+        const double pdex2mrr = tMMRI + 10; /* Do this properly? */
 
         inline u8 mrw2;
     }

@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stratosphere.hpp>
+#include "../oc_common.hpp"
 #include "../mtc_timing_value.hpp"
 
 namespace ams::ldr::hoc::pcv::erista {

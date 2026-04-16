@@ -178,7 +178,7 @@ namespace ams::ldr::hoc::pcv {
         if (isMariko) {
             mariko::Patch(mapped_nso, nso_size);
         } else {
-            mariko::Patch(mapped_nso, nso_size);
+            erista::Patch(mapped_nso, nso_size);
         }
 
         #endif

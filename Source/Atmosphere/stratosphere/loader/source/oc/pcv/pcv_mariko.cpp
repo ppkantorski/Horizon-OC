@@ -18,7 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <vector>
 #include "pcv.hpp"
 #include "../mtc_timing_value.hpp"
 #include "../mariko/calculate_timings.hpp"
@@ -54,7 +53,7 @@ namespace ams::ldr::hoc::pcv::mariko {
             R_SKIP();
         }
 
-        PATCH_OFFSET(ptr,      C.marikoGpuVmin);
+        PATCH_OFFSET(ptr +  0, C.marikoGpuVmin);
         PATCH_OFFSET(ptr +  3, C.marikoGpuVmin);
         PATCH_OFFSET(ptr +  6, C.marikoGpuVmin);
         PATCH_OFFSET(ptr +  9, C.marikoGpuVmin);
@@ -350,8 +349,6 @@ namespace ams::ldr::hoc::pcv::mariko {
             TABLE->shadow_regs_ca_train.PARAM   = VALUE; \
             TABLE->shadow_regs_rdwr_train.PARAM = VALUE;
 
-        const double tCK_avg = 1000'000.0 / table->rate_khz;
-
         #define GET_CYCLE_CEIL(PARAM) u32(CEIL(double(PARAM) / tCK_avg))
 
         /* Ram power down       */
@@ -375,7 +372,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         const u32 dyn_self_ref_control = (static_cast<u32>(7605.0 / tCK_avg) + 260) | (table->burst_regs.emc_dyn_self_ref_control & 0xffff0000);
 
-        CalculateTimings(tCK_avg);
+        CalculateTimings();
 
         WRITE_PARAM_ALL_REG(table, emc_rd_rcd, GET_CYCLE_CEIL(tRCD));
         WRITE_PARAM_ALL_REG(table, emc_wr_rcd, GET_CYCLE_CEIL(tRCD));
@@ -402,7 +399,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         WRITE_PARAM_ALL_REG(table, emc_twtm, tWTM);
         WRITE_PARAM_ALL_REG(table, emc_twatm, tWATM);
         WRITE_PARAM_ALL_REG(table, emc_rext, rext);
-        WRITE_PARAM_ALL_REG(table, emc_wext, (table->rate_khz >= 2533000) ? 0x19 : 0x16);
+        WRITE_PARAM_ALL_REG(table, emc_wext, (C.marikoEmcMaxClock >= 2533000) ? 0x19 : 0x16);
         WRITE_PARAM_ALL_REG(table, emc_refresh, refresh_raw);
         WRITE_PARAM_ALL_REG(table, emc_pre_refresh_req_cnt, refresh_raw / 4);
         WRITE_PARAM_ALL_REG(table, emc_trefbw, trefbw);
@@ -446,7 +443,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         constexpr double MC_ARB_DIV = 4.0;
         constexpr u32 MC_ARB_SFA = 2;
 
-        table->burst_mc_regs.mc_emem_arb_cfg          = table->rate_khz             / (33.3 * 1000) / MC_ARB_DIV;
+        table->burst_mc_regs.mc_emem_arb_cfg          = C.marikoEmcMaxClock         / (33.3 * 1000) / MC_ARB_DIV;
         table->burst_mc_regs.mc_emem_arb_timing_rcd   = CEIL(GET_CYCLE_CEIL(tRCD)   / MC_ARB_DIV) - 2;
         table->burst_mc_regs.mc_emem_arb_timing_rp    = CEIL(GET_CYCLE_CEIL(tRPpb)  / MC_ARB_DIV) - 1;
         table->burst_mc_regs.mc_emem_arb_timing_rc    = CEIL(GET_CYCLE_CEIL(tRC)    / MC_ARB_DIV) - 1;
@@ -488,7 +485,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         table->la_scale_regs.mc_mll_mpcorer_ptsa_rate = 0x115;
 
-        if (table->rate_khz >= 2133000) {
+        if (C.marikoEmcMaxClock >= 2133000) {
             table->la_scale_regs.mc_ftop_ptsa_rate = 0x1F;
         } else {
             table->la_scale_regs.mc_ftop_ptsa_rate = 0x1B;
@@ -497,14 +494,14 @@ namespace ams::ldr::hoc::pcv::mariko {
         table->la_scale_regs.mc_ptsa_grant_decrement = 0x17ff;
 
         constexpr u32 MaskHigh = 0xFF00FFFF;
-        constexpr u32 Mask2    = 0xFFFFFF00;
-        constexpr u32 Mask3    = 0xFF00FF00;
+        constexpr u32 Mask2 = 0xFFFFFF00;
+        constexpr u32 Mask3 = 0xFF00FF00;
 
-        const u32 allowance1 = static_cast<u32>(0x32000 / (table->rate_khz / 0x3E8)) & 0xFF;
-        const u32 allowance2 = static_cast<u32>(0x9C40  / (table->rate_khz / 0x3E8)) & 0xFF;
-        const u32 allowance3 = static_cast<u32>(0xB540  / (table->rate_khz / 0x3E8)) & 0xFF;
-        const u32 allowance4 = static_cast<u32>(0x9600  / (table->rate_khz / 0x3E8)) & 0xFF;
-        const u32 allowance5 = static_cast<u32>(0x8980  / (table->rate_khz / 0x3E8)) & 0xFF;
+        const u32 allowance1 = static_cast<u32>(0x32000 / (C.marikoEmcMaxClock / 0x3E8)) & 0xFF;
+        const u32 allowance2 = static_cast<u32>(0x9C40  / (C.marikoEmcMaxClock / 0x3E8)) & 0xFF;
+        const u32 allowance3 = static_cast<u32>(0xB540  / (C.marikoEmcMaxClock / 0x3E8)) & 0xFF;
+        const u32 allowance4 = static_cast<u32>(0x9600  / (C.marikoEmcMaxClock / 0x3E8)) & 0xFF;
+        const u32 allowance5 = static_cast<u32>(0x8980  / (C.marikoEmcMaxClock / 0x3E8)) & 0xFF;
 
         table->la_scale_regs.mc_latency_allowance_xusb_0    =              (table->la_scale_regs.mc_latency_allowance_xusb_0    & MaskHigh) | (allowance1 << 16);
         table->la_scale_regs.mc_latency_allowance_xusb_1    =              (table->la_scale_regs.mc_latency_allowance_xusb_1    & MaskHigh) | (allowance1 << 16);
@@ -528,8 +525,8 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         table->dram_timings.t_rp = tRFCpb;
         table->dram_timings.t_rfc = tRFCab;
-
         table->dram_timings.rl = RL;
+
         table->emc_mrw2 = (table->emc_mrw2 & ~0xFFu) | static_cast<u32>(mrw2);
         table->emc_cfg_2 = 0x11083D;
     }
@@ -538,24 +535,24 @@ namespace ams::ldr::hoc::pcv::mariko {
         constexpr u32 PllOscInKHz   = 38400;
         constexpr u32 PllOscHalfKHz = 19200;
 
-        double target_freq_d = static_cast<double>(table->rate_khz);
+        double target_freq_d = static_cast<double>(C.marikoEmcMaxClock);
 
-        s32 divm_candidate_half = static_cast<u8>(table->rate_khz / PllOscHalfKHz);
+        s32 divm_candidate_half = static_cast<u8>(C.marikoEmcMaxClock / PllOscHalfKHz);
 
-        bool remainder_check = (table->rate_khz - PllOscInKHz * (table->rate_khz / PllOscInKHz)) > (table->rate_khz - PllOscHalfKHz * divm_candidate_half) && static_cast<int>(((target_freq_d / PllOscHalfKHz - divm_candidate_half - 0.5) * 8192.0)) != 0;
+        bool remainder_check = (C.marikoEmcMaxClock - PllOscInKHz * (C.marikoEmcMaxClock / PllOscInKHz)) > (C.marikoEmcMaxClock - PllOscHalfKHz * divm_candidate_half) && static_cast<int>(((target_freq_d / PllOscHalfKHz - divm_candidate_half - 0.5) * 8192.0)) != 0;
 
         u32 divm_final = remainder_check + 1;
         table->pllmb_divm = divm_final;
 
         double div_step_d = static_cast<double>(PllOscInKHz) / divm_final;
-        s32 divn_integer = static_cast<u8>(table->rate_khz / div_step_d);
+        s32 divn_integer = static_cast<u8>(C.marikoEmcMaxClock / div_step_d);
         table->pllmb_divn = divn_integer;
 
         u32 divn_fraction = static_cast<s32>((target_freq_d / div_step_d - divn_integer - 0.5) * 8192.0);
 
         u32 actual_freq_khz = static_cast<u32>((divn_integer + 0.5 + divn_fraction * 0.000122070312) * div_step_d);
 
-        if (table->rate_khz - 2366001 < 133999) {
+        if (C.marikoEmcMaxClock - 2366001 < 133999) {
             s32 divn_fraction_ssc = static_cast<s32>((actual_freq_khz * 0.997 / div_step_d - divn_integer - 0.5) * 8192.0);
 
             double delta_scaled = (0.3 / div_step_d + 0.3 / div_step_d) * (divn_fraction - divn_fraction_ssc);
@@ -583,7 +580,7 @@ namespace ams::ldr::hoc::pcv::mariko {
             table->pllm_ss_cfg &= 0xBFFFFFFF;
             table->pllmb_ss_cfg &= 0xBFFFFFFF;
 
-            u64 pair = (static_cast<u64>(divn_fraction) << 32) | static_cast<u64>(table->rate_khz);
+            u64 pair = (static_cast<u64>(divn_fraction) << 32) | static_cast<u64>(C.marikoEmcMaxClock);
             u32 pll_misc = (table->pllm_ss_ctrl2 & 0xFFFF0000) | static_cast<u32>((pair - actual_freq_khz) >> 32);
 
             table->pllm_ss_ctrl2 = pll_misc;
@@ -591,168 +588,52 @@ namespace ams::ldr::hoc::pcv::mariko {
         }
     }
 
-    Result VerifyMtcTable(MarikoMtcTable *tableStart, u32 expectedFreq) {
-        Log("Rate_khz: %u, revision: %u\n", tableStart->rate_khz, tableStart->rev);
-        R_UNLESS(tableStart->rate_khz == expectedFreq,  ldr::ResultInvalidMtcTable());
-        R_UNLESS(tableStart->rev      == MTC_TABLE_REV, ldr::ResultInvalidMtcTable());
-
-        R_SUCCEED();
-    }
-
-    Result MtcValidateAllTables(MarikoMtcTable *tableStart, const u32 *validationList, u32 tableCount) {
-        for (u32 i = 0; i < tableCount; ++i) {
-            R_UNLESS(R_SUCCEEDED(VerifyMtcTable(&tableStart[i], validationList[i])), ldr::ResultInvalidMtcTable());
-        }
-
-        R_SUCCEED();
-    }
-
-    DramId GetDramId() {
-        u64 id64;
-        splGetConfig(SplConfigItem_DramId, &id64);
-        return static_cast<DramId>(id64);
-    }
-
-    MtcTableIndex GetMtcDramIndex(DramId dramId) {
-        for (u32 i = 0; i < std::size(mtcIndexTable); ++i) {
-            if (mtcIndexTable[i].dramId == dramId) {
-                return mtcIndexTable[i].index;
-            }
-        }
-
-        return MtcTableIndex_Invalid;
-    }
-
-    NORETURN void AbortInvalidDramId() {
-       // Log("Invalid dram id\n");
-        // ViewLog();
-        panic::SmcError(panic::Emc);
-        CRASH("Invalid dram id\n");
-    }
-
-    u32 GetMtcOffset(MtcTableIndex index) {
-        if (index < T210b0SdevEmcDvfsTableS4gb03) {
-            return index * mariko::MtcFullTableSize;
-        }
-
-        /* There are 2 erista mtc tables between T210b0SdevEmcDvfsTableS4gb01 and T210b0SdevEmcDvfsTableS4gb03, so we have to do this adjustment. */
-        return mariko::MtcFullTableSize * index + (2 * erista::MtcFullTableSize);
-    }
-
-    void PrepareMtcMemoryRegion(u8 *firstTable, MarikoMtcTable *usedTable) {
-        memmove(firstTable, usedTable, mariko::MtcFullTableSize);
-
-        /* Clear all other tables */
-        /* 1 erista table is excluded because it's always before firstTable. */
-        /* We also exclude the used table obviously. */
-        constexpr size_t RemainingRegionSize = (mariko::MtcFullTableSize) * 16 + (erista::MtcFullTableSize * 2);
-        memset(firstTable + mariko::MtcFullTableSize, 0, RemainingRegionSize);
-    }
-
-    std::vector<u32> newEmcList;
-    void MtcGenerateFreqTables() {
-        constexpr u32 OverwrittenEristaTables = erista::MtcFullTableCount - 1; /* We don't overwrite the first table */
-        constexpr size_t MaxFreqSize          = (OverwrittenEristaTables * erista::MtcTableCountDefault) + (mariko::MtcFullTableCount * mariko::MtcTableCountDefault);
-        constexpr u32 StepHz                  = 100000;
-        constexpr u32 RoundHz                 = 1000;
-
-        newEmcList.clear();
-        newEmcList.reserve(MaxFreqSize);
-        newEmcList.insert(newEmcList.end(), std::begin(EmcListDefault), std::end(EmcListDefault));
-
-        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
-            return;
-        }
-
-        for (u32 stepIndex = 1;; ++stepIndex) {
-            u32 newFreq = EmcClkOSLimit + (stepIndex * StepHz + 1) / 3;
-            newFreq     = (newFreq / RoundHz) * RoundHz;
-
-            if (newFreq > C.marikoEmcMaxClock) {
-                break;
-            }
-
-            newEmcList.push_back(newFreq);
-        }
-
-        newEmcList.resize(std::min(newEmcList.size(), MaxFreqSize));
-    }
-
-    void MtcExtendTables(MarikoMtcTable *table) {
-        for (u32 i = mariko::MtcTableCountDefault; i < newEmcList.size(); ++i) {
-            std::memcpy(&table[i], &table[i - 1], sizeof(MarikoMtcTable));
-            table[i].rate_khz = newEmcList[i];
-        }
-    }
-
-    bool patchedMtc = false;
     Result MemFreqMtcTable(u32 *ptr) {
-        if (C.marikoEmcMaxClock <= EmcClkOSLimit || patchedMtc) {
+        u32 khz_list[] = {1600000, 1331200, 204000};
+        u32 khz_list_size = sizeof(khz_list) / sizeof(u32);
+
+        // Generate list for mtc table pointers
+        MarikoMtcTable *table_list[khz_list_size];
+        for (u32 i = 0; i < khz_list_size; i++) {
+            u8 *table = reinterpret_cast<u8 *>(ptr) - offsetof(MarikoMtcTable, rate_khz) - i * sizeof(MarikoMtcTable);
+            table_list[i] = reinterpret_cast<MarikoMtcTable *>(table);
+            R_UNLESS(table_list[i]->rate_khz == khz_list[i], ldr::ResultInvalidMtcTable());
+            R_UNLESS(table_list[i]->rev == MTC_TABLE_REV, ldr::ResultInvalidMtcTable());
+        }
+
+        if (C.marikoEmcMaxClock <= EmcClkOSLimit)
             R_SKIP();
-        }
 
-        static const DramId dramId = [] {
-            DramId id = GetDramId();
-            id = IOWA_4GB_SAMSUNG_K4U6E3S4AA_MGCL;
-            //Log("Dram id: %u\n", id);
-            return id;
-        }();
+        MarikoMtcTable *table_alt = table_list[1], *table_max = table_list[0];
+        MarikoMtcTable *tmp = new MarikoMtcTable;
 
-        static const MtcTableIndex mtcIndex = [] {
-            MtcTableIndex idx = GetMtcDramIndex(dramId);
-            /* If for some reason this happens, there is chance of recovering this. */
-            if (idx == MtcTableIndex_Invalid) {
-                AbortInvalidDramId();
-            }
-            return idx;
-        }();
+        // Copy unmodified 1600000 table to tmp
+        std::memcpy(reinterpret_cast<void *>(tmp), reinterpret_cast<void *>(table_max), sizeof(MarikoMtcTable));
 
-        /* Offset to dram id specific mtc table. */
-        static const u32 mtcOffset = GetMtcOffset(mtcIndex);
+        /* Adjust timings properly according to the new frequency. */
+        MemMtcTableAutoAdjust(table_max);
 
-        /* Offset from 1600MHz pointer to 204Mhz table start. */
-        constexpr u32 StartAdjustment = offsetof(MarikoMtcTable, rate_khz) + sizeof(MarikoMtcTable) * 2;
-        u8 *startPtr = reinterpret_cast<u8 *>(ptr) - StartAdjustment;
-        MarikoMtcTable *table = reinterpret_cast<MarikoMtcTable *>(startPtr + mtcOffset);
-        R_UNLESS(R_SUCCEEDED(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault)), ldr::ResultInvalidMtcTable());
+        MemMtcPllmbDivisor(table_max);
+        // Overwrite 13312000 table with unmodified 1600000 table copied back
+        std::memcpy(reinterpret_cast<void *>(table_alt), reinterpret_cast<void *>(tmp), sizeof(MarikoMtcTable));
 
-        table = reinterpret_cast<MarikoMtcTable *>(startPtr);
+        delete tmp;
 
-        PrepareMtcMemoryRegion(startPtr, table);
-        if (R_FAILED(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault))) {
-            panic::SmcError(panic::Emc);
-        }
-
-        MtcExtendTables(table);
-        for (u32 i = 0; i < newEmcList.size(); ++i) {
-            Log("freqList[%u] = %u\n", i, newEmcList[i]);
-        }
-
-        if (R_FAILED(MtcValidateAllTables(table, newEmcList.data(), newEmcList.size()))) {
-            panic::SmcError(panic::Emc);
-        }
-
-        for (u32 i = mariko::MtcTableCountDefault; i < newEmcList.size(); ++i) {
-            MemMtcTableAutoAdjust(&table[i]);
-            MemMtcPllmbDivisor(&table[i]);
-        }
-
-        patchedMtc = true;
+        PATCH_OFFSET(ptr, C.marikoEmcMaxClock);
         R_SUCCEED();
     }
 
     Result MemFreqDvbTable(u32 *ptr) {
         emc_dvb_dvfs_table_t *default_end = reinterpret_cast<emc_dvb_dvfs_table_t *>(ptr);
-        emc_dvb_dvfs_table_t *new_start   = default_end + 1;
+        emc_dvb_dvfs_table_t *new_start = default_end + 1;
 
         // Validate existing table
         void *mem_dvb_table_head = reinterpret_cast<u8 *>(new_start) - sizeof(EmcDvbTableDefault);
-        bool validated           = std::memcmp(mem_dvb_table_head, EmcDvbTableDefault, sizeof(EmcDvbTableDefault)) == 0;
+        bool validated = std::memcmp(mem_dvb_table_head, EmcDvbTableDefault, sizeof(EmcDvbTableDefault)) == 0;
         R_UNLESS(validated, ldr::ResultInvalidDvbTable());
 
-        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
+        if (C.marikoEmcMaxClock <= EmcClkOSLimit)
             R_SKIP();
-        }
 
         int32_t voltAdd = 25 * C.emcDvbShift;
 
@@ -789,9 +670,8 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     Result MemFreqMax(u32 *ptr) {
-        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
+        if (C.marikoEmcMaxClock <= EmcClkOSLimit)
             R_SKIP();
-        }
 
         PATCH_OFFSET(ptr, C.marikoEmcMaxClock);
         R_SUCCEED();
@@ -805,13 +685,12 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         I2cSession _session;
         Result res = i2cOpenSession(&_session, dev);
-        if (R_FAILED(res)) {
+        if (R_FAILED(res))
             return res;
-        }
 
         cmd.reg = reg;
         cmd.val = val;
-        res     = i2csessionSendAuto(&_session, &cmd, sizeof(cmd), I2cTransactionOption_All);
+        res = i2csessionSendAuto(&_session, &cmd, sizeof(cmd), I2cTransactionOption_All);
         i2csessionClose(&_session);
         return res;
     }
@@ -823,24 +702,21 @@ namespace ams::ldr::hoc::pcv::mariko {
         constexpr u32 uv_min = 250'000;
 
         auto validator = [entry]() {
-            R_UNLESS(entry->id               == 2,       ldr::ResultInvalidRegulatorEntry());
-            R_UNLESS(entry->type             == 3,       ldr::ResultInvalidRegulatorEntry());
+            R_UNLESS(entry->id == 2, ldr::ResultInvalidRegulatorEntry());
+            R_UNLESS(entry->type == 3, ldr::ResultInvalidRegulatorEntry());
             R_UNLESS(entry->type_2_3.step_uv == uv_step, ldr::ResultInvalidRegulatorEntry());
-            R_UNLESS(entry->type_2_3.min_uv  == uv_min,  ldr::ResultInvalidRegulatorEntry());
+            R_UNLESS(entry->type_2_3.min_uv == uv_min, ldr::ResultInvalidRegulatorEntry());
             R_SUCCEED();
         };
 
         R_TRY(validator());
 
         u32 emc_uv = C.marikoEmcVddqVolt;
-
-        if (!emc_uv) {
+        if (!emc_uv)
             R_SKIP();
-        }
 
-        if (emc_uv % uv_step) {
+        if (emc_uv % uv_step)
             emc_uv = (emc_uv + uv_step - 1) / uv_step * uv_step; // rounding
-        }
 
         PATCH_OFFSET(ptr, emc_uv);
 
@@ -855,53 +731,28 @@ namespace ams::ldr::hoc::pcv::mariko {
         return resultI2C;
     }
 
-    Result MemMtcTableAsm(u32 *ptr) {
-        u32 adrp = *(ptr - 1);
-        R_UNLESS(AsmCompareAdrpNoImm(adrp, MtcAdrpAsm), ldr::ResultInvalidMtcTable());
-
-        /* We don't check for matching register because both registers must be x0 in order to pass the previous checks. */
-        /* The correct instructions will always be x0 since the mtcTable pointer is returned. */
-
-        /* Pray this does not break. */
-        u32 br = *(ptr - 12);
-        R_UNLESS(AsmCompareBrNoRd(br, MtcBrAsm), ldr::ResultInvalidMtcTable());
-
-        /* Pray this does not break either. */
-        u32 mov = *(ptr - 10);
-        R_UNLESS(asm_compare_no_rd(mov, MtcMovAsm), ldr::ResultInvalidMtcTable());
-
-        u8  movRd         = asm_get_rd(mov);
-        u32 movCountPatch = asm_set_rd(asm_set_imm16(MtcMovAsm, newEmcList.size()), movRd);
-
-        PATCH_OFFSET(ptr - 12, NopIns);
-        PATCH_OFFSET(ptr - 10, movCountPatch);
-        R_SUCCEED();
-    }
-
     void Patch(uintptr_t mapped_nso, size_t nso_size) {
-        MtcGenerateFreqTables();
         u32 CpuCvbDefaultMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(CpuCvbTableDefault)->freq);
         u32 GpuCvbDefaultMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(GpuCvbTableDefault)->freq);
 
         PatcherEntry<u32> patches[] = {
-            { "CPU Freq Vdd",      &CpuFreqVdd,            1, nullptr,  CpuClkOSLimit              },
-            { "CPU Freq Table",     CpuFreqCvbTable<true>, 1, nullptr,  CpuCvbDefaultMaxFreq       },
-            { "CPU Volt DVFS",     &CpuVoltDVFS,           1, nullptr,  CpuVminOfficial            },
-            { "CPU Volt Thermals", &CpuVoltThermals,       1, nullptr,  CpuVminOfficial            },
-            { "CPU Volt Dfll",     &CpuVoltDfll,           1, nullptr,  CpuTune0Low                },
-            { "GPU Volt DVFS",     &GpuVoltDVFS,           1, nullptr,  GpuVminOfficial            },
-            { "GPU Volt Thermals", &GpuVoltThermals,       1, nullptr,  GpuVminOfficial            },
-            { "GPU Freq Table",     GpuFreqCvbTable<true>, 1, nullptr,  GpuCvbDefaultMaxFreq       },
-            { "GPU Freq Asm",      &GpuFreqMaxAsm,         2,          &GpuMaxClockPatternFn       },
-            { "GPU PLL Max",       &GpuFreqPllMax,         1, nullptr,  GpuClkPllMax               },
-            { "GPU PLL Limit",     &GpuFreqPllLimit,       4, nullptr,  GpuClkPllLimit             },
-            { "MEM Freq Mtc",      &MemFreqMtcTable,       0, nullptr,  EmcClkOSLimit              },
-            { "MEM Freq Dvb",      &MemFreqDvbTable,       1, nullptr,  EmcClkOSLimit              },
-            { "MEM Freq Max",      &MemFreqMax,            0, nullptr,  EmcClkOSLimit              },
-            { "MEM Freq PLLM",     &MemFreqPllmLimit,      2, nullptr,  EmcClkPllmLimit            },
-            { "MEM Vddq",          &EmcVddqVolt,           2, nullptr,  EmcVddqDefault             },
-            { "MEM Vdd2",          &MemVoltHandler,        2, nullptr,  MemVdd2Default             },
-            { "Mem Table Asm",     &MemMtcTableAsm,        0,          &MemMtcGetGetTablePatternFn },
+            {"CPU Freq Vdd", &CpuFreqVdd, 1, nullptr, CpuClkOSLimit},
+            {"CPU Freq Table", CpuFreqCvbTable<true>, 1, nullptr, CpuCvbDefaultMaxFreq},
+            {"CPU Volt DVFS", &CpuVoltDVFS, 1, nullptr, CpuVminOfficial},
+            {"CPU Volt Thermals", &CpuVoltThermals, 1, nullptr, CpuVminOfficial},
+            {"CPU Volt Dfll", &CpuVoltDfll, 1, nullptr, 0x0000FFCF},
+            {"GPU Volt DVFS", &GpuVoltDVFS, 1, nullptr, GpuVminOfficial},
+            {"GPU Volt Thermals", &GpuVoltThermals, 1, nullptr, GpuVminOfficial},
+            {"GPU Freq Table", GpuFreqCvbTable<true>, 1, nullptr, GpuCvbDefaultMaxFreq},
+            {"GPU Freq Asm", &GpuFreqMaxAsm, 2, &GpuMaxClockPatternFn},
+            {"GPU PLL Max", &GpuFreqPllMax, 1, nullptr, GpuClkPllMax},
+            {"GPU PLL Limit", &GpuFreqPllLimit, 4, nullptr, GpuClkPllLimit},
+            {"MEM Freq Mtc", &MemFreqMtcTable, 0, nullptr, EmcClkOSLimit},
+            {"MEM Freq Dvb", &MemFreqDvbTable, 1, nullptr, EmcClkOSLimit},
+            {"MEM Freq Max", &MemFreqMax, 0, nullptr, EmcClkOSLimit},
+            {"MEM Freq PLLM", &MemFreqPllmLimit, 2, nullptr, EmcClkPllmLimit},
+            {"MEM Vddq", &EmcVddqVolt, 2, nullptr, EmcVddqDefault},
+            {"MEM Vdd2", &MemVoltHandler, 2, nullptr, MemVdd2Default},
         };
 
         for (uintptr_t ptr = mapped_nso; ptr <= mapped_nso + nso_size - sizeof(MarikoMtcTable); ptr += sizeof(u32)) {
@@ -923,7 +774,6 @@ namespace ams::ldr::hoc::pcv::mariko {
                 CRASH(entry.description);
             }
         }
-        // ViewLog();
     }
 
 }
