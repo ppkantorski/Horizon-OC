@@ -110,7 +110,12 @@ namespace ams::ldr::hoc::pcv::mariko {
         return asm_compare_no_rd(*ptr32, GpuAsmPattern[0]);
     }
 
-    constexpr emc_dvb_dvfs_table_t EmcDvbTableDefault[] = {
+    struct DvbEntry {
+        u64 freq;
+        s32 volt[4] = {};
+    };
+
+    constexpr DvbEntry EmcDvbTableDefault[] = {
         {  204000, { 637, 637, 637, } },
         {  408000, { 637, 637, 637, } },
         {  800000, { 637, 637, 637, } },

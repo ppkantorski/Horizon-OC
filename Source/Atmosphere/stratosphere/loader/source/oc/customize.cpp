@@ -31,6 +31,7 @@
 namespace ams::ldr::hoc {
 
 volatile CustomizeTable C = {
+
 /* Disables RAM powerdown */
 .hpMode = DISABLED,
 
@@ -39,8 +40,12 @@ volatile CustomizeTable C = {
 .eristaEmcMaxClock1 = 1600000,
 .eristaEmcMaxClock2 = 1600000,
 
-.marikoEmcMaxClock = 1633000, /* 1866MHz @ 1866tWRL is guaranteed to work on all Mariko units */
-.marikoEmcVddqVolt = 600000, /* Micron: 600mV, other manafacturers: 640mV */
+/* Available: 66MHz step rate, 100MHz step rate and jedec. */
+/* Jedec freqs are 1333MHz, 1600MHz, 1866MHz, 2133MHz, 2400MHz, 2666MHz, 2933MHz, 3200MHz. */
+.stepMode = StepMode_66MHz,
+
+.marikoEmcMaxClock = 1866000, /* 1866MHz @ 1866tWRL is guaranteed to work on all Mariko units */
+.marikoEmcVddqVolt = 600000,
 .emcDvbShift = 0,
 
 // Primary

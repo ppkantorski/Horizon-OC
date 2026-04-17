@@ -36,6 +36,12 @@ enum TableConfig: u32 {
     EXTREME_TABLE = 4,
 };
 
+enum StepMode:u32 {
+    StepMode_66MHz  = 0,
+    StepMode_100MHz = 1,
+    StepMode_Jedec  = 2,
+};
+
 /*
  *  Read:
  *   2133RL = 40
@@ -82,6 +88,8 @@ typedef struct CustomizeTable {
     u32 eristaEmcMaxClock;
     u32 eristaEmcMaxClock1;
     u32 eristaEmcMaxClock2;
+
+    StepMode stepMode;
     u32 marikoEmcMaxClock;
     u32 marikoEmcVddqVolt;
     u32 emcDvbShift;

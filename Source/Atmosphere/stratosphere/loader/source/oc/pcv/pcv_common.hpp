@@ -46,11 +46,6 @@ namespace ams::ldr::hoc::pcv {
         unsigned long dvco_calibration_max;
     } cvb_cpu_dfll_data;
 
-    typedef struct emc_dvb_dvfs_table_t {
-        u64 freq;
-        s32 volt[4] = {0};
-    } emc_dvb_dvfs_table_t;
-
     typedef struct __attribute__((packed)) div_nmp {
         u8 divn_shift;
         u8 divn_width;
