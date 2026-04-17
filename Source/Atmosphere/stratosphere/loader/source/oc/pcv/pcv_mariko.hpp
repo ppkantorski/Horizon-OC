@@ -184,23 +184,23 @@ namespace ams::ldr::hoc::pcv::mariko {
     };
 
     enum MtcTableIndex {
-        T210b0SdevEmcDvfsTableS4gb01    =   0, /* Samsung             */
-        T210b0SdevEmcDvfsTableS4gb03    =   1, /* Samsung AM-MGCJ 4Gb */ // guessed
-        T210b0SdevEmcDvfsTableS8gb03    =   2, /* Samsung AM-MGCJ 8Gb */ // Guesed
-        T210b0SdevEmcDvfsTableH4gb03    =   3, /* Hynix            */
-        T210b0SdevEmcDvfsTableM4gb03    =   4, /* Micron           */
-        T210b0SdevEmcDvfsTableS4gbY01   =   5, /* Samsung          */
-        T210b0SdevEmcDvfsTableS1y4gbY01 =   6, /* Samsung          */
-        T210b0SdevEmcDvfsTableS1y8gbY01 =   7, /* Samsung          */
-        T210b0SdevEmcDvfsTableS1y4gbX03 =   8, /* Samsung AA-MGCL 4GB */
-        T210b0SdevEmcDvfsTableS1y8gbX03 =   9, /* Samsung AA-MGCL 8GB */
-        T210b0SdevEmcDvfsTableS1y4gb01  =  10, /* Samsung          */
-        T210b0SdevEmcDvfsTableM1y4gb01  =  11, /* Micron           */
-        T210b0SdevEmcDvfsTableH1y4gb01  =  12, /* Hynix            */
-        T210b0SdevEmcDvfsTableS1y8gb04  =  13, /* Samsung          */
-        T210b0SdevEmcDvfsTableS1z4gb01  =  14, /* Samsung          */
-        T210b0SdevEmcDvfsTableH1a4gb01  =  15, /* Hynix            */
-        T210b0SdevEmcDvfsTableM1a4gb01  =  16, /* Micron           */
+        T210b0SdevEmcDvfsTableS4gb01    =   0, /* (Unused) Samsung 4Gb */
+        T210b0SdevEmcDvfsTableS4gb03    =   1, /* Samsung AM-MGCJ  4Gb */
+        T210b0SdevEmcDvfsTableS8gb03    =   2, /* (Unused) Samsung 4Gb */
+        T210b0SdevEmcDvfsTableH4gb03    =   3, /* Hynix NME        4Gb */
+        T210b0SdevEmcDvfsTableM4gb03    =   4, /* Micron WT:F      4Gb */
+        T210b0SdevEmcDvfsTableS4gbY01   =   5, /* (Unused) Samsung 4Gb */
+        T210b0SdevEmcDvfsTableS1y4gbY01 =   6, /* (Unused) Samsung 4Gb */
+        T210b0SdevEmcDvfsTableS1y8gbY01 =   7, /* (Unused) Samsung 4Gb */
+        T210b0SdevEmcDvfsTableS1y4gbX03 =   8, /* Samsung AA-MGCL  4Gb */
+        T210b0SdevEmcDvfsTableS1y8gbX03 =   9, /* Samsung AA-MGCL  8Gb */
+        T210b0SdevEmcDvfsTableS1y4gb01  =  10, /* (Unused) Samsung 4Gb */
+        T210b0SdevEmcDvfsTableM1y4gb01  =  11, /* Micron WT:E      4Gb */
+        T210b0SdevEmcDvfsTableH1y4gb01  =  12, /* Hynix NEE        4Gb */
+        T210b0SdevEmcDvfsTableS1y8gb04  =  13, /* Samsung AM-MGCJ  8Gb */
+        T210b0SdevEmcDvfsTableS1z4gb01  =  14, /* Samsung AB-MGCL  4Gb */
+        T210b0SdevEmcDvfsTableH1a4gb01  =  15, /* Hynix x267       4Gb */
+        T210b0SdevEmcDvfsTableM1a4gb01  =  16, /* Micron WT:B      8Gb */
         MtcTableIndex_Invalid           =  17,
     };
 
@@ -210,35 +210,35 @@ namespace ams::ldr::hoc::pcv::mariko {
     };
 
     constexpr MtcDramIndex mtcIndexTable[] = {
-        { HOAG_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       static_cast<MtcTableIndex>(0),   },
-        { AULA_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       static_cast<MtcTableIndex>(0),   },
-        { IOWA_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       static_cast<MtcTableIndex>(0),   },
-        { IOWA_4GB_SAMSUNG_K4U6E3S4AM_MGCJ,        static_cast<MtcTableIndex>(0),   },
-        { IOWA_8GB_SAMSUNG_K4UBE3D4AM_MGCJ,        static_cast<MtcTableIndex>(0),   },
-        { IOWA_4GB_HYNIX_H9HCNNNBKMMLHR_NME,       static_cast<MtcTableIndex>(0),   },
-        { IOWA_4GB_MICRON_MT53E512M32D2NP_046_WTE, static_cast<MtcTableIndex>(0),   },
-        { HOAG_4GB_SAMSUNG_K4U6E3S4AM_MGCJ,        static_cast<MtcTableIndex>(0),   },
-        { HOAG_8GB_SAMSUNG_K4UBE3D4AM_MGCJ,        static_cast<MtcTableIndex>(0),   },
-        { HOAG_4GB_HYNIX_H9HCNNNBKMMLHR_NME,       static_cast<MtcTableIndex>(0),   },
-        { HOAG_4GB_MICRON_MT53E512M32D2NP_046_WTE, static_cast<MtcTableIndex>(0),   },
+        { HOAG_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       T210b0SdevEmcDvfsTableH1y4gb01,  },
+        { AULA_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       T210b0SdevEmcDvfsTableH1y4gb01,  },
+        { IOWA_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       T210b0SdevEmcDvfsTableH1y4gb01,  },
+        { IOWA_4GB_SAMSUNG_K4U6E3S4AM_MGCJ,        T210b0SdevEmcDvfsTableS4gb03,    },
+        { IOWA_8GB_SAMSUNG_K4UBE3D4AM_MGCJ,        T210b0SdevEmcDvfsTableS1y8gb04,  },
+        { IOWA_4GB_HYNIX_H9HCNNNBKMMLHR_NME,       T210b0SdevEmcDvfsTableH4gb03,    },
+        { IOWA_4GB_MICRON_MT53E512M32D2NP_046_WTE, T210b0SdevEmcDvfsTableM1y4gb01,  },
+        { HOAG_4GB_SAMSUNG_K4U6E3S4AM_MGCJ,        T210b0SdevEmcDvfsTableS4gb03,    },
+        { HOAG_8GB_SAMSUNG_K4UBE3D4AM_MGCJ,        T210b0SdevEmcDvfsTableS1y8gb04,  },
+        { HOAG_4GB_HYNIX_H9HCNNNBKMMLHR_NME,       T210b0SdevEmcDvfsTableH4gb03,    },
+        { HOAG_4GB_MICRON_MT53E512M32D2NP_046_WTE, T210b0SdevEmcDvfsTableM1y4gb01,  },
         { IOWA_4GB_SAMSUNG_K4U6E3S4AA_MGCL,        T210b0SdevEmcDvfsTableS1y4gbX03, },
-        { IOWA_8GB_SAMSUNG_K4UBE3D4AA_MGCL,        static_cast<MtcTableIndex>(0),   },
-        { HOAG_4GB_SAMSUNG_K4U6E3S4AA_MGCL,        static_cast<MtcTableIndex>(0),   },
-        { IOWA_4GB_SAMSUNG_K4U6E3S4AB_MGCL,        static_cast<MtcTableIndex>(0),   },
-        { HOAG_4GB_SAMSUNG_K4U6E3S4AB_MGCL,        static_cast<MtcTableIndex>(0),   },
-        { AULA_4GB_SAMSUNG_K4U6E3S4AB_MGCL,        static_cast<MtcTableIndex>(0),   },
-        { HOAG_8GB_SAMSUNG_K4UBE3D4AA_MGCL,        static_cast<MtcTableIndex>(0),   },
-        { AULA_4GB_SAMSUNG_K4U6E3S4AA_MGCL,        static_cast<MtcTableIndex>(0),   },
-        { IOWA_4GB_MICRON_MT53E512M32D2NP_046_WTF, static_cast<MtcTableIndex>(0),   },
-        { HOAG_4GB_MICRON_MT53E512M32D2NP_046_WTF, static_cast<MtcTableIndex>(0),   },
-        { AULA_4GB_MICRON_MT53E512M32D2NP_046_WTF, static_cast<MtcTableIndex>(0),   },
-        { AULA_8GB_SAMSUNG_K4UBE3D4AA_MGCL,        static_cast<MtcTableIndex>(0),   },
-        { IOWA_4GB_HYNIX_H54G46CYRBX267,           static_cast<MtcTableIndex>(0),   },
-        { HOAG_4GB_HYNIX_H54G46CYRBX267,           static_cast<MtcTableIndex>(0),   },
-        { AULA_4GB_HYNIX_H54G46CYRBX267,           static_cast<MtcTableIndex>(0),   },
-        { IOWA_4GB_MICRON_MT53E512M32D1NP_046_WTB, static_cast<MtcTableIndex>(0),   },
-        { HOAG_4GB_MICRON_MT53E512M32D1NP_046_WTB, static_cast<MtcTableIndex>(0),   },
-        { AULA_4GB_MICRON_MT53E512M32D1NP_046_WTB, static_cast<MtcTableIndex>(0),   },
+        { IOWA_8GB_SAMSUNG_K4UBE3D4AA_MGCL,        T210b0SdevEmcDvfsTableS1y8gbX03, },
+        { HOAG_4GB_SAMSUNG_K4U6E3S4AA_MGCL,        T210b0SdevEmcDvfsTableS1y4gbX03, },
+        { IOWA_4GB_SAMSUNG_K4U6E3S4AB_MGCL,        T210b0SdevEmcDvfsTableS1z4gb01,  },
+        { HOAG_4GB_SAMSUNG_K4U6E3S4AB_MGCL,        T210b0SdevEmcDvfsTableS1y8gb04,  },
+        { AULA_4GB_SAMSUNG_K4U6E3S4AB_MGCL,        T210b0SdevEmcDvfsTableS1y8gb04,  },
+        { HOAG_8GB_SAMSUNG_K4UBE3D4AA_MGCL,        T210b0SdevEmcDvfsTableS1y8gbX03, },
+        { AULA_4GB_SAMSUNG_K4U6E3S4AA_MGCL,        T210b0SdevEmcDvfsTableS1y4gbX03, },
+        { IOWA_4GB_MICRON_MT53E512M32D2NP_046_WTF, T210b0SdevEmcDvfsTableM4gb03,    },
+        { HOAG_4GB_MICRON_MT53E512M32D2NP_046_WTF, T210b0SdevEmcDvfsTableM4gb03,    },
+        { AULA_4GB_MICRON_MT53E512M32D2NP_046_WTF, T210b0SdevEmcDvfsTableM4gb03,    },
+        { AULA_8GB_SAMSUNG_K4UBE3D4AA_MGCL,        T210b0SdevEmcDvfsTableS1y8gbX03, },
+        { IOWA_4GB_HYNIX_H54G46CYRBX267,           T210b0SdevEmcDvfsTableH1a4gb01,  },
+        { HOAG_4GB_HYNIX_H54G46CYRBX267,           T210b0SdevEmcDvfsTableH1a4gb01,  },
+        { AULA_4GB_HYNIX_H54G46CYRBX267,           T210b0SdevEmcDvfsTableH1a4gb01,  },
+        { IOWA_4GB_MICRON_MT53E512M32D1NP_046_WTB, T210b0SdevEmcDvfsTableM1a4gb01,  },
+        { HOAG_4GB_MICRON_MT53E512M32D1NP_046_WTB, T210b0SdevEmcDvfsTableM1a4gb01,  },
+        { AULA_4GB_MICRON_MT53E512M32D1NP_046_WTB, T210b0SdevEmcDvfsTableM1a4gb01,  },
     };
 
     /*

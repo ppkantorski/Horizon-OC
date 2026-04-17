@@ -592,7 +592,6 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     Result VerifyMtcTable(MarikoMtcTable *tableStart, u32 expectedFreq) {
-        // Log("Rate_khz: %u, revision: %u\n", tableStart->rate_khz, tableStart->rev);
         R_UNLESS(tableStart->rate_khz == expectedFreq,  ldr::ResultInvalidMtcTable());
         R_UNLESS(tableStart->rev      == MTC_TABLE_REV, ldr::ResultInvalidMtcTable());
 
@@ -624,8 +623,6 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     NORETURN void AbortInvalidDramId() {
-        Log("Invalid dram id\n");
-        ViewLog();
         panic::SmcError(panic::Emc);
         CRASH("Invalid dram id\n");
     }
@@ -706,8 +703,6 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         static const DramId dramId = [] {
             DramId id = GetDramId();
-            id = IOWA_4GB_SAMSUNG_K4U6E3S4AA_MGCL;
-            // Log("Dram id: %u\n", id);
             return id;
         }();
 
@@ -737,9 +732,6 @@ namespace ams::ldr::hoc::pcv::mariko {
         }
 
         MtcExtendTables(table);
-        for (u32 i = 0; i < newEmcList.size(); ++i) {
-            // Log("freqList[%u] = %u\n", i, newEmcList[i]);
-        }
 
         if (R_FAILED(MtcValidateAllTables(table, newEmcList.data(), newEmcList.size()))) {
             panic::SmcError(panic::Emc);
