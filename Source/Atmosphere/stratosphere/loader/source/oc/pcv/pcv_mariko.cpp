@@ -375,7 +375,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         const u32 dyn_self_ref_control = (static_cast<u32>(7605.0 / tCK_avg) + 260) | (table->burst_regs.emc_dyn_self_ref_control & 0xffff0000);
 
-        CalculateTimings(tCK_avg);
+        CalculateTimings(tCK_avg, table->rate_khz);
 
         WRITE_PARAM_ALL_REG(table, emc_rd_rcd, GET_CYCLE_CEIL(tRCD));
         WRITE_PARAM_ALL_REG(table, emc_wr_rcd, GET_CYCLE_CEIL(tRCD));
@@ -592,7 +592,7 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     Result VerifyMtcTable(MarikoMtcTable *tableStart, u32 expectedFreq) {
-        Log("Rate_khz: %u, revision: %u\n", tableStart->rate_khz, tableStart->rev);
+        // Log("Rate_khz: %u, revision: %u\n", tableStart->rate_khz, tableStart->rev);
         R_UNLESS(tableStart->rate_khz == expectedFreq,  ldr::ResultInvalidMtcTable());
         R_UNLESS(tableStart->rev      == MTC_TABLE_REV, ldr::ResultInvalidMtcTable());
 
@@ -624,8 +624,8 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     NORETURN void AbortInvalidDramId() {
-       // Log("Invalid dram id\n");
-        // ViewLog();
+        Log("Invalid dram id\n");
+        ViewLog();
         panic::SmcError(panic::Emc);
         CRASH("Invalid dram id\n");
     }
@@ -688,16 +688,7 @@ namespace ams::ldr::hoc::pcv::mariko {
             newEmcList.push_back(newFreq);
         }
 
-        Log("Size = %u\n", newEmcList.size());
-        for (u32 i = 0; i < newEmcList.size(); ++i) {
-            Log("Freq: %u\n", newEmcList[i]);
-        }
-
-        Log("C.marikoEmcMaxClock: %u", C.marikoEmcMaxClock);
-
-        /* TODO: Test */
-        //ViewLog();
-        newEmcList.resize(std::min(newEmcList.size(), DvfsTableEntryCount));
+        newEmcList.resize(std::min(newEmcList.size(), DvfsTableEntryLimit));
     }
 
     void MtcExtendTables(MarikoMtcTable *table) {
@@ -716,7 +707,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         static const DramId dramId = [] {
             DramId id = GetDramId();
             id = IOWA_4GB_SAMSUNG_K4U6E3S4AA_MGCL;
-            //Log("Dram id: %u\n", id);
+            // Log("Dram id: %u\n", id);
             return id;
         }();
 
@@ -747,7 +738,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         MtcExtendTables(table);
         for (u32 i = 0; i < newEmcList.size(); ++i) {
-            Log("freqList[%u] = %u\n", i, newEmcList[i]);
+            // Log("freqList[%u] = %u\n", i, newEmcList[i]);
         }
 
         if (R_FAILED(MtcValidateAllTables(table, newEmcList.data(), newEmcList.size()))) {
@@ -946,7 +937,6 @@ namespace ams::ldr::hoc::pcv::mariko {
                 CRASH(entry.description);
             }
         }
-        // ViewLog();
     }
 
 }

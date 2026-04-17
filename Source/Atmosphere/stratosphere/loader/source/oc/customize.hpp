@@ -103,6 +103,9 @@ typedef struct CustomizeTable {
     u32 t7_tWTR;
     u32 t8_tREFI;
 
+    u32 readLatency[4];
+    u32 writeLatency[4];
+
     u32 mem_burst_read_latency;
     u32 mem_burst_write_latency;
 

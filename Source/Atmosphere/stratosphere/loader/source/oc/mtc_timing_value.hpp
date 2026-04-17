@@ -126,6 +126,9 @@ namespace ams::ldr::hoc {
         const u32 tFAW     = static_cast<u32>(tRRD * 4.0);
         const double tRPab = tRPpb + 3;
 
+        inline u32 RL;
+        inline u32 WL;
+
         inline u32 tR2P;
         inline u32 tR2W;
         inline u32 tRTM;

@@ -30,6 +30,73 @@ namespace ams::ldr::hoc::pcv::mariko {
         rext = 0x1A;
     }
 
+    void SwitchLatency(volatile u32 &latency, u32 index, u32 latencyStep) {
+        latency += index * latencyStep;
+    }
+
+    static u32 GetMaxLatencyIndex(volatile u32 *latencyArray, u32 latencySize) {
+        u32 maxIndex = 0;
+        for (u32 i = 0; i < latencySize; ++i) {
+            if (latencyArray[i]) {
+                maxIndex = i;
+            }
+        }
+
+        return maxIndex;
+    }
+
+    void AutoLatency(volatile u32 &latency, u32 freq, u32 latencyStep) {
+        if (freq >= 1866'000 && freq < 2133000) {
+            latency += latencyStep * 2;
+        } else if (freq >= 2133'000) {
+            latency += latencyStep * 3;
+        } else {
+            latency += latencyStep;
+        }
+        /* 1333 latency is not possible with this config. */
+    }
+
+    void HandleLatency(u32 freq, volatile u32 &latency, volatile u32 *latencyArray, u32 indexMax, u32 latencyStep) {
+        for (u32 i = 0; i <= indexMax; ++i) {
+            if (latencyArray[i] != 0 && freq <= latencyArray[i]) {
+                SwitchLatency(latency, i, latencyStep);
+                return;
+            }
+        }
+
+        SwitchLatency(latency, indexMax, latencyStep);
+    }
+
+    void HandleLatency(u32 freq) {
+        static u32 rlIndexMax = GetMaxLatencyIndex(C.readLatency, std::size(C.readLatency));
+        static u32 wlIndexMax = GetMaxLatencyIndex(C.writeLatency, std::size(C.writeLatency));
+        constexpr u32 ReadLatencyStep  = 4;
+        constexpr u32 WriteLatencyStep = 2;
+        bool autoLatencyRead = false, autoLatencyWrite = false;
+
+        if (rlIndexMax == 0) {
+            AutoLatency(RL, freq, ReadLatencyStep);
+            autoLatencyRead = true;
+        }
+
+        if (wlIndexMax == 0) {
+            AutoLatency(WL, freq, WriteLatencyStep);
+            autoLatencyWrite = true;
+        }
+
+        if (autoLatencyRead && autoLatencyWrite) {
+            return;
+        }
+
+        if (!autoLatencyRead) {
+            HandleLatency(freq, RL, C.readLatency, rlIndexMax, ReadLatencyStep);
+        }
+
+        if (!autoLatencyWrite) {
+            HandleLatency(freq, WL, C.writeLatency, wlIndexMax, WriteLatencyStep);
+        }
+    }
+
     void CalculateMrw2() {
         static const u8 rlMapDBI[8] = {
             6, 12, 16, 22, 28, 32, 36, 40
@@ -59,7 +126,12 @@ namespace ams::ldr::hoc::pcv::mariko {
         mrw2 = static_cast<u8>(((rlIndex & 0x7) | ((wlIndex & 0x7) << 3) | ((0 & 0x1) << 6)));
     }
 
-    void CalculateTimings(double tCK_avg) {
+    void CalculateTimings(double tCK_avg, u32 freq) {
+        RL = 28;
+        WL = 12;
+
+        HandleLatency(freq);
+
         GetRext();
 
         tR2P  = CEIL((RL * 0.426) - 2.0);

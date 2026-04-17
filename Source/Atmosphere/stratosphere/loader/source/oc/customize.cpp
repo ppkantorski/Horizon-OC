@@ -44,9 +44,9 @@ volatile CustomizeTable C = {
 /* Jedec freqs are 1333MHz, 1600MHz, 1866MHz, 2133MHz, 2400MHz, 2666MHz, 2933MHz, 3200MHz. */
 .stepMode = StepMode_66MHz,
 
-.marikoEmcMaxClock = 1866000, /* 1866MHz @ 1866tWRL is guaranteed to work on all Mariko units */
+.marikoEmcMaxClock = 2933000, /* 1866MHz @ 1866tWRL is guaranteed to work on all Mariko units */
 .marikoEmcVddqVolt = 600000,
-.emcDvbShift = 0,
+.emcDvbShift = 10,
 
 // Primary
 .t1_tRCD = 0,
@@ -58,6 +58,20 @@ volatile CustomizeTable C = {
 .t6_tRTW  = 0,
 .t7_tWTR  = 0,
 .t8_tREFI = 0,
+
+.readLatency = {
+    2133000,
+    2400000,
+    2600000,
+    C.marikoEmcMaxClock,
+},
+
+.writeLatency = {
+    2133000,
+    2400000,
+    2600000,
+    C.marikoEmcMaxClock,
+},
 
 /* You can mix and match different latencies if needed */
 /*
@@ -79,7 +93,7 @@ volatile CustomizeTable C = {
 .eristaCpuUV = 0,
 .eristaCpuVmin = 800,
 .eristaCpuMaxVolt = 1200,
-/* Unlocks up to 2295 Mhz CPU, usage is not recommended. */
+/* Unlocks up to 2397 Mhz CPU, usage is not recommended. */
 .eristaCpuUnlock = DISABLED,
 
 .marikoCpuUVLow = 0, // No undervolt
