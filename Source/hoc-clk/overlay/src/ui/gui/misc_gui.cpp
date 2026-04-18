@@ -1047,13 +1047,11 @@ protected:
         uint32_t maxClock = (uint32_t)this->configList->values[KipConfigValue_marikoEmcMaxClock];
         uint32_t vals[4];
 
-        // 1. Fetch and resolve 0xFFFFFFFF
         for (int i = 0; i < 4; i++) {
             vals[i] = (uint32_t)this->configList->values[keysArr[i]];
             if (vals[i] == 0xFFFFFFFFu) vals[i] = maxClock;
         }
 
-        // 2. Backward Pass: If a higher tier is set, lower tiers must be <= that tier
         uint32_t currentLimit = 0;
         for (int i = 3; i >= 0; i--) {
             if (vals[i] != 0) {
@@ -1064,7 +1062,6 @@ protected:
             }
         }
 
-        // 3. Forward Pass: Ensure monotonic increase for active tiers
         uint32_t last = 0;
         for (int i = 0; i < 4; i++) {
             if (vals[i] == 0) continue;
@@ -1075,7 +1072,6 @@ protected:
             last = vals[i];
         }
 
-        // 4. Save back to config
         for (int i = 0; i < 4; i++) {
             this->configList->values[keysArr[i]] = vals[i];
         }
