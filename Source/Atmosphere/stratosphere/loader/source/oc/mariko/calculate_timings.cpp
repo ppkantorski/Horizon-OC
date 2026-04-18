@@ -146,13 +146,16 @@ namespace ams::ldr::hoc::pcv::mariko {
         tRAS    = tRAS_values[C.t3_tRAS];
         tRRD = tRRD_values[C.t4_tRRD];
         tRFCpb  = tRFC_values[C.t5_tRFC];
-        u32 tWTR    = 10 - tWTR_values[C.t7_tWTR];
+        u32 tRTW = C.t6_tRTW;
+        u32 tWTR = 10 - tWTR_values[C.t7_tWTR];
+
+        if (freq < C.timingEmcTbreak) {
+            tRTW  = C.low_t6_tRTW;
+            tWTR = 10 - tWTR_values[C.low_t7_tWTR];
+        }
+
         s32 finetRTW = C.fineTune_t6_tRTW;
         s32 finetWTR = C.fineTune_t7_tWTR;
-
-        Log("Freq: %u\n", freq);
-        Log("WL: %u\n", WL);
-        Log("tRP value: %u\n\n", tRPpb);
 
         tRC      = tRAS + tRPpb;
         tRFCab   = tRFCpb * 2;
@@ -161,7 +164,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         tRPab = tRPpb + 3;
 
         tR2P  = CEIL((RL * 0.426) - 2.0);
-        tR2W  = FLOOR(FLOOR((5.0 / tCK_avg) + ((FLOOR(48.0 / WL) - 0.478) * 3.0)) / 1.501) + RL - (C.t6_tRTW * 3) + finetRTW;
+        tR2W  = FLOOR(FLOOR((5.0 / tCK_avg) + ((FLOOR(48.0 / WL) - 0.478) * 3.0)) / 1.501) + RL - (tRTW * 3) + finetRTW;
         tRTM  = FLOOR((10.0 + RL) + (3.502 / tCK_avg)) + FLOOR(7.489 / tCK_avg);
         tRATM = CEIL((tRTM - 10.0) + (RL * 0.426));
 

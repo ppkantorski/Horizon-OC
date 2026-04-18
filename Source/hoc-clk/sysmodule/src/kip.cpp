@@ -71,6 +71,10 @@ namespace kip {
         CUST_WRITE_FIELD_BATCH(&table, t7_tWTR, config::GetConfigValue(KipConfigValue_t7_tWTR));
         CUST_WRITE_FIELD_BATCH(&table, t8_tREFI, config::GetConfigValue(KipConfigValue_t8_tREFI));
         CUST_WRITE_FIELD_BATCH(&table, stepMode, config::GetConfigValue(KipConfigValue_stepMode));
+
+        CUST_WRITE_FIELD_BATCH(&table, timingEmcTbreak, config::GetConfigValue(KipConfigValue_timingEmcTbreak));
+        CUST_WRITE_FIELD_BATCH(&table, low_t6_tRTW, config::GetConfigValue(KipConfigValue_low_t6_tRTW));
+        CUST_WRITE_FIELD_BATCH(&table, low_t7_tWTR, config::GetConfigValue(KipConfigValue_low_t7_tWTR));
         CUST_WRITE_FIELD_BATCH(&table, t2_tRP_cap, config::GetConfigValue(KipConfigValue_t2_tRP_cap));
 
         CUST_WRITE_FIELD_BATCH(&table, readLatency1333, config::GetConfigValue(KipConfigValue_read_latency_1333));
@@ -202,6 +206,9 @@ namespace kip {
             configValues.values[KipConfigValue_t8_tREFI] = cust_get_tREFI(&table);
             configValues.values[KipConfigValue_stepMode] = cust_get_step_mode(&table);
 
+            configValues.values[KipConfigValue_timingEmcTbreak] = cust_get_timing_emc_tbreak(&table);
+            configValues.values[KipConfigValue_low_t6_tRTW] = cust_get_low_t6_tRTW(&table);
+            configValues.values[KipConfigValue_low_t7_tWTR] = cust_get_low_t7_tWTR(&table);
             configValues.values[KipConfigValue_t2_tRP_cap] = cust_get_tRP_cap(&table);
 
             configValues.values[KipConfigValue_read_latency_1333] = cust_get_read_latency_1333(&table);

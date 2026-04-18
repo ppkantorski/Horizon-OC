@@ -56,6 +56,10 @@ namespace kip {
 
         u32 t2_tRP_cap;
 
+        u32 timingEmcTbreak;
+        u32 low_t6_tRTW;
+        u32 low_t7_tWTR;
+
         /* These latencies are arrays in loader, but it's easier to handle it this way in the configurator. */
         u32 readLatency1333, readLatency1600, readLatency1866, readLatency2133;
         u32 writeLatency1333, writeLatency1600, writeLatency1866, writeLatency2133;
@@ -222,6 +226,9 @@ namespace kip {
     static inline bool cust_set_tWTR(const char* p, u32 v) { CUST_WRITE_FIELD(p, t7_tWTR, v); }
     static inline bool cust_set_tREFI(const char* p, u32 v) { CUST_WRITE_FIELD(p, t8_tREFI, v); }
     static inline bool cust_set_tRP_cap(const char* p, u32 v) { CUST_WRITE_FIELD(p, t2_tRP_cap, v); }
+    static inline bool cust_set_timing_emc_tbreak(const char* p, u32 v) { CUST_WRITE_FIELD(p, timingEmcTbreak, v); }
+    static inline bool cust_set_low_tRTW(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t6_tRTW, v); }
+    static inline bool cust_set_low_tWTR(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t7_tWTR, v); }
     static inline bool cust_set_tRTW_fine_tune(const char* p, u32 v) { CUST_WRITE_FIELD(p, t6_tRTW_fine_tune, v); }
     static inline bool cust_set_tWTR_fine_tune(const char* p, u32 v) { CUST_WRITE_FIELD(p, t7_tWTR_fine_tune, v); }
 
@@ -306,6 +313,9 @@ namespace kip {
     static inline u32 cust_get_tWTR(const CustomizeTable* t) { return CUST_GET_FIELD(t, t7_tWTR); }
     static inline u32 cust_get_tREFI(const CustomizeTable* t) { return CUST_GET_FIELD(t, t8_tREFI); }
     static inline u32 cust_get_tRP_cap(const CustomizeTable* t) { return CUST_GET_FIELD(t, t2_tRP_cap); }
+    static inline u32 cust_get_timing_emc_tbreak(const CustomizeTable* t) { return CUST_GET_FIELD(t, timingEmcTbreak); }
+    static inline u32 cust_get_low_t6_tRTW(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t6_tRTW); }
+    static inline u32 cust_get_low_t7_tWTR(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t7_tWTR); }
     static inline u32 cust_get_tRTW_fine_tune(const CustomizeTable* t) { return CUST_GET_FIELD(t, t6_tRTW_fine_tune); }
     static inline u32 cust_get_tWTR_fine_tune(const CustomizeTable* t) { return CUST_GET_FIELD(t, t7_tWTR_fine_tune); }
 

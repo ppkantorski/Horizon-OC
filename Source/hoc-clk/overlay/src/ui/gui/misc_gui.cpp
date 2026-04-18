@@ -897,6 +897,7 @@ protected:
             freqSubmenu->setValue(R_ARROW);
             this->listElement->addItem(freqSubmenu);
         } else {
+            RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
             std::vector<NamedValue> marikoMaxEmcClock = {
                 NamedValue("1600 MHz", 1600000),
                 NamedValue("1633 MHz", 1633000),
@@ -958,8 +959,6 @@ protected:
                 // NamedValue("3466MHz (Needs ridiculous Speedo/PLL)", 3466000),
                 // NamedValue("3500MHz (Needs ridiculous Speedo/PLL)", 3500000),
             };
-
-            RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
             for (auto& nv : marikoMaxEmcClock)
                 nv.name = formatMemClockKhzLabel(nv.value, unit);
 
@@ -1031,7 +1030,79 @@ protected:
             NamedValue("+3", 3),
         };
 
+        /* Yes this is duplicated code, yes I don't care. */
+        std::vector<NamedValue> timingTbreakFreqs = {
+            NamedValue("Disabled",       0),
+            NamedValue("1633 MHz", 1633000),
+            NamedValue("1666 MHz", 1666000),
+            NamedValue("1700 MHz", 1700000),
+            NamedValue("1733 MHz", 1733000),
+            NamedValue("1766 MHz", 1766000),
+            NamedValue("1800 MHz", 1800000),
+            NamedValue("1833 MHz", 1833000),
+            NamedValue("1866 MHz", 1866000, "JEDEC."),
+            NamedValue("1900 MHz", 1900000),
+            NamedValue("1933 MHz", 1933000),
+            NamedValue("1966 MHz", 1966000),
+            NamedValue("1996 MHz", 1996800, "JEDEC."),
+            NamedValue("2000 MHz", 2000000),
+            NamedValue("2033 MHz", 2033000),
+            NamedValue("2066 MHz", 2066000),
+            NamedValue("2100 MHz", 2100000),
+            NamedValue("2133 MHz", 2133000, "JEDEC."),
+            NamedValue("2166 MHz", 2166000),
+            NamedValue("2200 MHz", 2200000),
+            NamedValue("2233 MHz", 2233000),
+            NamedValue("2266 MHz", 2266000),
+            NamedValue("2300 MHz", 2300000),
+            NamedValue("2333 MHz", 2333000),
+            NamedValue("2366 MHz", 2366000),
+            NamedValue("2400 MHz", 2400000, "JEDEC."),
+            NamedValue("2433 MHz", 2433000),
+            NamedValue("2466 MHz", 2466000),
+            NamedValue("2500 MHz", 2500000),
+            NamedValue("2533 MHz", 2533000),
+            NamedValue("2566 MHz", 2566000),
+            NamedValue("2600 MHz", 2600000),
+            NamedValue("2633 MHz", 2633000),
+            NamedValue("2666 MHz", 2666000, "JEDEC."),
+            NamedValue("2700 MHz", 2700000),
+            NamedValue("2733 MHz", 2733000),
+            NamedValue("2766 MHz", 2766000),
+            NamedValue("2800 MHz", 2800000),
+            NamedValue("2833 MHz", 2833000),
+            NamedValue("2866 MHz", 2866000),
+            NamedValue("2900 MHz", 2900000),
+            NamedValue("2933 MHz", 2933000, "JEDEC."),
+            NamedValue("2966 MHz", 2966000),
+            NamedValue("3000 MHz", 3000000),
+            NamedValue("3033 MHz", 3033000),
+            NamedValue("3066 MHz", 3066000),
+            NamedValue("3100 MHz", 3100000),
+            NamedValue("3133 MHz", 3133000),
+            NamedValue("3166 MHz", 3166000),
+            NamedValue("3200 MHz", 3200000, "JEDEC."),
+            NamedValue("3233 MHz", 3233000, "High speedo needed"),
+            NamedValue("3266 MHz", 3266000, "High speedo needed!"),
+            NamedValue("3300 MHz", 3300000, "High speedo needed!"),
+            // NamedValue("3333MHz (Needs extreme Speedo/PLL)", 3333000),
+            // NamedValue("3366MHz (Needs extreme Speedo/PLL)", 3366000),
+            // NamedValue("3400MHz (Needs extreme Speedo/PLL)", 3400000),
+            // NamedValue("3433MHz (Needs ridiculous Speedo/PLL)", 3433000),
+            // NamedValue("3466MHz (Needs ridiculous Speedo/PLL)", 3466000),
+            // NamedValue("3500MHz (Needs ridiculous Speedo/PLL)", 3500000),
+        };
+        RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
+
+        for (size_t i = 1; i < timingTbreakFreqs.size(); ++i) {
+            auto &nv = timingTbreakFreqs[i];
+            nv.name = formatMemClockKhzLabel(nv.value, unit);
+        }
+
         this->listElement->addItem(new tsl::elm::CategoryHeader("Advanced"));
+        addConfigButton(KipConfigValue_timingEmcTbreak, "RAM-Timing tBreak", ValueRange(0, 1, 1, "", 1), "tBreak", &thresholdsDisabled, {}, timingTbreakFreqs, false, true);
+        addConfigButton(KipConfigValue_low_t6_tRTW, "Low t6 tRTW", ValueRange(0, 10, 1, "", 1), "low tRTW", &thresholdsDisabled, {}, {}, false, true );
+        addConfigButton(KipConfigValue_low_t7_tWTR, "Low t7 tWTR", ValueRange(0, 10, 1, "", 1), "low tWTR", &thresholdsDisabled, {}, {}, false, true );
         addConfigButton(KipConfigValue_t2_tRP_cap, "1333WL t2 RP Cap", ValueRange(0, 8, 1, "", 1), "tRP Cap", &thresholdsDisabled, {}, {}, false, true );
         addConfigButton(KipConfigValue_t6_tRTW_fine_tune, "t6 tRTW Fine Tune", ValueRange(0, 4, 1, "", 0), "tRTW Fine Tune", &thresholdsDisabled, {}, t6_tRTW_fine_tune, false, true);
         addConfigButton(KipConfigValue_t7_tWTR_fine_tune, "t7 tWTR Fine Tune", ValueRange(0, 6, 1, "", 0), "tWTR Fine Tune", &thresholdsDisabled, {}, t7_tWTR_fine_tune, false, true);

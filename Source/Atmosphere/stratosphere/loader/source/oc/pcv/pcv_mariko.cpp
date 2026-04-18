@@ -591,7 +591,11 @@ namespace ams::ldr::hoc::pcv::mariko {
         }
     }
 
-    std::vector<u32> newEmcList;
+    namespace {
+        std::vector<u32> newEmcList;
+        u32 *nsoStart;
+    }
+
     void MtcGenerateJedecTable() {
         const u32 jedecFreqs[] = { 1866000, 1996000, 2133000, 2400000, 2666000, 2933000, 3200000 };
         constexpr u32 JedecFreqCount = std::size(jedecFreqs);
@@ -718,6 +722,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         static const DramId dramId = [] {
             DramId id = GetDramId();
+                id = IOWA_4GB_SAMSUNG_K4U6E3S4AA_MGCL;
             return id;
         }();
 
@@ -877,29 +882,37 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     Result MemMtcTableAsm(u32 *ptr) {
-        u32 adrp = *(ptr - 1);
+        constexpr u32 AddpOffset = 1;
+        constexpr u32 BrOffset   = 12;
+        constexpr u32 MovOffset  = 10;
+
+        /* Ensure we don't dereference memory before nso start. */
+        R_UNLESS(ptr - BrOffset >= nsoStart, ldr::ResultInvalidMtcTable());
+
+        u32 adrp = *(ptr - AddpOffset);
         R_UNLESS(AsmCompareAdrpNoImm(adrp, MtcAdrpAsm), ldr::ResultInvalidMtcTable());
 
         /* We don't check for matching register because both registers must be x0 in order to pass the previous checks. */
         /* The correct instructions will always be x0 since the mtcTable pointer is returned. */
 
         /* Pray this does not break. */
-        u32 br = *(ptr - 12);
+        u32 br = *(ptr - BrOffset);
         R_UNLESS(AsmCompareBrNoRd(br, MtcBrAsm), ldr::ResultInvalidMtcTable());
 
         /* Pray this does not break either. */
-        u32 mov = *(ptr - 10);
+        u32 mov = *(ptr - MovOffset);
         R_UNLESS(asm_compare_no_rd(mov, MtcMovAsm), ldr::ResultInvalidMtcTable());
 
         u8  movRd         = asm_get_rd(mov);
         u32 movCountPatch = asm_set_rd(asm_set_imm16(MtcMovAsm, newEmcList.size()), movRd);
 
-        PATCH_OFFSET(ptr - 12, NopIns);
-        PATCH_OFFSET(ptr - 10, movCountPatch);
+        PATCH_OFFSET(ptr - BrOffset, NopIns);
+        PATCH_OFFSET(ptr - MovOffset, movCountPatch);
         R_SUCCEED();
     }
 
     void Patch(uintptr_t mapped_nso, size_t nso_size) {
+        nsoStart = reinterpret_cast<u32 *>(mapped_nso);
         MtcGenerateFreqTables();
         u32 CpuCvbDefaultMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(CpuCvbTableDefault)->freq);
         u32 GpuCvbDefaultMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(GpuCvbTableDefault)->freq);
