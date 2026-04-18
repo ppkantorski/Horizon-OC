@@ -30,7 +30,7 @@
 
 namespace kip {
     extern bool kipAvailable;
-    
+
     typedef struct {
         u8  cust[4];
         u32 custRev;
@@ -40,6 +40,7 @@ namespace kip {
         u32 eristaEmcMaxClock;
         u32 eristaEmcMaxClock1;
         u32 eristaEmcMaxClock2;
+        u32 stepMode;
         u32 marikoEmcMaxClock;
         u32 marikoEmcVddqVolt;
         u32 emcDvbShift;
@@ -52,6 +53,10 @@ namespace kip {
         u32 t6_tRTW;
         u32 t7_tWTR;
         u32 t8_tREFI;
+
+        /* These latencies are arrays in loader, but it's easier to handle it this way in the configurator. */
+        u32 readLatency1333, readLatency1600, readLatency1866, readLatency2133;
+        u32 writeLatency1333, writeLatency1600, writeLatency1866, writeLatency2133;
 
         u32 mem_burst_read_latency;
         u32 mem_burst_write_latency;
@@ -201,6 +206,7 @@ namespace kip {
     static inline bool cust_set_erista_emc_max(const char* p, u32 v) { CUST_WRITE_FIELD(p, eristaEmcMaxClock, v); }
     static inline bool cust_set_erista_emc_max1(const char* p, u32 v) { CUST_WRITE_FIELD(p, eristaEmcMaxClock1, v); }
     static inline bool cust_set_erista_emc_max2(const char* p, u32 v) { CUST_WRITE_FIELD(p, eristaEmcMaxClock2, v); }
+    static inline bool cust_set_step_mode(const char* p, u32 v) { CUST_WRITE_FIELD(p, stepMode, v); }
     static inline bool cust_set_mariko_emc_max(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoEmcMaxClock, v); }
     static inline bool cust_set_mariko_emc_vddq(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoEmcVddqVolt, v); }
     static inline bool cust_set_emc_dvb_shift(const char* p, u32 v) { CUST_WRITE_FIELD(p, emcDvbShift, v); }
@@ -215,6 +221,17 @@ namespace kip {
     static inline bool cust_set_tREFI(const char* p, u32 v) { CUST_WRITE_FIELD(p, t8_tREFI, v); }
     static inline bool cust_set_tRTW_fine_tune(const char* p, u32 v) { CUST_WRITE_FIELD(p, t6_tRTW_fine_tune, v); }
     static inline bool cust_set_tWTR_fine_tune(const char* p, u32 v) { CUST_WRITE_FIELD(p, t7_tWTR_fine_tune, v); }
+
+    static inline bool cust_set_read_latency_1333(const char* p, u32 v) { CUST_WRITE_FIELD(p, readLatency1333, v); }
+    static inline bool cust_set_read_latency_1600(const char* p, u32 v) { CUST_WRITE_FIELD(p, readLatency1600, v); }
+    static inline bool cust_set_read_latency_1866(const char* p, u32 v) { CUST_WRITE_FIELD(p, readLatency1866, v); }
+    static inline bool cust_set_read_latency_2133(const char* p, u32 v) { CUST_WRITE_FIELD(p, readLatency2133, v); }
+
+    static inline bool cust_set_write_latency_1333(const char* p, u32 v) { CUST_WRITE_FIELD(p, writeLatency1333, v); }
+    static inline bool cust_set_write_latency_1600(const char* p, u32 v) { CUST_WRITE_FIELD(p, writeLatency1600, v); }
+    static inline bool cust_set_write_latency_1866(const char* p, u32 v) { CUST_WRITE_FIELD(p, writeLatency1866, v); }
+    static inline bool cust_set_write_latency_2133(const char* p, u32 v) { CUST_WRITE_FIELD(p, writeLatency2133, v); }
+
     static inline bool cust_set_burst_read_lat(const char* p, u32 v) { CUST_WRITE_FIELD(p, mem_burst_read_latency, v); }
     static inline bool cust_set_burst_write_lat(const char* p, u32 v) { CUST_WRITE_FIELD(p, mem_burst_write_latency, v); }
 
@@ -272,6 +289,7 @@ namespace kip {
     static inline u32 cust_get_erista_emc_max(const CustomizeTable* t) { return CUST_GET_FIELD(t, eristaEmcMaxClock); }
     static inline u32 cust_get_erista_emc_max1(const CustomizeTable* t) { return CUST_GET_FIELD(t, eristaEmcMaxClock1); }
     static inline u32 cust_get_erista_emc_max2(const CustomizeTable* t) { return CUST_GET_FIELD(t, eristaEmcMaxClock2); }
+    static inline u32 cust_get_step_mode(const CustomizeTable* t) { return CUST_GET_FIELD(t, stepMode); }
     static inline u32 cust_get_mariko_emc_max(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoEmcMaxClock); }
     static inline u32 cust_get_mariko_emc_vddq(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoEmcVddqVolt); }
     static inline u32 cust_get_emc_dvb_shift(const CustomizeTable* t) { return CUST_GET_FIELD(t, emcDvbShift); }
@@ -286,6 +304,17 @@ namespace kip {
     static inline u32 cust_get_tREFI(const CustomizeTable* t) { return CUST_GET_FIELD(t, t8_tREFI); }
     static inline u32 cust_get_tRTW_fine_tune(const CustomizeTable* t) { return CUST_GET_FIELD(t, t6_tRTW_fine_tune); }
     static inline u32 cust_get_tWTR_fine_tune(const CustomizeTable* t) { return CUST_GET_FIELD(t, t7_tWTR_fine_tune); }
+
+    static inline u32 cust_get_read_latency_1333(const CustomizeTable* t) { return CUST_GET_FIELD(t, readLatency1333); }
+    static inline u32 cust_get_read_latency_1600(const CustomizeTable* t) { return CUST_GET_FIELD(t, readLatency1600); }
+    static inline u32 cust_get_read_latency_1866(const CustomizeTable* t) { return CUST_GET_FIELD(t, readLatency1866); }
+    static inline u32 cust_get_read_latency_2133(const CustomizeTable* t) { return CUST_GET_FIELD(t, readLatency2133); }
+
+    static inline u32 cust_get_write_latency_1333(const CustomizeTable* t) { return CUST_GET_FIELD(t, writeLatency1333); }
+    static inline u32 cust_get_write_latency_1600(const CustomizeTable* t) { return CUST_GET_FIELD(t, writeLatency1600); }
+    static inline u32 cust_get_write_latency_1866(const CustomizeTable* t) { return CUST_GET_FIELD(t, writeLatency1866); }
+    static inline u32 cust_get_write_latency_2133(const CustomizeTable* t) { return CUST_GET_FIELD(t, writeLatency2133); }
+
     static inline u32 cust_get_burst_read_lat(const CustomizeTable* t) { return CUST_GET_FIELD(t, mem_burst_read_latency); }
     static inline u32 cust_get_burst_write_lat(const CustomizeTable* t) { return CUST_GET_FIELD(t, mem_burst_write_latency); }
 

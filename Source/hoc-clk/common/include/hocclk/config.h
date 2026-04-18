@@ -79,6 +79,8 @@ typedef enum {
     KipConfigValue_eristaEmcMaxClock,
     KipConfigValue_eristaEmcMaxClock1,
     KipConfigValue_eristaEmcMaxClock2,
+
+    KipConfigValue_stepMode,
     KipConfigValue_marikoEmcMaxClock,
     KipConfigValue_marikoEmcVddqVolt,
     KipConfigValue_emcDvbShift,
@@ -91,6 +93,17 @@ typedef enum {
     KipConfigValue_t6_tRTW,
     KipConfigValue_t7_tWTR,
     KipConfigValue_t8_tREFI,
+
+    KipConfigValue_read_latency_1333,
+    KipConfigValue_read_latency_1600,
+    KipConfigValue_read_latency_1866,
+    KipConfigValue_read_latency_2133,
+
+    KipConfigValue_write_latency_1333,
+    KipConfigValue_write_latency_1600,
+    KipConfigValue_write_latency_1866,
+    KipConfigValue_write_latency_2133,
+
     KipConfigValue_mem_burst_read_latency,
     KipConfigValue_mem_burst_write_latency,
 
@@ -283,6 +296,8 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "Erista EMC Max Clock 2" : "erista_emc_max_clock1";
         case KipConfigValue_eristaEmcMaxClock2:
             return pretty ? "Erista EMC Max Clock 3" : "erista_emc_max_clock2";
+        case KipConfigValue_stepMode:
+            return pretty ? "Step Mode:" : "step_mode";
         case KipConfigValue_marikoEmcMaxClock:
             return pretty ? "Mariko EMC Max Clock" : "mariko_emc_max_clock";
         case KipConfigValue_marikoEmcVddqVolt:
@@ -307,6 +322,25 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "t7 - tWTR" : "t7_twtr";
         case KipConfigValue_t8_tREFI:
             return pretty ? "t8 - tREFI" : "t8_trefi";
+
+        case KipConfigValue_read_latency_1333:
+            return pretty ? "1333 Read Latency" : "read_latency_1333";
+        case KipConfigValue_read_latency_1600:
+            return pretty ? "1600 Read Latency" : "read_latency_1600";
+        case KipConfigValue_read_latency_1866:
+            return pretty ? "1866 Read Latency" : "read_latency_1866";
+        case KipConfigValue_read_latency_2133:
+            return pretty ? "2133 Read Latency" : "read_latency_2133";
+
+        case KipConfigValue_write_latency_1333:
+            return pretty ? "1333 Write Latency" : "write_latency_1333";
+        case KipConfigValue_write_latency_1600:
+            return pretty ? "1600 Write Latency" : "write_latency_1600";
+        case KipConfigValue_write_latency_1866:
+            return pretty ? "1866 Write Latency" : "write_latency_1866";
+        case KipConfigValue_write_latency_2133:
+            return pretty ? "2133 Write Latency" : "write_latency_2133";
+
         case KipConfigValue_mem_burst_read_latency:
             return pretty ? "Memory Burst Read Latency" : "mem_burst_read_latency";
         case KipConfigValue_mem_burst_write_latency:
@@ -512,6 +546,7 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_eristaEmcMaxClock:
         case KipConfigValue_eristaEmcMaxClock1:
         case KipConfigValue_eristaEmcMaxClock2:
+        case KipConfigValue_stepMode:
         case KipConfigValue_marikoEmcMaxClock:
         case KipConfigValue_marikoEmcVddqVolt:
         case KipConfigValue_emcDvbShift:
