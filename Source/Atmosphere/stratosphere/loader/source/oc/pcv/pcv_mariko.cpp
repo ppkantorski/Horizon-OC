@@ -887,21 +887,21 @@ namespace ams::ldr::hoc::pcv::mariko {
         constexpr u32 MovOffset  = 10;
 
         /* Ensure we don't dereference memory before nso start. */
-        R_UNLESS(ptr - BrOffset >= nsoStart, ldr::ResultInvalidMtcTable());
+        R_UNLESS(ptr - BrOffset >= nsoStart, ldr::ResultInvalidMtcTablePattern());
 
         u32 adrp = *(ptr - AddpOffset);
-        R_UNLESS(AsmCompareAdrpNoImm(adrp, MtcAdrpAsm), ldr::ResultInvalidMtcTable());
+        R_UNLESS(AsmCompareAdrpNoImm(adrp, MtcAdrpAsm), ldr::ResultInvalidMtcTablePattern());
 
         /* We don't check for matching register because both registers must be x0 in order to pass the previous checks. */
         /* The correct instructions will always be x0 since the mtcTable pointer is returned. */
 
         /* Pray this does not break. */
         u32 br = *(ptr - BrOffset);
-        R_UNLESS(AsmCompareBrNoRd(br, MtcBrAsm), ldr::ResultInvalidMtcTable());
+        R_UNLESS(AsmCompareBrNoRd(br, MtcBrAsm), ldr::ResulInvalidMtcTablePattern());
 
         /* Pray this does not break either. */
         u32 mov = *(ptr - MovOffset);
-        R_UNLESS(asm_compare_no_rd(mov, MtcMovAsm), ldr::ResultInvalidMtcTable());
+        R_UNLESS(asm_compare_no_rd(mov, MtcMovAsm), ldr::ResultInvalidMtcTablePattern());
 
         u8  movRd         = asm_get_rd(mov);
         u32 movCountPatch = asm_set_rd(asm_set_imm16(MtcMovAsm, newEmcList.size()), movRd);
