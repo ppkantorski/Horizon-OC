@@ -1000,13 +1000,17 @@ protected:
 
         this->listElement->addItem(new tsl::elm::CategoryHeader("Memory Timings"));
 
-        addConfigButton(KipConfigValue_t1_tRCD, "t1 tRCD", ValueRange(0, 8, 1, "", 1), "tRCD", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t2_tRP, "t2 tRP", ValueRange(0, 8, 1, "", 1), "tRP", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t3_tRAS, "t3 tRAS", ValueRange(0, 10, 1, "", 1), "tRAS", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t4_tRRD, "t4 tRRD", ValueRange(0, 7, 1, "", 1), "tRRD", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t5_tRFC, "t5 tRFC", ValueRange(0, 11, 1, "", 1), "tRFC", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t6_tRTW, "t6 tRTW", ValueRange(0, 10, 1, "", 1), "tRTW", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t7_tWTR, "t7 tWTR", ValueRange(0, 10, 1, "", 1), "tWTR", &thresholdsDisabled, {}, {}, false, true);
+        addConfigButton(KipConfigValue_t1_tRCD, "t1 tRCD", ValueRange(0, 7, 1, "", 1), "tRCD", &thresholdsDisabled, {}, {}, false, true);
+        addConfigButton(KipConfigValue_t2_tRP, "t2 tRP", ValueRange(0, 7, 1, "", 1), "tRP", &thresholdsDisabled, {}, {}, false, true);
+        addConfigButton(KipConfigValue_t3_tRAS, "t3 tRAS", ValueRange(0, 9, 1, "", 1), "tRAS", &thresholdsDisabled, {}, {}, false, true);
+        addConfigButton(KipConfigValue_t4_tRRD, "t4 tRRD", ValueRange(0, 6, 1, "", 1), "tRRD", &thresholdsDisabled, {}, {}, false, true);
+        u32 tRFCCount = 10;
+        if (IsErista()) {
+            tRFCCount = 5;
+        }
+        addConfigButton(KipConfigValue_t5_tRFC, "t5 tRFC", ValueRange(0, tRFCCount, 1, "", 1), "tRFC", &thresholdsDisabled, {}, {}, false, true);
+        addConfigButton(KipConfigValue_t6_tRTW, "t6 tRTW", ValueRange(0, 9, 1, "", 1), "tRTW", &thresholdsDisabled, {}, {}, false, true);
+        addConfigButton(KipConfigValue_t7_tWTR, "t7 tWTR", ValueRange(0, 9, 1, "", 1), "tWTR", &thresholdsDisabled, {}, {}, false, true);
         addConfigButton(KipConfigValue_t8_tREFI, "t8 tREFI", ValueRange(0, 6, 1, "", 1), "tREFI", &thresholdsDisabled, {}, {}, false, true);
 
         std::vector<NamedValue> t6_tRTW_fine_tune = {
