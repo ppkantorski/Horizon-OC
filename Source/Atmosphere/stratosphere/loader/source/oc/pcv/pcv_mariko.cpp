@@ -897,7 +897,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         /* Pray this does not break. */
         u32 br = *(ptr - BrOffset);
-        R_UNLESS(AsmCompareBrNoRd(br, MtcBrAsm), ldr::ResulInvalidMtcTablePattern());
+        R_UNLESS(AsmCompareBrNoRd(br, MtcBrAsm), ldr::ResultInvalidMtcTablePattern());
 
         /* Pray this does not break either. */
         u32 mov = *(ptr - MovOffset);
