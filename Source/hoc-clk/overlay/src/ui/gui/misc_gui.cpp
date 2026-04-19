@@ -423,7 +423,7 @@ void MiscGui::listUI()
     std::vector<NamedValue> noNamedValues = {};
 
     this->listElement->addItem(new tsl::elm::CategoryHeader("Settings"));
-    
+
     tsl::elm::CustomDrawer* rebootSetWarning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
         renderer->drawString("\uE150 Settings marked in orange", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
         renderer->drawString("require a reboot to apply!", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
@@ -554,7 +554,7 @@ protected:
             {},
             RamDisplayUnitValues,
             false
-            
+
         );
         addConfigButton(
             HocClkConfigValue_PollingIntervalMs,
@@ -604,7 +604,7 @@ protected:
             false
         );
 
-        
+
         std::vector<NamedValue> ramRFMeasurementMethods = {
             NamedValue("Actmon", MemoryFrequencyMeasurementMode_Actmon),
             NamedValue("PLL", MemoryFrequencyMeasurementMode_PLL),
@@ -724,7 +724,7 @@ public:
 protected:
     void listUI() override {
         ValueThresholds thresholdsDisabled(0, 0);
-        
+
         BaseMenuGui::refresh(); // get latest context
         if(!this->context)
             return;
@@ -876,6 +876,14 @@ protected:
             true
         );
 
+        std::vector<NamedValue> stepMode = {
+             NamedValue("66MHz", 0),
+             NamedValue("100MHz", 1),
+             NamedValue("Jedec", 2),
+        };
+
+        addConfigButton(KipConfigValue_stepMode, "Step Mode", ValueRange(0, 0, 2, "", 0), "Step Mode", &thresholdsDisabled, {}, stepMode, false, true);
+
         if (IsErista()) {
             tsl::elm::ListItem* freqSubmenu = new tsl::elm::ListItem("RAM Frequency Editor");
             freqSubmenu->setTextColor(tsl::Color(255, 165, 0, 255));
@@ -889,6 +897,7 @@ protected:
             freqSubmenu->setValue(R_ARROW);
             this->listElement->addItem(freqSubmenu);
         } else {
+            RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
             std::vector<NamedValue> marikoMaxEmcClock = {
                 NamedValue("1600 MHz", 1600000),
                 NamedValue("1633 MHz", 1633000),
@@ -950,13 +959,12 @@ protected:
                 // NamedValue("3466MHz (Needs ridiculous Speedo/PLL)", 3466000),
                 // NamedValue("3500MHz (Needs ridiculous Speedo/PLL)", 3500000),
             };
-
-            RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
             for (auto& nv : marikoMaxEmcClock)
                 nv.name = formatMemClockKhzLabel(nv.value, unit);
 
             addConfigButton(KipConfigValue_marikoEmcMaxClock, "Ram Max Clock", ValueRange(0, 1, 1, "", 1), "Ram Max Clock", &thresholdsDisabled, {}, marikoMaxEmcClock, false, true);
         }
+
 
         tsl::elm::ListItem* latenciesSubmenu = new tsl::elm::ListItem("RAM Latency Editor");
         latenciesSubmenu->setTextColor(tsl::Color(255, 165, 0, 255));
@@ -1022,7 +1030,80 @@ protected:
             NamedValue("+3", 3),
         };
 
+        /* Yes this is duplicated code, yes I don't care. */
+        std::vector<NamedValue> timingTbreakFreqs = {
+            NamedValue("Disabled",       0),
+            NamedValue("1633 MHz", 1633000),
+            NamedValue("1666 MHz", 1666000),
+            NamedValue("1700 MHz", 1700000),
+            NamedValue("1733 MHz", 1733000),
+            NamedValue("1766 MHz", 1766000),
+            NamedValue("1800 MHz", 1800000),
+            NamedValue("1833 MHz", 1833000),
+            NamedValue("1866 MHz", 1866000, "JEDEC."),
+            NamedValue("1900 MHz", 1900000),
+            NamedValue("1933 MHz", 1933000),
+            NamedValue("1966 MHz", 1966000),
+            NamedValue("1996 MHz", 1996800, "JEDEC."),
+            NamedValue("2000 MHz", 2000000),
+            NamedValue("2033 MHz", 2033000),
+            NamedValue("2066 MHz", 2066000),
+            NamedValue("2100 MHz", 2100000),
+            NamedValue("2133 MHz", 2133000, "JEDEC."),
+            NamedValue("2166 MHz", 2166000),
+            NamedValue("2200 MHz", 2200000),
+            NamedValue("2233 MHz", 2233000),
+            NamedValue("2266 MHz", 2266000),
+            NamedValue("2300 MHz", 2300000),
+            NamedValue("2333 MHz", 2333000),
+            NamedValue("2366 MHz", 2366000),
+            NamedValue("2400 MHz", 2400000, "JEDEC."),
+            NamedValue("2433 MHz", 2433000),
+            NamedValue("2466 MHz", 2466000),
+            NamedValue("2500 MHz", 2500000),
+            NamedValue("2533 MHz", 2533000),
+            NamedValue("2566 MHz", 2566000),
+            NamedValue("2600 MHz", 2600000),
+            NamedValue("2633 MHz", 2633000),
+            NamedValue("2666 MHz", 2666000, "JEDEC."),
+            NamedValue("2700 MHz", 2700000),
+            NamedValue("2733 MHz", 2733000),
+            NamedValue("2766 MHz", 2766000),
+            NamedValue("2800 MHz", 2800000),
+            NamedValue("2833 MHz", 2833000),
+            NamedValue("2866 MHz", 2866000),
+            NamedValue("2900 MHz", 2900000),
+            NamedValue("2933 MHz", 2933000, "JEDEC."),
+            NamedValue("2966 MHz", 2966000),
+            NamedValue("3000 MHz", 3000000),
+            NamedValue("3033 MHz", 3033000),
+            NamedValue("3066 MHz", 3066000),
+            NamedValue("3100 MHz", 3100000),
+            NamedValue("3133 MHz", 3133000),
+            NamedValue("3166 MHz", 3166000),
+            NamedValue("3200 MHz", 3200000, "JEDEC."),
+            NamedValue("3233 MHz", 3233000, "High speedo needed"),
+            NamedValue("3266 MHz", 3266000, "High speedo needed!"),
+            NamedValue("3300 MHz", 3300000, "High speedo needed!"),
+            // NamedValue("3333MHz (Needs extreme Speedo/PLL)", 3333000),
+            // NamedValue("3366MHz (Needs extreme Speedo/PLL)", 3366000),
+            // NamedValue("3400MHz (Needs extreme Speedo/PLL)", 3400000),
+            // NamedValue("3433MHz (Needs ridiculous Speedo/PLL)", 3433000),
+            // NamedValue("3466MHz (Needs ridiculous Speedo/PLL)", 3466000),
+            // NamedValue("3500MHz (Needs ridiculous Speedo/PLL)", 3500000),
+        };
+        RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
+
+        for (size_t i = 1; i < timingTbreakFreqs.size(); ++i) {
+            auto &nv = timingTbreakFreqs[i];
+            nv.name = formatMemClockKhzLabel(nv.value, unit);
+        }
+
         this->listElement->addItem(new tsl::elm::CategoryHeader("Advanced"));
+        addConfigButton(KipConfigValue_timingEmcTbreak, "RAM-Timing tBreak", ValueRange(0, 1, 1, "", 1), "tBreak", &thresholdsDisabled, {}, timingTbreakFreqs, false, true);
+        addConfigButton(KipConfigValue_low_t6_tRTW, "Low t6 tRTW", ValueRange(0, 10, 1, "", 1), "low tRTW", &thresholdsDisabled, {}, {}, false, true );
+        addConfigButton(KipConfigValue_low_t7_tWTR, "Low t7 tWTR", ValueRange(0, 10, 1, "", 1), "low tWTR", &thresholdsDisabled, {}, {}, false, true );
+        addConfigButton(KipConfigValue_t2_tRP_cap, "1333WL t2 RP Cap", ValueRange(0, 8, 1, "", 1), "tRP Cap", &thresholdsDisabled, {}, {}, false, true );
         addConfigButton(KipConfigValue_t6_tRTW_fine_tune, "t6 tRTW Fine Tune", ValueRange(0, 4, 1, "", 0), "tRTW Fine Tune", &thresholdsDisabled, {}, t6_tRTW_fine_tune, false, true);
         addConfigButton(KipConfigValue_t7_tWTR_fine_tune, "t7 tWTR Fine Tune", ValueRange(0, 6, 1, "", 0), "tWTR Fine Tune", &thresholdsDisabled, {}, t7_tWTR_fine_tune, false, true);
     }
@@ -1033,48 +1114,252 @@ public:
     RamLatenciesSubmenuGui() { }
 
 protected:
+
+    void normalizeLatencies(const HocClkConfigValue keysArr[4]) {
+        uint32_t maxClock = (uint32_t)this->configList->values[KipConfigValue_marikoEmcMaxClock];
+        uint32_t vals[4];
+
+        for (int i = 0; i < 4; i++) {
+            vals[i] = (uint32_t)this->configList->values[keysArr[i]];
+            if (vals[i] == 0xFFFFFFFFu) vals[i] = maxClock;
+        }
+
+        uint32_t currentLimit = 0;
+        for (int i = 3; i >= 0; i--) {
+            if (vals[i] != 0) {
+                if (currentLimit != 0 && vals[i] > currentLimit) {
+                    vals[i] = currentLimit;
+                }
+                currentLimit = vals[i];
+            }
+        }
+
+        uint32_t last = 0;
+        for (int i = 0; i < 4; i++) {
+            if (vals[i] == 0) continue;
+
+            if (vals[i] < last) vals[i] = last;
+            if (vals[i] > maxClock) vals[i] = maxClock;
+
+            last = vals[i];
+        }
+
+        for (int i = 0; i < 4; i++) {
+            this->configList->values[keysArr[i]] = vals[i];
+        }
+    }
+
     void listUI() override {
         ValueThresholds thresholdsDisabled(0, 0);
 
-        this->listElement->addItem(new tsl::elm::CategoryHeader("Memory Latencies"));
+        if (IsErista()) {
+            std::vector<NamedValue> rlLabels = { NamedValue("1333 RL", 28), NamedValue("1600 RL", 32), NamedValue("1866 RL", 36), NamedValue("2133 RL", 40) };
+            std::vector<NamedValue> wlLabels = { NamedValue("1333 WL", 12), NamedValue("1600 WL", 14), NamedValue("1866 WL", 16), NamedValue("2133 WL", 18) };
 
-        std::vector<NamedValue> rlLabels = {
-            NamedValue("1333 RL", 28),
-            NamedValue("1600 RL", 32),
-            NamedValue("1866 RL", 36),
-            NamedValue("2133 RL", 40)
+            addConfigButton(KipConfigValue_mem_burst_read_latency,  "Read Latency",  ValueRange(0, 6, 1, "", 0), "Read Latency",  &thresholdsDisabled, {}, rlLabels, false, true);
+            addConfigButton(KipConfigValue_mem_burst_write_latency, "Write Latency", ValueRange(0, 6, 1, "", 0), "Write Latency", &thresholdsDisabled, {}, wlLabels, false, true);
+            return;
+        }
+
+        Result rc = hocclkIpcGetConfigValues(this->configList);
+        if (R_FAILED(rc)) [[unlikely]] {
+            FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc);
+            return;
+        }
+
+        uint32_t maxClock = (uint32_t)this->configList->values[KipConfigValue_marikoEmcMaxClock];
+        RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
+
+        static const std::vector<uint32_t> kFreqOptions = {
+            1633000, 1666000, 1700000, 1733000, 1766000, 1800000,
+            1833000, 1866000, 1900000, 1933000, 1966000, 1996800, 2000000,
+            2033000, 2066000, 2100000, 2133000, 2166000, 2200000, 2233000,
+            2266000, 2300000, 2333000, 2366000, 2400000, 2433000, 2466000,
+            2500000, 2533000, 2566000, 2600000, 2633000, 2666000, 2700000,
+            2733000, 2766000, 2800000, 2833000, 2866000, 2900000, 2933000,
+            2966000, 3000000, 3033000, 3066000, 3100000, 3133000, 3166000,
+            3200000, 3233000, 3266000, 3300000,
         };
 
-        std::vector<NamedValue> wlLabels = {
-            NamedValue("1333 WL", 12),
-            NamedValue("1600 WL", 14),
-            NamedValue("1866 WL", 16),
-            NamedValue("2133 WL", 18)
+        static const HocClkConfigValue kLatencyRKeys[4] = {
+            KipConfigValue_read_latency_1333,
+            KipConfigValue_read_latency_1600,
+            KipConfigValue_read_latency_1866,
+            KipConfigValue_read_latency_2133,
+        };
+        static const HocClkConfigValue kLatencyWKeys[4] = {
+            KipConfigValue_write_latency_1333,
+            KipConfigValue_write_latency_1600,
+            KipConfigValue_write_latency_1866,
+            KipConfigValue_write_latency_2133,
         };
 
-        addConfigButton(
-            KipConfigValue_mem_burst_read_latency,
-            "Read Latency",
-            ValueRange(0, 6, 1, "", 0),
-            "Read Latency",
-            &thresholdsDisabled,
-            {},
-            rlLabels,
-            false,
-            true
-        );
+        static const char* kTierLabels[4] = { "1333 Latency Max", "1600 Latency Max", "1866 Latency Max", "2133 Latency Max" };
 
-        addConfigButton(
-            KipConfigValue_mem_burst_write_latency,
-            "Write Latency",
-            ValueRange(0, 6, 1, "", 0),
-            "Write Latency",
-            &thresholdsDisabled,
-            {},
-            wlLabels,
-            false,
-            true
-        );
+        auto buildNamedValues = [&](int tierIdx) -> std::vector<NamedValue> {
+            std::vector<NamedValue> nv;
+            nv.push_back(NamedValue("-", 0u));
+            if (tierIdx == 3) {
+                nv.push_back(NamedValue(formatMemClockKhzLabel(maxClock, unit), maxClock));
+                nv.push_back(NamedValue(formatMemClockKhzLabel(maxClock, unit), 0xFFFFFFFFu));
+            } else {
+                for (uint32_t freq : kFreqOptions) {
+                    if (freq > maxClock) continue;
+                    nv.push_back(NamedValue(formatMemClockKhzLabel(freq, unit), freq));
+                }
+                nv.push_back(NamedValue(formatMemClockKhzLabel(maxClock, unit), maxClock));
+                nv.push_back(NamedValue(formatMemClockKhzLabel(maxClock, unit), 0xFFFFFFFFu));
+            }
+            return nv;
+        };
+
+        auto makeValueText = [&](uint32_t rawVal) -> std::string {
+            if (rawVal == 0) return "-";
+            if (rawVal == 0xFFFFFFFFu) return formatMemClockKhzLabel(maxClock, unit);
+            return formatMemClockKhzLabel(rawVal, unit);
+        };
+
+        auto addLatencyRow = [&](const char* label, int tierIdx, const HocClkConfigValue keysArr[4]) {
+            HocClkConfigValue thisKey = keysArr[tierIdx];
+            uint32_t currentVal = (uint32_t)this->configList->values[thisKey];
+
+            tsl::elm::ListItem* item = new tsl::elm::ListItem(label);
+            item->setTextColor(tsl::Color(255, 165, 0, 255));
+            item->setValue(makeValueText(currentVal));
+
+            item->setClickListener([this, tierIdx, thisKey, keysArr](u64 keys) -> bool {
+                if ((keys & HidNpadButton_A) == 0)
+                    return false;
+
+                uint32_t vals[4];
+                for (int i = 0; i < 4; i++)
+                    vals[i] = (uint32_t)this->configList->values[keysArr[i]];
+
+                uint32_t maxClock = (uint32_t)this->configList->values[KipConfigValue_marikoEmcMaxClock];
+                RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
+
+                auto resolveVal = [maxClock](uint32_t v) -> uint32_t {
+                    return (v == 0xFFFFFFFFu) ? maxClock : v;
+                };
+
+                if (tierIdx == 3) {
+                    bool maxOccupied = false;
+                    for (int i = 0; i < 3; i++) {
+                        if (resolveVal(vals[i]) == maxClock) {
+                            maxOccupied = true;
+                            break;
+                        }
+                    }
+
+                    std::vector<NamedValue> opts;
+                    opts.push_back(NamedValue("-", 0u));
+
+                    if (!maxOccupied) {
+                        opts.push_back(NamedValue(formatMemClockKhzLabel(maxClock, unit), maxClock));
+                    }
+
+                    uint32_t displayCurrent = resolveVal(vals[3]);
+                    if (maxOccupied && displayCurrent == maxClock) {
+                        displayCurrent = 0;
+                    }
+
+                    tsl::changeTo<ValueChoiceGui>(
+                        displayCurrent,
+                        ValueRange(0, 0, 1, "", 1),
+                        std::string("2133 Latency Max"),
+                        [this, thisKey, keysArr](uint32_t chosen) -> bool {
+                            this->configList->values[thisKey] = chosen;
+                            Result rc = hocclkIpcSetConfigValues(this->configList);
+                            if (R_FAILED(rc)) {
+                                FatalGui::openWithResultCode("hocclkIpcSetConfigValues", rc);
+                                return false;
+                            }
+                            sendKipData();
+                            this->lastContextUpdate = armGetSystemTick();
+                            return true;
+                        },
+                        ValueThresholds(), false,
+                        std::map<uint32_t, std::string>{},
+                        opts,
+                        false,
+                        false
+                    );
+                    return true;
+                }
+
+                uint32_t lowerBound = 0;
+                for (int i = 0; i < tierIdx; i++) {
+                    uint32_t v = resolveVal(vals[i]);
+                    if (v != 0 && v > lowerBound)
+                        lowerBound = v;
+                }
+
+                uint32_t upperBound = 0;
+                for (int i = tierIdx + 1; i < 4; i++) {
+                    uint32_t v;
+                    if (i == 3) {
+                        uint32_t r = resolveVal(vals[i]);
+                        v = (r != 0) ? maxClock : 0;
+                    } else {
+                        v = resolveVal(vals[i]);
+                    }
+                    if (v != 0 && (upperBound == 0 || v < upperBound))
+                        upperBound = v;
+                }
+
+                std::vector<NamedValue> opts;
+                opts.push_back(NamedValue("-", 0u));
+                for (uint32_t freq : kFreqOptions) {
+                    if (freq <= lowerBound) continue;
+                    if (freq > maxClock) continue;
+                    if (upperBound != 0 && freq >= upperBound) continue;
+                    opts.push_back(NamedValue(formatMemClockKhzLabel(freq, unit), freq));
+                }
+
+                uint32_t displayCurrent = resolveVal(vals[tierIdx]);
+                bool currentInList = false;
+                for (auto& nv : opts)
+                    if (nv.value == displayCurrent) { currentInList = true; break; }
+                if (!currentInList) displayCurrent = 0;
+
+                tsl::changeTo<ValueChoiceGui>(
+                    displayCurrent,
+                    ValueRange(0, 0, 1, "", 1),
+                    std::string("Latency Max"),
+                    [this, thisKey, keysArr](uint32_t chosen) -> bool {
+                        this->configList->values[thisKey] = chosen;
+                        normalizeLatencies(keysArr);
+                        Result rc = hocclkIpcSetConfigValues(this->configList);
+                        if (R_FAILED(rc)) {
+                            FatalGui::openWithResultCode("hocclkIpcSetConfigValues", rc);
+                            return false;
+                        }
+                        sendKipData();
+                        this->lastContextUpdate = armGetSystemTick();
+                        return true;
+                    },
+                    ValueThresholds(), false,
+                    std::map<uint32_t, std::string>{},
+                    opts,
+                    false,
+                    false
+                );
+                return true;
+            });
+
+            this->listElement->addItem(item);
+            this->configButtons[thisKey] = item;
+            this->configRanges[thisKey]  = ValueRange(0, 0, 1, "", 1);
+            this->configNamedValues[thisKey] = buildNamedValues(tierIdx);
+        };
+
+        this->listElement->addItem(new tsl::elm::CategoryHeader("Read Latency"));
+        for (int i = 0; i < 4; i++)
+            addLatencyRow(kTierLabels[i], i, kLatencyRKeys);
+
+        this->listElement->addItem(new tsl::elm::CategoryHeader("Write Latency"));
+        for (int i = 0; i < 4; i++)
+            addLatencyRow(kTierLabels[i], i, kLatencyWKeys);
     }
 };
 
@@ -1373,7 +1658,7 @@ protected:
         for (auto& nv : eristaMaxEmcClock)
             if (nv.name != "Disabled")
                 nv.name = formatMemClockKhzLabel(nv.value, unit);
-                
+
         addConfigButtonS(KipConfigValue_eristaEmcMaxClock, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN, true);
         addConfigButtonS(KipConfigValue_eristaEmcMaxClock1, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN, true);
         addConfigButtonS(KipConfigValue_eristaEmcMaxClock2, "", ValueRange(0, 1, 1, "", 1), "", &eristaRamThresholds, {}, eristaMaxEmcClock, false, A_BTN, true);

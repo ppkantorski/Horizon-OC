@@ -51,6 +51,7 @@ namespace ams::ldr {
     R_DEFINE_ERROR_RESULT(UninitializedPatcher,     1013);
     R_DEFINE_ERROR_RESULT(UnsuccessfulPatcher,      1014);
     R_DEFINE_ERROR_RESULT(SafetyCheckFailure,       1015);
+    R_DEFINE_ERROR_RESULT(InvalidMtcTablePattern,   1016);
 }
 
 namespace ams::ldr::hoc {

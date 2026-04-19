@@ -113,7 +113,38 @@ namespace ams::ldr::hoc::pcv::erista {
     constexpr u32 EmcClkMinFreq = 40800; /* 40.8 MHz table only exists on erista. */
     constexpr u32 EmcClkPllmLimit = 1866'000'000;
 
-    constexpr u32 MTC_TABLE_REV = 7;
+    constexpr u32 MTC_TABLE_REV        = 7;
+    constexpr u32 MtcTableCountDefault = 10;
+
+    constexpr size_t MtcFullTableSize  = sizeof(EristaMtcTable) * MtcTableCountDefault;
+    constexpr u32 MtcFullTableCount    = 3;
+
+    /* These dramids were copied from Hekate -- see /bdk/mem/sdram.h */
+    enum DramId {
+        ICOSA_4GB_SAMSUNG_K4F6E304HB_MGCH        = 0,
+        ICOSA_4GB_HYNIX_H9HCNNNBPUMLHR_NLE       = 1,
+        ICOSA_4GB_MICRON_MT53B512M32D2NP_062_WTC = 2, /* This doesn't have a table in pcv? Wtf? */
+        ICOSA_6GB_SAMSUNG_K4FHE3D4HM_MGCH        = 4,
+        ICOSA_8GB_SAMSUNG_K4FBE3D4HM_MGXX        = 7, /* No table, but expected */
+    };
+
+    enum MtcTableIndex {
+        T210SdevEmcDvfsTableS4gb01 = 0, /* HB-MGCH */
+        T210SdevEmcDvfsTableS6gb01 = 1, /* HM-MGCH */
+        T210SdevEmcDvfsTableH4gb01 = 2, /* HR-NLE  */
+        MtcTableIndex_Invalid      = 3,
+    };
+
+    struct MtcDramIndex {
+        DramId dramId;
+        MtcTableIndex index;
+    };
+
+    constexpr MtcDramIndex mtcIndexTable[] = {
+        { ICOSA_4GB_SAMSUNG_K4F6E304HB_MGCH,  T210SdevEmcDvfsTableS4gb01, },
+        { ICOSA_6GB_SAMSUNG_K4FHE3D4HM_MGCH,  T210SdevEmcDvfsTableS6gb01, },
+        { ICOSA_4GB_HYNIX_H9HCNNNBPUMLHR_NLE, T210SdevEmcDvfsTableH4gb01, },
+    };
 
     void Patch(uintptr_t mapped_nso, size_t nso_size);
 

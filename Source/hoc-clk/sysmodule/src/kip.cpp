@@ -21,7 +21,7 @@
 namespace kip {
 
     bool kipAvailable = false;
-    
+
     void SetKipData()
     {
         // TODO: figure out if this REALLY causes issues (i doubt it)
@@ -70,6 +70,23 @@ namespace kip {
         CUST_WRITE_FIELD_BATCH(&table, t6_tRTW, config::GetConfigValue(KipConfigValue_t6_tRTW));
         CUST_WRITE_FIELD_BATCH(&table, t7_tWTR, config::GetConfigValue(KipConfigValue_t7_tWTR));
         CUST_WRITE_FIELD_BATCH(&table, t8_tREFI, config::GetConfigValue(KipConfigValue_t8_tREFI));
+        CUST_WRITE_FIELD_BATCH(&table, stepMode, config::GetConfigValue(KipConfigValue_stepMode));
+
+        CUST_WRITE_FIELD_BATCH(&table, timingEmcTbreak, config::GetConfigValue(KipConfigValue_timingEmcTbreak));
+        CUST_WRITE_FIELD_BATCH(&table, low_t6_tRTW, config::GetConfigValue(KipConfigValue_low_t6_tRTW));
+        CUST_WRITE_FIELD_BATCH(&table, low_t7_tWTR, config::GetConfigValue(KipConfigValue_low_t7_tWTR));
+        CUST_WRITE_FIELD_BATCH(&table, t2_tRP_cap, config::GetConfigValue(KipConfigValue_t2_tRP_cap));
+
+        CUST_WRITE_FIELD_BATCH(&table, readLatency1333, config::GetConfigValue(KipConfigValue_read_latency_1333));
+        CUST_WRITE_FIELD_BATCH(&table, readLatency1600, config::GetConfigValue(KipConfigValue_read_latency_1600));
+        CUST_WRITE_FIELD_BATCH(&table, readLatency1866, config::GetConfigValue(KipConfigValue_read_latency_1866));
+        CUST_WRITE_FIELD_BATCH(&table, readLatency2133, config::GetConfigValue(KipConfigValue_read_latency_2133));
+
+        CUST_WRITE_FIELD_BATCH(&table, writeLatency1333, config::GetConfigValue(KipConfigValue_write_latency_1333));
+        CUST_WRITE_FIELD_BATCH(&table, writeLatency1600, config::GetConfigValue(KipConfigValue_write_latency_1600));
+        CUST_WRITE_FIELD_BATCH(&table, writeLatency1866, config::GetConfigValue(KipConfigValue_write_latency_1866));
+        CUST_WRITE_FIELD_BATCH(&table, writeLatency2133, config::GetConfigValue(KipConfigValue_write_latency_2133));
+
         CUST_WRITE_FIELD_BATCH(&table, mem_burst_read_latency, config::GetConfigValue(KipConfigValue_mem_burst_read_latency));
         CUST_WRITE_FIELD_BATCH(&table, mem_burst_write_latency, config::GetConfigValue(KipConfigValue_mem_burst_write_latency));
         CUST_WRITE_FIELD_BATCH(&table, eristaCpuUV, config::GetConfigValue(KipConfigValue_eristaCpuUV));
@@ -166,7 +183,7 @@ namespace kip {
                 configValues.values[HocClkConfigValue_IsFirstLoad] = (u64)false;
                 notification::writeNotification("Horizon OC has been installed");
             }
-            
+
             configValues.values[KipCrc32] = (u64)crc32::checksum_file("sdmc:/atmosphere/kips/hoc.kip"); // write checksum
             // configValues.values[KipConfigValue_mtcConf] = cust_get_mtc_conf(&table);
             configValues.values[KipConfigValue_hpMode] = cust_get_hp_mode(&table);
@@ -187,6 +204,23 @@ namespace kip {
             configValues.values[KipConfigValue_t6_tRTW] = cust_get_tRTW(&table);
             configValues.values[KipConfigValue_t7_tWTR] = cust_get_tWTR(&table);
             configValues.values[KipConfigValue_t8_tREFI] = cust_get_tREFI(&table);
+            configValues.values[KipConfigValue_stepMode] = cust_get_step_mode(&table);
+
+            configValues.values[KipConfigValue_timingEmcTbreak] = cust_get_timing_emc_tbreak(&table);
+            configValues.values[KipConfigValue_low_t6_tRTW] = cust_get_low_t6_tRTW(&table);
+            configValues.values[KipConfigValue_low_t7_tWTR] = cust_get_low_t7_tWTR(&table);
+            configValues.values[KipConfigValue_t2_tRP_cap] = cust_get_tRP_cap(&table);
+
+            configValues.values[KipConfigValue_read_latency_1333] = cust_get_read_latency_1333(&table);
+            configValues.values[KipConfigValue_read_latency_1600] = cust_get_read_latency_1600(&table);
+            configValues.values[KipConfigValue_read_latency_1866] = cust_get_read_latency_1866(&table);
+            configValues.values[KipConfigValue_read_latency_2133] = cust_get_read_latency_2133(&table);
+
+            configValues.values[KipConfigValue_write_latency_1333] = cust_get_write_latency_1333(&table);
+            configValues.values[KipConfigValue_write_latency_1600] = cust_get_write_latency_1600(&table);
+            configValues.values[KipConfigValue_write_latency_1866] = cust_get_write_latency_1866(&table);
+            configValues.values[KipConfigValue_write_latency_2133] = cust_get_write_latency_2133(&table);
+
             configValues.values[KipConfigValue_mem_burst_read_latency] = cust_get_burst_read_lat(&table);
             configValues.values[KipConfigValue_mem_burst_write_latency] = cust_get_burst_write_lat(&table);
 

@@ -31,6 +31,7 @@
 namespace ams::ldr::hoc {
 
 volatile CustomizeTable C = {
+
 /* Disables RAM powerdown */
 .hpMode = DISABLED,
 
@@ -39,8 +40,12 @@ volatile CustomizeTable C = {
 .eristaEmcMaxClock1 = 1600000,
 .eristaEmcMaxClock2 = 1600000,
 
+/* Available: 66MHz step rate, 100MHz step rate and jedec. */
+/* Jedec freqs are 1333MHz, 1600MHz, 1866MHz, 2133MHz, 2400MHz, 2666MHz, 2933MHz, 3200MHz. */
+.stepMode = StepMode_66MHz,
+
 .marikoEmcMaxClock = 1866000, /* 1866MHz @ 1866tWRL is guaranteed to work on all Mariko units */
-.marikoEmcVddqVolt = 600000, /* Micron: 600mV, other manafacturers: 640mV */
+.marikoEmcVddqVolt = 600000,
 .emcDvbShift = 0,
 
 // Primary
@@ -53,6 +58,29 @@ volatile CustomizeTable C = {
 .t6_tRTW  = 0,
 .t7_tWTR  = 0,
 .t8_tREFI = 0,
+
+/* At 1333WL, for some reason (incorrect ram timing config in mtc table?), tRP causes crashes at high reductions - 2 seems to be the most common limit. */
+/* This is a lazy workaround until I find the issue... */
+.t2_tRP_cap = 2,
+
+/* Frequency where non low timings gets used. */
+.timingEmcTbreak = DISABLED,
+.low_t6_tRTW = DISABLED,
+.low_t7_tWTR = DISABLED,
+
+.readLatency = {
+    DISABLED,
+    DISABLED,
+    DISABLED,
+    DISABLED,
+},
+
+.writeLatency = {
+    DISABLED,
+    DISABLED,
+    DISABLED,
+    DISABLED,
+},
 
 /* You can mix and match different latencies if needed */
 /*
@@ -74,7 +102,7 @@ volatile CustomizeTable C = {
 .eristaCpuUV = 0,
 .eristaCpuVmin = 800,
 .eristaCpuMaxVolt = 1200,
-/* Unlocks up to 2295 Mhz CPU, usage is not recommended. */
+/* Unlocks up to 2397 Mhz CPU, usage is not recommended. */
 .eristaCpuUnlock = DISABLED,
 
 .marikoCpuUVLow = 0, // No undervolt
