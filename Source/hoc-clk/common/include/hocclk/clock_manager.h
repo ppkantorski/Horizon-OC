@@ -58,6 +58,9 @@ typedef struct
     // FPS / Resolution
     u8 fps;
     u16 resolutionHeight;
+    
+    // Reserved for future use
+    u8 reserved[0xF28];
 } HocClkContext;
 
 typedef struct
@@ -71,3 +74,5 @@ typedef struct
 #define HOCCLK_FREQ_LIST_MAX 32
 
 #define GLOBAL_PROFILE_ID 0xA111111111111111
+
+static_assert(sizeof(HocClkContext) == 0x1000);

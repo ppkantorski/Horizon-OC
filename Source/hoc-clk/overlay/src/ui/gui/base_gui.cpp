@@ -48,10 +48,10 @@ std::string getVersionString() {
     return std::string(buf);
 }
 
-static constexpr tsl::Color dynamicLogoRGB1 = tsl::Color(0, 4, 8, 15);
-static constexpr tsl::Color dynamicLogoRGB2 = tsl::Color(7, 15, 15, 15);
-static constexpr tsl::Color STATIC_AQUA     = tsl::Color(2, 10, 12, 15);
-const std::string name = "Horizon OC Zeus";
+static constexpr tsl::Color dynamicLogoRGB1 = tsl::Color(0, 15, 3, 15);
+static constexpr tsl::Color dynamicLogoRGB2 = tsl::Color(0, 8, 1, 15);
+static constexpr tsl::Color STATIC_GREEN     = tsl::Color(0, 15, 0, 15);
+const std::string name = "Horizon OC Gaea";
 
 static s32 drawDynamicUltraText(
     tsl::gfx::Renderer* renderer,
@@ -100,12 +100,12 @@ static s32 drawDynamicUltraText(
         g = std::clamp<u8>(g, 0, 15);
         b = std::clamp<u8>(b, 0, 15);
 
-        bool lightning = (fmod(timeNow, 5.0) < 0.15);
-        if (lightning) {
-            r = std::min<u8>(r + 4, 15);
-            g = std::min<u8>(g + 4, 15);
-            b = std::min<u8>(b + 15, 15);
-        }
+        // bool lightning = (fmod(timeNow, 5.0) < 0.15);
+        // if (lightning) {
+        //     r = std::min<u8>(r + 4, 15);
+        //     g = std::min<u8>(g + 4, 15);
+        //     b = std::min<u8>(b + 15, 15);
+        // }
 
         tsl::Color color(r, g, b, 15);
 
@@ -126,7 +126,7 @@ void BaseGui::preDraw(tsl::gfx::Renderer* renderer) {
         LOGO_X,
         LOGO_Y,
         LOGO_LABEL_FONT_SIZE,
-        STATIC_AQUA,
+        STATIC_GREEN,
         false
     );
 }

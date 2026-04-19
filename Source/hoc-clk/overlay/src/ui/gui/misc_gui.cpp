@@ -568,11 +568,10 @@ protected:
         );
 
         tsl::elm::CustomDrawer* exSetWarning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("\uE150 Experimental Settings", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
-            renderer->drawString("are a work in progress! Use with caution!", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
-            renderer->drawString("Here be dragons!", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
+            renderer->drawString("\uE150 Experimental Settings are incomplete ", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
+            renderer->drawString("and may not work correctly! Here be dragons!", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
         });
-        exSetWarning->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 90);
+        exSetWarning->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 70);
         this->listElement->addItem(exSetWarning);
 
         addConfigToggle(HocClkConfigValue_EnableExperimentalSettings, nullptr);
@@ -1376,7 +1375,7 @@ protected:
         }
 
         ValueThresholds thresholdsDisabled(0, 0);
-        ValueThresholds mCpuClockThresholds(1963000, 2397000);
+        ValueThresholds mCpuClockThresholds(1963500, 2397000);
         ValueThresholds mCpuClockThresholdsUV(2397000, 2499000);
         ValueThresholds eCpuClockThresholds(1785000, 2091000);
         ValueThresholds eCpuClockThresholdsUV(2091000, 2193000);
@@ -1384,7 +1383,7 @@ protected:
         this->listElement->addItem(new tsl::elm::CategoryHeader("CPU Settings"));
         if(IsMariko()) {
             std::vector<NamedValue> ClkOptions = {
-                NamedValue("1963 MHz", 1963000),
+                NamedValue("1963 MHz", 1963500),
                 NamedValue("2091 MHz", 2091000),
                 NamedValue("2193 MHz", 2193000),
                 NamedValue("2295 MHz", 2295000),
@@ -1409,7 +1408,7 @@ protected:
             std::vector<NamedValue> ClkOptionsE = {
                 NamedValue("1785 MHz", 1785000),
                 NamedValue("1887 MHz", 1887000),
-                NamedValue("1963 MHz", 1963000),
+                NamedValue("1989 MHz", 1989000),
                 NamedValue("2091 MHz", 2091000),
                 NamedValue("2193 MHz", 2193000),
                 NamedValue("2295 MHz", 2295000),

@@ -70,6 +70,7 @@ typedef enum {
 
     HocClkConfigValue_MemoryFrequencyMeasurementMode,
     HocClkConfigValue_RamDisplayUnit,
+    HocClkConfigValue_IsFirstLoad,
 
     KipConfigValue_custRev,
     // KipConfigValue_mtcConf,
@@ -195,7 +196,6 @@ typedef enum {
     KipConfigValue_t7_tWTR_fine_tune,
 
     KipCrc32,
-    HocClkConfigValue_IsFirstLoad,
     HocClkConfigValue_EnumMax,
 } HocClkConfigValue;
 
@@ -467,7 +467,7 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_g_volt_e_998400: return pretty ? "Erista GPU Volt 998 MHz" : "g_volt_e_998400";
         case KipConfigValue_g_volt_e_1036800: return pretty ? "Erista GPU Volt 1036 MHz" : "g_volt_e_1036800";
         case KipConfigValue_g_volt_e_1075200: return pretty ? "Erista GPU Volt 1075 MHz" : "g_volt_e_1075200";
-        case KipConfigValue_t6_tRTW_fine_tune: return pretty ? "t6 - tRTW Fine Tune" : "t6_tRTW_fine_fune";
+        case KipConfigValue_t6_tRTW_fine_tune: return pretty ? "t6 - tRTW Fine Tune" : "t6_tRTW_fine_tune";
         case KipConfigValue_t7_tWTR_fine_tune: return pretty ? "t7 - tWTR Fine Tune" : "t7_tWTR_fine_tune";
         case KipCrc32:
             return pretty ? "CRC32" : "crc32";

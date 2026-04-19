@@ -33,19 +33,20 @@
 #include <switch/types.h>
 typedef enum
 {
-    HocClkSocType_Erista = 0,
-    HocClkSocType_Mariko,
+    HocClkSocType_Erista = 0, // T210, found in Icosa and Copper
+    HocClkSocType_Mariko,     // T214/T210B01, found in Hoag, Iowa, Calcio and Aula
+//  HocClkSocType_Drake,      // T239, found in Switch 2. Maybe someday...
     HocClkSocType_EnumMax
 } HocClkSocType;
 
 typedef enum
 {
-    HocClkConsoleType_Icosa = 0,
-    HocClkConsoleType_Copper,
-    HocClkConsoleType_Hoag,
-    HocClkConsoleType_Iowa,
-    HocClkConsoleType_Calcio,
-    HocClkConsoleType_Aula,
+    HocClkConsoleType_Icosa = 0, // V1
+    HocClkConsoleType_Copper,    // Unreleased Erista
+    HocClkConsoleType_Hoag,      // Lite
+    HocClkConsoleType_Iowa,      // V2
+    HocClkConsoleType_Calcio,    // Unreleased Mariko
+    HocClkConsoleType_Aula,      // OLED
     HocClkConsoleType_EnumMax,
 } HocClkConsoleType;
 
@@ -54,7 +55,7 @@ typedef enum {
     HocClkVoltage_EMCVDD2,
     HocClkVoltage_CPU,
     HocClkVoltage_GPU,
-    HocClkVoltage_EMCVDDQ,
+    HocClkVoltage_EMCVDDQ, // Returns VDD2 on Erista
     HocClkVoltage_Display,
     HocClkVoltage_Battery,
     HocClkVoltage_EnumMax,
@@ -63,10 +64,10 @@ typedef enum {
 typedef enum
 {
     HocClkProfile_Handheld = 0,
-    HocClkProfile_HandheldCharging,
+    HocClkProfile_HandheldCharging, // Not a real profile, just a marker
     HocClkProfile_HandheldChargingUSB,
     HocClkProfile_HandheldChargingOfficial,
-    HocClkProfile_Docked,
+    HocClkProfile_Docked, // Not shown on Lites
     HocClkProfile_EnumMax
 } HocClkProfile;
 
@@ -86,11 +87,11 @@ typedef enum
     HocClkThermalSensor_PCB,
     HocClkThermalSensor_Skin,
     HocClkThermalSensor_Battery,
-    HocClkThermalSensor_PMIC,
+    HocClkThermalSensor_PMIC, // Always return 50.0C, as thats the only reasonable value the PMIC sensor can generate
     HocClkThermalSensor_CPU,
     HocClkThermalSensor_GPU,
-    HocClkThermalSensor_MEM,
-    HocClkThermalSensor_PLLX,
+    HocClkThermalSensor_MEM, // Returns the PLLX sensor value on Mariko
+    HocClkThermalSensor_PLLX, 
     HocClkThermalSensor_EnumMax
 } HocClkThermalSensor;
 
@@ -107,12 +108,12 @@ typedef enum
     HocClkPartLoad_EMCCpu,
     HocClkPartLoad_GPU,
     HocClkPartLoad_CPUMax,
-    HocClkPartLoad_BAT,
+    HocClkPartLoad_BAT, // Battery raw charge percentage
     HocClkPartLoad_FAN,
     HocClkPartLoad_RamBWAll,
     HocClkPartLoad_RamBWCpu,
     HocClkPartLoad_RamBWGpu,
-    HocClkPartLoad_RamBWPeak,
+    HocClkPartLoad_RamBWPeak, 
     HocClkPartLoad_EnumMax
 } HocClkPartLoad;
 
@@ -237,7 +238,7 @@ static inline const char* hocclkFormatThermalSensor(HocClkThermalSensor thermSen
         case HocClkThermalSensor_PLLX:
             return pretty ? "PLLX" : "pllx";
         default:
-            return NULL;
+            return "unknown";
     }
 }
 
@@ -250,7 +251,7 @@ static inline const char* hocclkFormatPowerSensor(HocClkPowerSensor powSensor, b
         case HocClkPowerSensor_Avg:
             return pretty ? "Avg" : "avg";
         default:
-            return NULL;
+            return "unknown";
     }
 }
 
@@ -269,7 +270,7 @@ static inline const char* hocclkFormatProfile(HocClkProfile profile, bool pretty
         case HocClkProfile_HandheldChargingOfficial:
             return pretty ? "PD Charger" : "handheld_charging_official";
         default:
-            return NULL;
+            return "unknown";
     }
 }
 
@@ -291,6 +292,6 @@ static inline const char* hocClkFormatVoltage(HocClkVoltage voltage, bool pretty
         case HocClkVoltage_Display:
             return pretty ? "Display" : "display";
         default:
-            return NULL;
+            return "unknown";
     }
 }

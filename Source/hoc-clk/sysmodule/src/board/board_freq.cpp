@@ -88,7 +88,7 @@ namespace board {
 
             /* Voltage bug workaround. */
             if (module == HocClkModule_CPU) {
-                svcSleepThread(250'000);
+                svcSleepThread(300'000);
                 ClkrstSetHz(session, hz);
             }
 
@@ -97,7 +97,7 @@ namespace board {
             PcvSetHz(GetPcvModule(module), hz);
 
             if (module == HocClkModule_CPU) {
-                svcSleepThread(250'000);
+                svcSleepThread(300'000);
                 PcvSetHz(GetPcvModule(module), hz);
             }
         }

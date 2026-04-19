@@ -261,7 +261,7 @@ namespace ipcService {
         ASSERT_RESULT_OK(rc, "svcGetThreadPriority");
         rc = ipcServerInit(&gServer, HOCCLK_IPC_SERVICE_NAME, 42);
         ASSERT_RESULT_OK(rc, "ipcServerInit");
-        rc = threadCreate(&gThread, &ProcessThreadFunc, nullptr, NULL, 0x2000, priority, -2);
+        rc = threadCreate(&gThread, &ProcessThreadFunc, nullptr, NULL, 0x4000, priority, -2);
         ASSERT_RESULT_OK(rc, "threadCreate");
         gRunning = false;
     }
