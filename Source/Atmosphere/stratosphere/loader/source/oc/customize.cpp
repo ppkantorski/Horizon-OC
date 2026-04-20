@@ -96,8 +96,8 @@ volatile CustomizeTable C = {
  *   1331WL = 12
  */
 
-.mem_burst_read_latency = RL_2133,
-.mem_burst_write_latency = WL_2133,
+.mem_burst_read_latency = RL_1600,
+.mem_burst_write_latency = WL_1600,
 
 .eristaCpuUV = 0,
 .eristaCpuVmin = 800,
