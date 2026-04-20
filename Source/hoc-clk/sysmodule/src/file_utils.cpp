@@ -33,6 +33,7 @@ namespace fileUtils {
 
     namespace {
 
+        u64 bootTimeS;
         LockableMutex g_log_mutex;
         LockableMutex g_csv_mutex;
         std::atomic_bool g_has_initialized = false;
@@ -82,12 +83,10 @@ namespace fileUtils {
                 FILE* file = fopen(FILE_LOG_FILE_PATH, "a");
 
                 if (file) {
-                    struct timespec now;
-                    struct tm *timeInfo;
+                    timespec now = {};
                     clock_gettime(CLOCK_REALTIME, &now);
-                    timeInfo = localtime(&now.tv_sec);
 
-                    fprintf(file, "[%02d:%02d:%02d] ", timeInfo->tm_hour, timeInfo->tm_min, timeInfo->tm_sec);
+                    fprintf(file, "[%luls] ", now.tv_sec - bootTimeS);
                     vfprintf(file, format, args);
                     fprintf(file, "\n");
                     fclose(file);
@@ -152,6 +151,12 @@ namespace fileUtils {
         }
     }
 
+    void SetBootTime() {
+        timespec bootTime = {};
+        clock_gettime(CLOCK_REALTIME, &bootTime);
+        bootTimeS = bootTime.tv_sec;
+    }
+
     void InitializeAsync() {
         Thread initThread = {0};
         threadCreate(&initThread, InitializeThreadFunc, NULL, NULL, 0x4000, 0x15, 0);
@@ -167,6 +172,7 @@ namespace fileUtils {
 
         __libnx_init_time();
         timeExit();
+        SetBootTime();
 
         if (R_SUCCEEDED(rc)) {
             rc = fsInitialize();
