@@ -608,6 +608,10 @@ namespace ams::ldr::hoc::pcv::mariko {
             }
         }
 
+        if (newEmcList.back() != C.marikoEmcMaxClock) {
+            newEmcList.push_back(static_cast<u32>(C.marikoEmcMaxClock));
+        }
+
         newEmcList.resize(std::min(newEmcList.size(), DvfsTableEntryLimit));
     }
 
