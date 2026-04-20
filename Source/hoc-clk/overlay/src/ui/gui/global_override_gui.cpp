@@ -311,7 +311,7 @@ public:
         static constexpr struct { const char* label; int shift; } kAll[] = {
             {"CPU", 0}, {"GPU", 8}, {"VRR", 16}
         };
-        int count = configList.values[HocClkConfigValue_OverwriteRefreshRate] ? 3 : 2;
+        int count = configList.values[HocClkConfigValue_OverwriteRefreshRate] || this->context->isUsingRetroSuper ? 3 : 2;
 
         for (int i = 0; i < count; i++) {
             u8 cur = (this->packed >> kAll[i].shift) & 0xFF;

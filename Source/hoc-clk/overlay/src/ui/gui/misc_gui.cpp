@@ -743,7 +743,7 @@ protected:
             ValueThresholds displayThresholds(60, 65);
             addConfigButton(
                 HocClkConfigValue_MaxDisplayClockH,
-                "Max Handheld Display",
+                "Max Handheld Display Hz",
                 ValueRange(60, IsAula() ? 65 : 75, 1, " Hz", 1),
                 "Display Clock",
                 &displayThresholds,
@@ -752,16 +752,18 @@ protected:
                 false
             );
         }
-        addConfigButton(
-            HocClkConfigValue_DisplayVoltage,
-            "Display Voltage",
-            ValueRange(800, 1200, 25, " mV", 1),
-            "Display Voltage",
-            &thresholdsDisabled,
-            {},
-            {},
-            false
-        );
+        if(!IsAula()) {
+            addConfigButton(
+                HocClkConfigValue_DisplayVoltage,
+                "Display Voltage",
+                ValueRange(800, 1200, 25, " mV", 1),
+                "Display Voltage",
+                &thresholdsDisabled,
+                {},
+                {},
+                false
+            );
+        }
     }
 };
 
