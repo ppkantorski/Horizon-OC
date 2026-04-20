@@ -52,11 +52,12 @@ namespace kip {
             return;
         }
 
-        if(cust_get_cust_rev(&table) != CUST_REV) {
-            notification::writeNotification("Horizon OC\nKip version mismatch\nPlease reinstall Horizon OC");
-            return;
-        }
-        
+        // if(cust_get_cust_rev(&table) != CUST_REV) {
+        //     fileUtils::LogLine("Revision: %u", cust_get_cust_rev(&table));
+        //     notification::writeNotification("Horizon OC\nKip version mismatch\nPlease reinstall Horizon OC");
+        //     return;
+        // }
+
         CUST_WRITE_FIELD_BATCH(&table, custRev, config::GetConfigValue(KipConfigValue_custRev));
         // CUST_WRITE_FIELD_BATCH(&table, mtcConf, config::GetConfigValue(KipConfigValue_mtcConf));
         CUST_WRITE_FIELD_BATCH(&table, hpMode, config::GetConfigValue(KipConfigValue_hpMode));
@@ -181,10 +182,10 @@ namespace kip {
                 return;
             }
 
-            if(cust_get_cust_rev(&table) != CUST_REV) {
-                notification::writeNotification("Horizon OC\nKip version mismatch\nPlease reinstall Horizon OC");
-                return;
-            }
+            // if(cust_get_cust_rev(&table) != CUST_REV) {
+            //     notification::writeNotification("Horizon OC\nKip version mismatch\nPlease reinstall Horizon OC");
+            //     return;
+            // }
 
             if ((u64)crc32::checksum_file("sdmc:/atmosphere/kips/hoc.kip") != config::GetConfigValue(KipCrc32) && !config::GetConfigValue(HocClkConfigValue_IsFirstLoad)) {
                 SetKipData();
