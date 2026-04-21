@@ -840,7 +840,7 @@ protected:
             {1250000, "Unsafe Max"},
         };
 
-        ValueThresholds vdd2Thresholds(1212500, 1250000);
+        ValueThresholds vdd2Thresholds(IsMariko() ? 1212500 : 1237500, 1250000);
         addConfigButton(
             KipConfigValue_commonEmcMemVolt,
             "RAM VDD2 Voltage",
