@@ -290,6 +290,9 @@ public:
         : applicationId(appId), profileList(pList), profile(prof) {}
 
     void listUI() override {
+        BaseMenuGui::refresh(); // get latest context
+        if(!this->context)
+            return;
         Result rc = hocclkIpcGetConfigValues(&configList);
         if (R_FAILED(rc)) [[unlikely]] {
             FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc);

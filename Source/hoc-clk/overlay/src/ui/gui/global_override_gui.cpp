@@ -301,6 +301,9 @@ public:
     GovernorOverrideSubMenuGui(u32 initialPacked) : packed(initialPacked) {}
 
     void listUI() override {
+        BaseMenuGui::refresh(); // get latest context
+        if(!this->context)
+            return;
         Result rc = hocclkIpcGetConfigValues(&configList); // idk why this is needed, probably some refreshing issue
         if (R_FAILED(rc)) [[unlikely]] {
             FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc);
