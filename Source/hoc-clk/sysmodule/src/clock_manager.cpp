@@ -286,7 +286,7 @@ namespace clockManager {
             if (!targetHz) {
                 targetHz = config::GetAutoClockHz(gContext.applicationId, HocClkModule_GPU, gContext.profile, false);
                 if (!targetHz) {
-                    targetHz = config::GetAutoClockHz(GLOBAL_PROFILE_ID, HocClkModule_GPU, gContext.profile, false);
+                    targetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_GPU, gContext.profile, false);
                 }
             }
             u32 maxHz = GetMaxAllowedHz(HocClkModule_GPU, gContext.profile);
@@ -357,7 +357,7 @@ namespace clockManager {
             if (!targetHz) {
                 targetHz = config::GetAutoClockHz(gContext.applicationId, (HocClkModule)module, gContext.profile, returnRaw);
                 if (!targetHz)
-                    targetHz = config::GetAutoClockHz(GLOBAL_PROFILE_ID, (HocClkModule)module, gContext.profile, returnRaw);
+                    targetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, (HocClkModule)module, gContext.profile, returnRaw);
             }
 
             if (module == HocClkModule_Governor) {
@@ -528,7 +528,7 @@ namespace clockManager {
         if (!targetHz) {
             targetHz = config::GetAutoClockHz(gContext.applicationId, HocClkModule_Display, gContext.profile, true);
             if (!targetHz)
-                targetHz = config::GetAutoClockHz(GLOBAL_PROFILE_ID, HocClkModule_Display, gContext.profile, true);
+                targetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Display, gContext.profile, true);
         }
 
         if (board::GetConsoleType() != HocClkConsoleType_Hoag)

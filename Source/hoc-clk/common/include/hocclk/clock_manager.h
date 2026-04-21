@@ -73,6 +73,6 @@ typedef struct
 
 #define HOCCLK_FREQ_LIST_MAX 32
 
-#define GLOBAL_PROFILE_ID 0xA111111111111111
+#define HOCCLK_GLOBAL_PROFILE_TID 0xA111111111111111
 
 static_assert(sizeof(HocClkContext) == 0x500);
