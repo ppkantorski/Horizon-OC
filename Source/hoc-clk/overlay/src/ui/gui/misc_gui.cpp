@@ -569,9 +569,10 @@ protected:
 
         tsl::elm::CustomDrawer* exSetWarning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150 Experimental Settings are incomplete ", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
-            renderer->drawString("and may not work correctly! Here be dragons!", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
+            renderer->drawString("and may not work correctly or at all!", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
+            renderer->drawString("Here be dragons!", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
         });
-        exSetWarning->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 70);
+        exSetWarning->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 90);
         this->listElement->addItem(exSetWarning);
 
         addConfigToggle(HocClkConfigValue_EnableExperimentalSettings, nullptr);
@@ -659,13 +660,14 @@ protected:
                 NamedValue("1024mA", 1024),
                 NamedValue("1280mA", 1280),
                 NamedValue("1536mA", 1536),
+                NamedValue("1664mA", 1664), // Why Nintendo?
                 NamedValue("1792mA", 1792),
                 NamedValue("2048mA", 2048),
                 NamedValue("2304mA", 2304),
                 NamedValue("2560mA", 2560),
             };
 
-            ValueThresholds chargerThresholds(1792, 1793);
+            ValueThresholds chargerThresholds(1664, 1793);
 
             addConfigButton(
                 HocClkConfigValue_BatteryChargeCurrent,
