@@ -1,132 +1,109 @@
+// Thx to kazushime for this!
 #include "pllmb.hpp"
 
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <inttypes.h>
+#include <switch.h>
+#include "../file_utils.hpp"
+#include <nxExt/t210.h>
+
+
 namespace pllmb {
-    static const u8 qlin_hw_to_pdiv[17] = {
-        1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 15, 16, 18, 20, 24, 30, 32
-    };
+    #define CLK_RST_IO_BASE 0x60006000
+    #define CLK_RST_IO_SIZE 0x1000
 
-    enum pdiv_type {
-        PDIV_QLIN, 
-        PDIV_POW2 
-    };
+    #define GET_BITS(VAL, HIGH, LOW)    ((VAL & ((1UL << (HIGH + 1UL)) - 1UL)) >> LOW)
+    #define GET_BIT(VAL, BIT)           GET_BITS(VAL, BIT, BIT)
 
-    struct pll_desc_t {
-        u32       base_offset;
-        u8        divm_shift;
-        u8        divm_width;
-        u8        divn_shift;
-        u8        divn_width;
-        u8        divp_shift;
-        u8        divp_width;
-        pdiv_type ptype;
-    };
-
-    static const pll_desc_t pll_table[] = {
-        { PLLM_BASE,  0, 8,  8, 8, 20, 5, PDIV_QLIN },
-        { PLLMB_BASE, 0, 8,  8, 8, 20, 5, PDIV_QLIN },
-        { PLLP_BASE,  0, 8,  8, 8, 20, 5, PDIV_POW2 },
-        { PLLA_BASE,  0, 8,  8, 8, 20, 5, PDIV_POW2 },
-        { PLLU_BASE,  0, 8,  8, 8, 20, 5, PDIV_POW2 },
-        { _PLLD_BASE,  0, 8,  8, 8, 20, 5, PDIV_POW2 },
-        { PLLX_BASE,  0, 8,  8, 8, 20, 5, PDIV_QLIN },
-        { PLLA1_BASE, 0, 8,  8, 8, 20, 5, PDIV_QLIN },
-        { PLLDP_BASE, 0, 8,  8, 8, 20, 5, PDIV_QLIN },
-        { PLLD2_BASE, 0, 8,  8, 8, 20, 5, PDIV_QLIN },
-        { PLLC4_BASE, 0, 8,  8, 8, 20, 5, PDIV_QLIN },
-        { PLLRE_BASE, 0, 8,  8, 8, 16, 4, PDIV_QLIN },
-        { PLLC_BASE,  0, 8, 10, 8, 20, 5, PDIV_QLIN },
-        { PLLC2_BASE, 0, 8, 10, 8, 20, 5, PDIV_QLIN },
-        { PLLC3_BASE, 0, 8, 10, 8, 20, 5, PDIV_QLIN },
-    };
-
-    static inline u32 clk_read32(u32 offset)
-    {
-        return *(volatile u32 *)(uintptr_t)(board::clkVirtAddr + offset);
+    static inline volatile u32& REG(uintptr_t addr) {
+        return *reinterpret_cast<volatile u32*>(addr);
     }
 
-    static inline u32 extract(u32 val, u8 shift, u8 width)
-    {
-        return (val >> shift) & ((1u << width) - 1u);
-    }
+    // From jetson nano kernel
+    typedef enum {
+        /* divider = 2 */
+        CLK_PLLX  = 5,
+        CLK_PLLM  = 2,
+        CLK_PLLMB = 37,
+        /* PLLX & PLLG are backup PLLs for CPU & GPU */
+        /* divider = 1 */
+        CLK_CCLK_G = 18, // A57 CPU cluster
+        CLK_EMC   = 36,
+    } PTO_ID; // PLL Test Output Register ID
 
-    static u64 pll_rate_from_desc(const pll_desc_t &pll, u64 osc_hz,
-                                  bool undivided)
-    {
-        u32 base = clk_read32(pll.base_offset);
-        u32 divm = extract(base, pll.divm_shift, pll.divm_width);
-        u32 divn = extract(base, pll.divn_shift, pll.divn_width);
+    /* See if GM20B clock GPC PLL regs are accessible. */
 
-        if (divm == 0 || divn == 0)
-            return 0;
+    #define PLLX_MISC0 0xE4
+    #define PLLM_MISC2 0x9C
 
-        u64 vco = osc_hz * divn / divm;
+    double ptoGetMHz(PTO_ID pto_id, u32 divider = 1, u32 presel_reg = 0, u32 presel_mask = 0) {
+        u32 pre_val, val, presel_val;
 
-        if (undivided)
-            return vco;
-
-        u32 hw_p = extract(base, pll.divp_shift, pll.divp_width);
-        u32 pdiv;
-
-        if (pll.ptype == PDIV_QLIN)
-            pdiv = (hw_p < 17) ? qlin_hw_to_pdiv[hw_p] : 1;
-        else
-            pdiv = 1u << hw_p;
-
-        return vco / pdiv;
-    }
-
-    static u64 pll_rate_by_offset(u32 base_offset, u64 osc_hz,
-                                  bool undivided)
-    {
-        for (const auto &pll : pll_table) {
-            if (pll.base_offset == base_offset)
-                return pll_rate_from_desc(pll, osc_hz, undivided);
-        }
-        return 0;
-    }
-
-    u64 getRamClockRatePLLMB()
-    {
-        u32 clk_src = clk_read32(CLK_SOURCE_EMC);
-        u32 src     = (clk_src >> 29) & 0x7;
-        u32 div     = (clk_src >>  0) & 0xff;
-
-        u32  pll_off;
-        bool undivided = false;
-
-        switch (src) {
-            case EMC_SRC_PLLM:
-                pll_off = PLLM_BASE;
-                break;
-            case EMC_SRC_PLLM_UD:
-                pll_off = PLLM_BASE;
-                undivided = true;
-                break;
-            case EMC_SRC_PLLMB:
-                pll_off = PLLMB_BASE;
-                break;
-            case EMC_SRC_PLLMB_UD:
-                pll_off = PLLMB_BASE;
-                undivided = true;
-                break;
-            case EMC_SRC_PLLP:
-                pll_off = PLLP_BASE;
-                break;
-            case EMC_SRC_PLLP_UD:
-                pll_off = PLLP_BASE;
-                undivided = true;
-                break;
-            case EMC_SRC_PLLC:
-                pll_off = PLLC_BASE;
-                break;
-            case EMC_SRC_CLK_M:
-                return OSC_HZ;
-            default:
-                return 0;
+        if (presel_reg) {
+            val = REG(board::clkVirtAddr + presel_reg);
+            usleep(10);
+            presel_val = val & presel_mask;
+            val &= ~presel_mask;
+            val |= presel_mask;
+            REG(board::clkVirtAddr + presel_reg) = val;
+            usleep(10);
         }
 
-        u64 pll_hz = pll_rate_by_offset(pll_off, OSC_HZ, undivided);
-        return pll_hz / (div + 2) * 2;
+        constexpr u32 cycle_count = 16;
+        pre_val = REG(board::clkVirtAddr + 0x60);
+        val = BIT(23) | BIT(13) | (cycle_count - 1);
+        val |= pto_id << 14;
+
+        REG(board::clkVirtAddr + 0x60) = val;
+        usleep(10);
+        REG(board::clkVirtAddr + 0x60) = val | BIT(10);
+        usleep(10);
+        REG(board::clkVirtAddr + 0x60) = val;
+        usleep(10);
+        REG(board::clkVirtAddr + 0x60) = val | BIT(9);
+        usleep(500);
+
+        while(REG(board::clkVirtAddr + 0x64) & BIT(31))
+            ;
+
+        val = REG(board::clkVirtAddr + 0x64);
+        val &= 0xFFFFFF;
+        val *= divider;
+
+        double rate_mhz = (u64)val * 32768. / cycle_count;
+        usleep(10);
+        REG(board::clkVirtAddr + 0x60) = pre_val;
+        usleep(10);
+
+        if (presel_reg) {
+            val = REG(board::clkVirtAddr + presel_reg);
+            usleep(10);
+            val &= ~presel_mask;
+            val |= presel_val;
+            REG(board::clkVirtAddr + presel_reg) = val;
+            usleep(10);
+        }
+
+        return rate_mhz;
     }
 
+    u64 getRamClockRatePLLMB() {
+        // printf("\n"
+        //        "EMC:    %6.1f MHz\n"
+        //        "CCLK_G: %6.1f MHz\n"
+        //        "PLLX:   %6.1f MHz\n"
+        //        "PLLM:   %6.1f MHz\n"
+        //        "PLLMB:  %6.1f MHz\n",
+        //        ptoGetMHz(CLK_EMC),
+        //        ptoGetMHz(CLK_CCLK_G),
+        //        ptoGetMHz(CLK_PLLX,  2, PLLX_MISC0, BIT(22)),
+        //        ptoGetMHz(CLK_PLLM,  2, PLLM_MISC2, BIT(8)),
+        //        ptoGetMHz(CLK_PLLMB, 2, PLLM_MISC2, BIT(9))
+        //        );
+        return ptoGetMHz(CLK_PLLMB, 2, PLLM_MISC2, BIT(9));
+    }
 }
