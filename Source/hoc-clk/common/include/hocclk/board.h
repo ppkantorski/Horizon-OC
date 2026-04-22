@@ -92,6 +92,7 @@ typedef enum
     HocClkThermalSensor_GPU,
     HocClkThermalSensor_MEM, // Returns the PLLX sensor value on Mariko
     HocClkThermalSensor_PLLX, 
+    HocClkThermalSensor_BQ24193,
     HocClkThermalSensor_EnumMax
 } HocClkThermalSensor;
 

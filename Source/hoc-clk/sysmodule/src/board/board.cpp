@@ -44,7 +44,7 @@
 #include "../file_utils.hpp"
 namespace board {
 
-    u64 clkVirtAddr, dsiVirtAddr;
+    u64 clkVirtAddr, dsiVirtAddr, apbVirtAddr;
 
     HocClkSocType gSocType;
     u8 gDramID;
@@ -153,6 +153,9 @@ namespace board {
         rc = QueryMemoryMapping(&dsiVirtAddr, 0x54300000, 0x40000);
         ASSERT_RESULT_OK(rc, "QueryMemoryMapping (dsi)");
         
+        rc = QueryMemoryMapping(&apbVirtAddr, 0x70000000, 0x1000);
+        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (apb)");
+
         display::DisplayRefreshConfig cfg = {.clkVirtAddr = clkVirtAddr, .dsiVirtAddr = dsiVirtAddr, .isLite = (GetConsoleType() == HocClkConsoleType_Hoag), .isRetroSUPER = integrations::GetRETROSuperStatus()};
         display::Initialize(&cfg);
 
@@ -175,6 +178,7 @@ namespace board {
 
         max17050Exit();
         tmp451Exit();
+        display::Shutdown();
 
         ExitLoad();
 
@@ -185,7 +189,6 @@ namespace board {
         rgltrExit();
         batteryInfoExit();
         pmdmntExit();
-        display::Shutdown();
         nvExit();
     }
 

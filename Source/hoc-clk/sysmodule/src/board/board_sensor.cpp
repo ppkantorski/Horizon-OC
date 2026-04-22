@@ -32,7 +32,7 @@
 #include <pwm.h>
 #include "board.hpp"
 #include "../soctherm.hpp"
-
+#include "bq24193.hpp"
 namespace board {
 
     s32 GetTemperatureMilli(HocClkThermalSensor sensor) {
@@ -82,6 +82,11 @@ namespace board {
             }
             case HocClkThermalSensor_PLLX: {
                 millis = temps.pllx;
+                break;
+            }
+            case HocClkThermalSensor_BQ24193: {
+                millis = bq24193::getBQTemp();
+                break;
             }
             default: {
                 ASSERT_ENUM_VALID(HocClkThermalSensor, sensor);

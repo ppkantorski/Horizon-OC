@@ -36,6 +36,7 @@ tsl::elm::ListItem* ramBWItemAll = NULL;
 tsl::elm::ListItem* ramBWItemCpu = NULL;
 tsl::elm::ListItem* ramBWItemGpu = NULL;
 tsl::elm::ListItem* ramBWItemMax = NULL;
+tsl::elm::ListItem* bqtempitem = NULL;
 
 ImageElement* CatImage = NULL;
 HideableCategoryHeader* CatHeader = NULL;
@@ -72,6 +73,10 @@ void AboutGui::listUI()
     if(IsErista()) {
         this->listElement->addItem(eristaPLLXItem);
     }
+
+    bqtempitem =
+        new tsl::elm::ListItem("BQ24193 Temp:");
+    this->listElement->addItem(bqtempitem);
 
     this->listElement->addItem(
         new tsl::elm::CategoryHeader("RAM Bandwidth")
@@ -381,5 +386,24 @@ void AboutGui::refresh()
 
     sprintf(strings[9], "%u MB/s", context->partLoad[HocClkPartLoad_RamBWPeak]);
     ramBWItemMax->setValue(strings[9]);
+
+    switch(context->temps[HocClkThermalSensor_BQ24193]) {
+        case 0: 
+            strcpy(strings[10], "Normal"); 
+            break;
+        case 1: 
+            strcpy(strings[10], "Warm"); 
+            break;
+        case 2: 
+            strcpy(strings[10], "Hot"); 
+            break;
+        case 3: 
+            strcpy(strings[10], "Overheat"); 
+            break;
+        default: 
+            strcpy(strings[10], "Unknown");
+    }
+
+    bqtempitem->setValue(strings[10]);
 
 }

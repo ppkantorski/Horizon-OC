@@ -60,7 +60,7 @@ typedef struct
     u16 resolutionHeight;
 
     // Reserved for future use
-    u8 reserved[0x428];
+    u8 reserved[0x424];
 } HocClkContext;
 
 typedef struct
