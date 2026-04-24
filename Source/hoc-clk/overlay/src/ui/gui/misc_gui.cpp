@@ -102,6 +102,51 @@ void MiscGui::addConfigToggle(HocClkConfigValue configVal, const char* altName, 
     this->configToggles[configVal] = toggle;
 }
 
+void MiscGui::addConfigTrackbar(HocClkConfigValue configVal, const char* altName, u32 maxVal, bool kip) {
+    struct IndexedBar : tsl::elm::NamedStepTrackBar {
+        IndexedBar(const char* label, u32 max)
+            : tsl::elm::NamedStepTrackBar("", {""}, true, label) {
+            m_stepDescriptions.clear();
+            for (u32 i = 0; i <= max; i++) m_stepDescriptions.push_back(std::to_string(i));
+            m_numSteps = (u8)m_stepDescriptions.size();
+            m_selection = m_stepDescriptions[0];
+        }
+    };
+    const char* name = altName ? altName : hocclkFormatConfigValue(configVal, true);
+    auto* bar = new IndexedBar(name, maxVal);
+    u32 cur = (u32)this->configList->values[configVal];
+    if (cur > maxVal) cur = 0;
+    bar->setProgress(cur);
+    bar->setValueChangedListener([this, configVal, kip](u16 v) {
+        this->configList->values[configVal] = v;
+        Result rc = hocclkIpcSetConfigValues(this->configList);
+        if (R_FAILED(rc)) FatalGui::openWithResultCode("hocclkIpcSetConfigValues", rc);
+        if (kip) sendKipData();
+    });
+    this->listElement->addItem(bar);
+}
+
+void MiscGui::addMappedConfigTrackbar(HocClkConfigValue configVal, const char* altName,
+                                       std::vector<u32> vals,
+                                       std::initializer_list<std::string> names, bool kip) {
+    const char* name = altName ? altName : hocclkFormatConfigValue(configVal, true);
+    auto* bar = new tsl::elm::NamedStepTrackBar("", names, true, name);
+    u32 cur = (u32)this->configList->values[configVal];
+    u16 curIdx = 0;
+    for (u16 i = 0; i < (u16)vals.size(); i++) {
+        if (vals[i] == cur) { curIdx = i; break; }
+    }
+    bar->setProgress(curIdx);
+    bar->setValueChangedListener([this, configVal, kip, vals](u16 idx) {
+        if (idx < (u16)vals.size())
+            this->configList->values[configVal] = vals[idx];
+        Result rc = hocclkIpcSetConfigValues(this->configList);
+        if (R_FAILED(rc)) FatalGui::openWithResultCode("hocclkIpcSetConfigValues", rc);
+        if (kip) sendKipData();
+    });
+    this->listElement->addItem(bar);
+}
+
 
 void MiscGui::addConfigButton(HocClkConfigValue configVal,
     const char* altName,
@@ -882,7 +927,7 @@ protected:
         std::vector<NamedValue> stepMode = {
              NamedValue("66MHz", 0),
              NamedValue("100MHz", 1),
-             NamedValue("Jedec", 2),
+             NamedValue("JEDEC.", 2),
         };
 
         addConfigButton(KipConfigValue_stepMode, "Step Mode", ValueRange(0, 0, 2, "", 0), "Step Mode", &thresholdsDisabled, {}, stepMode, false, true);
@@ -999,40 +1044,16 @@ public:
 
 protected:
     void listUI() override {
-        ValueThresholds thresholdsDisabled(0, 0);
-
         this->listElement->addItem(new tsl::elm::CategoryHeader("Memory Timings"));
 
-        addConfigButton(KipConfigValue_t1_tRCD, "t1 tRCD", ValueRange(0, 7, 1, "", 1), "tRCD", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t2_tRP, "t2 tRP", ValueRange(0, 7, 1, "", 1), "tRP", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t3_tRAS, "t3 tRAS", ValueRange(0, 9, 1, "", 1), "tRAS", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t4_tRRD, "t4 tRRD", ValueRange(0, 6, 1, "", 1), "tRRD", &thresholdsDisabled, {}, {}, false, true);
-        u32 tRFCCount = 10;
-        if (IsErista()) {
-            tRFCCount = 5;
-        }
-        addConfigButton(KipConfigValue_t5_tRFC, "t5 tRFC", ValueRange(0, tRFCCount, 1, "", 1), "tRFC", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t6_tRTW, "t6 tRTW", ValueRange(0, 9, 1, "", 1), "tRTW", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t7_tWTR, "t7 tWTR", ValueRange(0, 9, 1, "", 1), "tWTR", &thresholdsDisabled, {}, {}, false, true);
-        addConfigButton(KipConfigValue_t8_tREFI, "t8 tREFI", ValueRange(0, 6, 1, "", 1), "tREFI", &thresholdsDisabled, {}, {}, false, true);
-
-        std::vector<NamedValue> t6_tRTW_fine_tune = {
-            NamedValue("-2", 0xFFFFFFFE),
-            NamedValue("-1", 0xFFFFFFFF),
-            NamedValue(" 0", 0),
-            NamedValue("+1", 1),
-            NamedValue("+2", 2),
-        };
-
-        std::vector<NamedValue> t7_tWTR_fine_tune = {
-            NamedValue("-3", 0xFFFFFFFD),
-            NamedValue("-2", 0xFFFFFFFE),
-            NamedValue("-1", 0xFFFFFFFF),
-            NamedValue(" 0", 0),
-            NamedValue("+1", 1),
-            NamedValue("+2", 2),
-            NamedValue("+3", 3),
-        };
+        addConfigTrackbar(KipConfigValue_t1_tRCD,  "t1 tRCD",  7);
+        addConfigTrackbar(KipConfigValue_t2_tRP,   "t2 tRP",   7);
+        addConfigTrackbar(KipConfigValue_t3_tRAS,  "t3 tRAS",  9);
+        addConfigTrackbar(KipConfigValue_t4_tRRD,  "t4 tRRD",  6);
+        addConfigTrackbar(KipConfigValue_t5_tRFC,  "t5 tRFC",  IsErista() ? 5u : 10u);
+        addConfigTrackbar(KipConfigValue_t6_tRTW,  "t6 tRTW",  9);
+        addConfigTrackbar(KipConfigValue_t7_tWTR,  "t7 tWTR",  9);
+        addConfigTrackbar(KipConfigValue_t8_tREFI, "t8 tREFI", 6);
 
         /* Yes this is duplicated code, yes I don't care. */
         std::vector<NamedValue> timingTbreakFreqs = {
@@ -1103,13 +1124,18 @@ protected:
             nv.name = formatMemClockKhzLabel(nv.value, unit);
         }
 
+        ValueThresholds thresholdsDisabled(0, 0);
         this->listElement->addItem(new tsl::elm::CategoryHeader("Advanced"));
         addConfigButton(KipConfigValue_timingEmcTbreak, "RAM-Timing tBreak", ValueRange(0, 1, 1, "", 1), "tBreak", &thresholdsDisabled, {}, timingTbreakFreqs, false, true);
-        addConfigButton(KipConfigValue_low_t6_tRTW, "Low t6 tRTW", ValueRange(0, 10, 1, "", 1), "low tRTW", &thresholdsDisabled, {}, {}, false, true );
-        addConfigButton(KipConfigValue_low_t7_tWTR, "Low t7 tWTR", ValueRange(0, 10, 1, "", 1), "low tWTR", &thresholdsDisabled, {}, {}, false, true );
-        addConfigButton(KipConfigValue_t2_tRP_cap, "1333WL t2 RP Cap", ValueRange(0, 8, 1, "", 1), "tRP Cap", &thresholdsDisabled, {}, {}, false, true );
-        addConfigButton(KipConfigValue_t6_tRTW_fine_tune, "t6 tRTW Fine Tune", ValueRange(0, 4, 1, "", 0), "tRTW Fine Tune", &thresholdsDisabled, {}, t6_tRTW_fine_tune, false, true);
-        addConfigButton(KipConfigValue_t7_tWTR_fine_tune, "t7 tWTR Fine Tune", ValueRange(0, 6, 1, "", 0), "tWTR Fine Tune", &thresholdsDisabled, {}, t7_tWTR_fine_tune, false, true);
+        addConfigTrackbar(KipConfigValue_low_t6_tRTW, "Low t6 tRTW",      9);
+        addConfigTrackbar(KipConfigValue_low_t7_tWTR, "Low t7 tWTR",      9);
+        addConfigTrackbar(KipConfigValue_t2_tRP_cap,  "1333WL t2 RP Cap",  8);
+        addMappedConfigTrackbar(KipConfigValue_t6_tRTW_fine_tune, "t6 tRTW Fine Tune",
+            {0xFFFFFFFEu, 0xFFFFFFFFu, 0u, 1u, 2u},
+            {"-2", "-1", " 0", "+1", "+2"});
+        addMappedConfigTrackbar(KipConfigValue_t7_tWTR_fine_tune, "t7 tWTR Fine Tune",
+            {0xFFFFFFFDu, 0xFFFFFFFEu, 0xFFFFFFFFu, 0u, 1u, 2u, 3u},
+            {"-3", "-2", "-1", " 0", "+1", "+2", "+3"});
     }
 };
 
