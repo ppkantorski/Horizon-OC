@@ -45,7 +45,7 @@ protected:
     std::set<HocClkConfigValue> emcClockConfigs;
     
     void addConfigToggle(HocClkConfigValue configVal, const char* altName, bool kip = false);
-    void addConfigTrackbar(HocClkConfigValue configVal, const char* altName, u32 maxVal, bool kip = true);
+    void addConfigTrackbar(HocClkConfigValue configVal, const char* altName, const ValueRange& range, bool kip = true);
     void addMappedConfigTrackbar(HocClkConfigValue configVal, const char* altName,
                                   std::vector<u32> vals,
                                   std::initializer_list<std::string> names, bool kip = true);
