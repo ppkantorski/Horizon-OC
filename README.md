@@ -78,7 +78,7 @@ Refer to COMPILATION.md
 ---
 ## Clock table
 
-### MEM clocks(mhz)
+### MEM clocks (mhz)
 * 3200 → max on mariko, JEDEC.
 * 2933 → JEDEC.
 * 2666 → JEDEC.
@@ -92,7 +92,7 @@ Refer to COMPILATION.md
 * 800
 * 665
 
-### CPU clocks(mhz)
+### CPU clocks (mhz)
 * 2703 → mariko absolute max, dangerous
 * 2601 → unsafe
 * 2499
@@ -115,7 +115,7 @@ Refer to COMPILATION.md
 * 714
 * 612 → sleep mode
 
-### GPU clocks(mhz)
+### GPU clocks (mhz)
 * 1536 → absolute max clock on mariko. very dangerous
 * 1459
 * 1382
@@ -124,7 +124,7 @@ Refer to COMPILATION.md
 * 1228 → mariko HiOPT safe clock
 * 1152 → mariko SLT max clock
 * 1075 → mariko no UV max clock. absolute max clock on erista. very dangerous
-* 998 → NVIDIA T210(erista) rating
+* 998 → NVIDIA T210 (erista) rating
 * 960 (erista only) → erista slt/hiopt safe max clock
 * 921 → erista no UV max clock
 * 844
