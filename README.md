@@ -78,21 +78,21 @@ Refer to COMPILATION.md
 ---
 ## Clock table
 
-### MEM clocks
+### MEM clocks (mhz)
 * 3200 → max on mariko, JEDEC.
 * 2933 → JEDEC.
 * 2666 → JEDEC.
 * 2400 → max on erista, JEDEC.
-* 2133 → mariko safe max (4266 Modules), JEDEC.
-* 1996 → JEDEC.
-* 1866 → mariko safe max (3733 Modules), JEDEC.
+* 2133 → Mariko JEDEC standard max (4266 Modules)
+* 1996 → JEDEC standard
+* 1866 → Mariko JEDEC standard max (3733 Modules)
 * 1600 → official docked, boost mode, erista safe max, JEDEC.
 * 1331 → official handheld, JEDEC.
 * 1065
 * 800
 * 665
 
-### CPU clocks
+### CPU clocks (mhz)
 * 2703 → mariko absolute max, dangerous
 * 2601 → unsafe
 * 2499
@@ -115,16 +115,16 @@ Refer to COMPILATION.md
 * 714
 * 612 → sleep mode
 
-### GPU clocks
+### GPU clocks (mhz)
 * 1536 → absolute max clock on mariko. very dangerous
 * 1459
 * 1382
 * 1305
-* 1267 → NVIDIA T214 rating
+* 1267 → NVIDIA T214(mariko) rating
 * 1228 → mariko HiOPT safe clock
 * 1152 → mariko SLT max clock
 * 1075 → mariko no UV max clock. absolute max clock on erista. very dangerous
-* 998 → NVIDIA T210 rating
+* 998 → NVIDIA T210 (erista) rating
 * 960 (erista only) → erista slt/hiopt safe max clock
 * 921 → erista no UV max clock
 * 844
