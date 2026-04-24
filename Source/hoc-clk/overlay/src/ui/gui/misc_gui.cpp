@@ -878,16 +878,17 @@ protected:
             false,
             true
         );
-        
+
         if (IsMariko()) {
             std::vector<NamedValue> stepMode = {
                 NamedValue("66MHz", 0),
                 NamedValue("100MHz", 1),
                 NamedValue("Jedec", 2),
             };
-    
+
             addConfigButton(KipConfigValue_stepMode, "Step Mode", ValueRange(0, 0, 2, "", 0), "Step Mode", &thresholdsDisabled, {}, stepMode, false, true);
         }
+
         if (IsErista()) {
             tsl::elm::ListItem* freqSubmenu = new tsl::elm::ListItem("RAM Frequency Editor");
             freqSubmenu->setClickListener([](u64 keys) {
