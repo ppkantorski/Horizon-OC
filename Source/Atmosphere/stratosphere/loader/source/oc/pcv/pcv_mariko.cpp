@@ -610,12 +610,12 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     void MtcGenerate133StepTable() {
-        const u32 StepFreqs133[] = { 1733000, 1866000, 2000000, 2133000, 2266000, 2400000, 2533000, 2666000, 2800000, 2933000, 3066000, 3200000, 3333000, 3466000, }; // Avoid rounding issues
-        constexpr u32 StepFreqs133Size = std::size(StepFreqs133);
+        const u32 stepFreqs133[] = { 1733000, 1866000, 2000000, 2133000, 2266000, 2400000, 2533000, 2666000, 2800000, 2933000, 3066000, 3200000, 3333000, 3466000, }; // Avoid rounding issues
+        constexpr u32 StepFreqs133Size = std::size(stepFreqs133);
 
         for (u32 i = 0; i < StepFreqs133Size; ++i) {
-            if (StepFreqs133[i] <= C.marikoEmcMaxClock) {
-                newEmcList.push_back(StepFreqs133[i]);
+            if (stepFreqs133[i] <= C.marikoEmcMaxClock) {
+                newEmcList.push_back(stepFreqs133[i]);
             } else {
                 break;
             }
