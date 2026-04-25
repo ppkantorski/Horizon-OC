@@ -48,7 +48,7 @@ volatile CustomizeTable C = {
 .marikoEmcVddqVolt = 600000,
 
 .emcDvbShift = 0,
-.marikoSocVmax = 0, /* 0 = stock limits (0 - 1598 is 1050mV, 1599-1708 is 1025mV, 1709+ is 1000mV). */
+.marikoSocVmax = 0, /* 0 = stock limits (1450 - 1597 is 1050mV, 1598-1708 is 1025mV, 1709+ is 1000mV). */
 
 // Primary
 .t1_tRCD = 0,
