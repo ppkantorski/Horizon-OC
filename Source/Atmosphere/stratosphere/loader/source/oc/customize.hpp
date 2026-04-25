@@ -40,6 +40,7 @@ enum StepMode: u32 {
     StepMode_66MHz  = 0,
     StepMode_100MHz = 1,
     StepMode_Jedec  = 2,
+    StepMode_133MHz = 3,
 };
 
 /*

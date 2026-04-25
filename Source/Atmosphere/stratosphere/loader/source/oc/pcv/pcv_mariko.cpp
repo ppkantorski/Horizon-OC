@@ -609,6 +609,25 @@ namespace ams::ldr::hoc::pcv::mariko {
         newEmcList.resize(std::min(newEmcList.size(), DvfsTableEntryLimit));
     }
 
+    void MtcGenerate133StepTable() {
+        const u32 StepFreqs133[] = { 1733000, 1866000, 2000000, 2133000, 2266000, 2400000, 2533000, 2666000, 2800000, 2933000, 3066000, 3200000, 3333000, 3466000, }; // Avoid rounding issues
+        constexpr u32 StepFreqs133Size = std::size(StepFreqs133);
+
+        for (u32 i = 0; i < StepFreqs133Size; ++i) {
+            if (StepFreqs133[i] <= C.marikoEmcMaxClock) {
+                newEmcList.push_back(StepFreqs133[i]);
+            } else {
+                break;
+            }
+        }
+
+        if (newEmcList.back() != C.marikoEmcMaxClock) {
+            newEmcList.push_back(static_cast<u32>(C.marikoEmcMaxClock));
+        }
+
+        newEmcList.resize(std::min(newEmcList.size(), DvfsTableEntryLimit));
+    }
+
     void MtcGenerateFreqTables() {
         if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
             return;
@@ -628,6 +647,9 @@ namespace ams::ldr::hoc::pcv::mariko {
                 break;
             case StepMode_Jedec:
                 MtcGenerateJedecTable();
+                return;
+            case StepMode_133MHz:
+                MtcGenerate133StepTable();
                 return;
             default:
                 stepRate = 66667;

@@ -986,6 +986,7 @@ protected:
             std::vector<NamedValue> stepMode = {
                 NamedValue("66MHz", 0),
                 NamedValue("100MHz", 1),
+                NamedValue("133MHz", 3), // Mantain compatability
                 NamedValue("JEDEC.", 2),
             };
 
