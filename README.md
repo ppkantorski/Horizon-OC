@@ -163,10 +163,10 @@ Refer to COMPILATION.md
 * **B3711 (halop)** - EOS
 * **sys-clk team (m4xw, p-sam, natinusala)** - sys-clk
 * **Dominatorul** - Soctherm driver, guides, general help
-* **b0rd2death** - Ultrahand sys-clk & Status Monitor fork
+* **ppkantorski** - Ultrahand sys-clk & Status Monitor fork
 * **MasaGratoR and ZachyCatGames** - General help
 * **MasaGratoR** - Status Monitor & Display Refresh Rate driver
-* **Dominatorul, Samybigio, Arcdelta, Miki, Happy, Flopsider, Winnerboi77, Blaise, Alvise, TDRR, agjeococh, frost, letum00, and Xenshen** - Testing
+* **Dominatorul, Samybigio, Arcdelta, Miki, Happy, tetetete-ctrl, Winnerboi77, Blaise, Alvise, TDRR, agjeococh, frost, letum00, and Xenshen** - Testing
 * **Samybigio2011, Miki** - Italian translations
 * **angelblaster** - Korean translations
 * **q1332348216-glitch** - Chinese translations

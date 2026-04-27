@@ -34,8 +34,8 @@ namespace ams::ldr::hoc::pcv::mariko {
         latency += index * latencyStep;
     }
 
-    static u32 GetMaxLatencyIndex(volatile u32 *latencyArray, u32 latencySize) {
-        u32 maxIndex = 0;
+    static s32 GetMaxLatencyIndex(volatile u32 *latencyArray, u32 latencySize) {
+        s32 maxIndex = -1;
         for (u32 i = 0; i < latencySize; ++i) {
             if (latencyArray[i]) {
                 maxIndex = i;
@@ -65,18 +65,18 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     void HandleLatency(u32 freq) {
-        static u32 rlIndexMax = GetMaxLatencyIndex(C.readLatency, std::size(C.readLatency));
-        static u32 wlIndexMax = GetMaxLatencyIndex(C.writeLatency, std::size(C.writeLatency));
+        static s32 rlIndexMax = GetMaxLatencyIndex(C.readLatency, std::size(C.readLatency));
+        static s32 wlIndexMax = GetMaxLatencyIndex(C.writeLatency, std::size(C.writeLatency));
         constexpr u32 ReadLatencyStep  = 4;
         constexpr u32 WriteLatencyStep = 2;
         bool autoLatencyRead = false, autoLatencyWrite = false;
 
-        if (rlIndexMax == 0) {
+        if (rlIndexMax == -1) {
             AutoLatency(RL, freq, ReadLatencyStep);
             autoLatencyRead = true;
         }
 
-        if (wlIndexMax == 0) {
+        if (wlIndexMax == -1) {
             AutoLatency(WL, freq, WriteLatencyStep);
             autoLatencyWrite = true;
         }
@@ -120,6 +120,7 @@ namespace ams::ldr::hoc::pcv::mariko {
             }
         }
 
+        /* DBI is always enabled. */
         mrw2 = static_cast<u8>(((rlIndex & 0x7) | ((wlIndex & 0x7) << 3) | ((0 & 0x1) << 6)));
     }
 

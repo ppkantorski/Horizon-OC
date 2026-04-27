@@ -205,7 +205,7 @@ void AboutGui::listUI()
     );
 
     this->listElement->addItem(
-        new tsl::elm::ListItem("Flopsider")
+        new tsl::elm::ListItem("tetetete-ctrl")
     );
 
     this->listElement->addItem(
@@ -270,7 +270,7 @@ void AboutGui::listUI()
     );
 
     this->listElement->addItem(
-        new tsl::elm::ListItem("b0rd2death - Ultrahand")
+        new tsl::elm::ListItem("ppkantorski - Ultrahand")
     );
 
     this->listElement->addItem(
