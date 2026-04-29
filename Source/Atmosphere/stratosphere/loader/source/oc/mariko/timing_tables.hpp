@@ -15,7 +15,7 @@
  */
 
 #pragma once
-#include "../mtc_timing_value.hpp"
+#include <stratosphere.hpp>
 
 namespace ams::ldr::hoc::pcv::mariko {
 

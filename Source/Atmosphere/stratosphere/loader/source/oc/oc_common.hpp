@@ -28,7 +28,10 @@
 #endif
 
 #include "customize.hpp"
-#include "oc_log.hpp"
+
+#if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
+    #include "oc_log.hpp"
+#endif
 
 #define PATCH_OFFSET(offset, value) \
     static_assert(sizeof(__typeof__(offset)) <= sizeof(u64)); \

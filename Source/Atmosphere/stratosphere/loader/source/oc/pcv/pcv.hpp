@@ -24,7 +24,6 @@
 #include "pcv_common.hpp"
 #include "pcv_erista.hpp"
 #include "pcv_mariko.hpp"
-#include "pcv_asm.hpp"
 
 namespace ams::ldr::hoc::pcv {
 

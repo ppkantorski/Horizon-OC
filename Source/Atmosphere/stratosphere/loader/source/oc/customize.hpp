@@ -27,8 +27,6 @@
 
 namespace ams::ldr::hoc {
 
-#include "mtc_timing_table.hpp"
-
 enum TableConfig: u32 {
     DEFAULT_TABLE = 1,
     TBREAK_1581 = 2,
