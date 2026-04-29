@@ -321,7 +321,7 @@ namespace board {
     }
 
     void CacheGpuVoltTable() {
-        fileUtils::LogLine("[dvfs] CacheGpuVoltTable start (build: v4)");
+        fileUtils::LogLine("[dvfs] CacheGpuVoltTable start (build: v6)");
         UnkRegulator reg = {
             .voltageMin  = 600000,
             .voltageStep = 12500,

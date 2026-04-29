@@ -39,6 +39,7 @@
 #include "integrations.hpp"
 #include <nxExt/cpp/lockable_mutex.h>
 #include "governor.hpp"
+#include "kip.hpp"
 
 #define HOSPPC_HAS_BOOST (hosversionAtLeast(7,0,0))
 
@@ -261,15 +262,21 @@ namespace clockManager {
 
         u32 maxHz = GetMaxAllowedHz(HocClkModule_GPU, gContext.profile);
         u32 nearestHz = GetNearestHz(HocClkModule_GPU, targetHz, maxHz);
+
+        fileUtils::LogLine("[dvfs] DVFSAfterSet: targetHz=%u, vmin=%u, nearestGpuHz=%u", targetHz, vmin, nearestHz);
+
         board::PcvHijackGpuVolts(vmin);
 
         if (targetHz) {
+            fileUtils::LogLine("[dvfs] DVFSAfterSet: SetHz(GPU, MAX) then SetHz(GPU, %u)", nearestHz);
             board::SetHz(HocClkModule_GPU, ~0);
             board::SetHz(HocClkModule_GPU, nearestHz);
         } else {
+            fileUtils::LogLine("[dvfs] DVFSAfterSet: SetHz(GPU, MAX) then ResetToStockGpu");
             board::SetHz(HocClkModule_GPU, ~0);
             board::ResetToStockGpu();
         }
+        fileUtils::LogLine("[dvfs] DVFSAfterSet: done");
     }
 
     void HandleCpuUv()
@@ -283,6 +290,7 @@ namespace clockManager {
     void DVFSReset()
     {
         if (board::GetSocType() == HocClkSocType_Mariko && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
+            fileUtils::LogLine("[dvfs] DVFSReset: un-hijacking");
             board::PcvHijackGpuVolts(0);
 
             u32 targetHz = gContext.overrideFreqs[HocClkModule_GPU];
@@ -295,12 +303,14 @@ namespace clockManager {
             u32 maxHz = GetMaxAllowedHz(HocClkModule_GPU, gContext.profile);
             u32 nearestHz = GetNearestHz(HocClkModule_GPU, targetHz, maxHz);
 
+            fileUtils::LogLine("[dvfs] DVFSReset: SetHz(GPU, MAX) then targetHz=%u nearestHz=%u", targetHz, nearestHz);
             board::SetHz(HocClkModule_GPU, ~0);
             if (targetHz) {
                 board::SetHz(HocClkModule_GPU, nearestHz);
             } else {
                 board::ResetToStockGpu();
             }
+            fileUtils::LogLine("[dvfs] DVFSReset: done");
         }
     }
 
@@ -411,7 +421,13 @@ namespace clockManager {
                         DVFSBeforeSet(targetHz);
                     }
 
+                    if (module == HocClkModule_MEM) {
+                        fileUtils::LogLine("[mgr] SetHz(MEM, %u) calling...", nearestHz);
+                    }
                     board::SetHz((HocClkModule)module, nearestHz);
+                    if (module == HocClkModule_MEM) {
+                        fileUtils::LogLine("[mgr] SetHz(MEM, %u) returned", nearestHz);
+                    }
                     gContext.freqs[module] = nearestHz;
 
                     if (module == HocClkModule_CPU && config::GetConfigValue(HocClkConfigValue_LiveCpuUv)) {
@@ -455,17 +471,21 @@ namespace clockManager {
 
         // restore clocks to stock values on app or profile change
         if (hasChanged) {
+            fileUtils::LogLine("[mgr] hasChanged: ResetToStock + DVFSReset starting");
             board::ResetToStock();
             if (board::GetSocType() == HocClkSocType_Mariko && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
+                fileUtils::LogLine("[mgr] hasChanged: PcvHijackGpuVolts(0) + GPU reset");
                 board::PcvHijackGpuVolts(0);
                 board::SetHz(HocClkModule_GPU, ~0);
                 board::ResetToStockGpu();
             }
+            fileUtils::LogLine("[mgr] hasChanged: WaitForNextTick");
             // Hardware settle time before SetClocks reapplies new clocks.
             // PCV needs a tick interval after we tear down the hijack and
             // reset GPU state, otherwise EMC clock change at high freqs may
             // race against PCV's voltage management.
             WaitForNextTick();
+            fileUtils::LogLine("[mgr] hasChanged: done");
         }
 
         std::uint32_t hz = 0;
@@ -575,6 +595,14 @@ namespace clockManager {
         gLastTempLogNs = 0;
         gLastCsvWriteNs = 0;
 
+        // Read the externally-managed KIP at sdmc:/atmosphere/kips/hoc.kip
+        // and populate KipConfigValue_* into the in-memory config. This is
+        // READ-ONLY (kip.cpp never writes the KIP) - the third-party tool
+        // owns the KIP file. Without this call, KipConfigValue_marikoGpuUV
+        // and several CPU undervolt values stay at zero, which silently
+        // caps the GPU at 614.4 MHz and (when LiveCpuUv is on) zeroes the
+        // DFLL tunings. Both can destabilise the SoC at high EMC frequencies.
+        kip::GetKipData();
 
         board::FuseData *fuse = board::GetFuseData();
 
