@@ -481,7 +481,8 @@ namespace display {
             g_wasRetroSuperTurnedOff = false;
         }
         
-        svcSleepThread(1000000000);
+        // NOTE: 1s sleep moved to below the rate-match check (was firing even when
+        // rate already matched, causing 1s stall on every Display SetHz poll).
         
         uint32_t fd = 0;
         if (nvOpen(&fd, "/dev/nvdisp-disp0")) {
@@ -536,6 +537,9 @@ namespace display {
             nvClose(fd);
             return true;
         }
+
+        // Hardware stabilization delay: only needed when actually changing the rate.
+        svcSleepThread(1000000000);
 
         uint32_t itr = (new_refreshRate - 40) / 5;
         display_b.hFrontPorch = g_handheldTimingsRETRO[itr].hFrontPorch;
@@ -675,7 +679,6 @@ namespace display {
                             _getDockedHighestRefreshRate(0);
                             g_canChangeRefreshRateDocked = true;
                         } else {
-                            svcSleepThread(1000000000);
                             return false;
                         }
                     } else {

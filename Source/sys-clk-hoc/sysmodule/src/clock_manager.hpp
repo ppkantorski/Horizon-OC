@@ -42,7 +42,8 @@ namespace clockManager {
 
     // instance variables
     extern bool gRunning;
-    extern LockableMutex gContextMutex;
+    extern LockableMutex gContextMutex;   // guards gContext (tick + governor threads)
+    extern LockableMutex gSnapshotMutex;  // guards gContextSnapshot (tick + IPC thread only)
     extern HocClkContext gContext;
     extern FreqTable gFreqTable[HocClkModule_EnumMax];
     extern std::uint64_t gLastTempLogNs;

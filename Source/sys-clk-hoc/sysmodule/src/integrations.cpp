@@ -88,7 +88,7 @@ namespace integrations {
 
     bool GetRETROSuperStatus() {
         struct stat st = {0};
-        return stat("sdmc:/config/horizon-oc/retro.flag", &st) == 0; // TODO: unhardcode this
+        return stat("sdmc:/config/" CONFIG_DIR "/retro.flag", &st) == 0; // TODO: unhardcode this
     }
 
     void LoadSaltyNX() {

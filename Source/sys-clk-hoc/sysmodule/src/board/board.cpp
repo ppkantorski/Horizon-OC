@@ -32,7 +32,6 @@
 #include <battery.h>
 #include "display_refresh_rate.hpp"
 #include <rgltr.h>
-#include <notification.h>
 
 #include "board.hpp"
 #include "board_fuse.hpp"
@@ -211,7 +210,7 @@ namespace board {
         svcCallSecureMonitor(&args);
 
         if (args.X[1] == (MC_REGISTER_BASE + MC_EMEM_CFG_0)) { // if param 1 is identical read failed
-            notification::writeNotification("Horizon OC\nSecmon read failed!\n This may be a hardware issue!");
+            fileUtils::LogLine("[board] Secmon read failed - this may be a hardware issue!");
             return false;
         }
 

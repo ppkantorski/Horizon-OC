@@ -321,6 +321,7 @@ namespace board {
     }
 
     void CacheGpuVoltTable() {
+        fileUtils::LogLine("[dvfs] CacheGpuVoltTable start (build: v4)");
         UnkRegulator reg = {
             .voltageMin  = 600000,
             .voltageStep = 12500,
@@ -377,7 +378,31 @@ namespace board {
                 constexpr u32 GpuVoltageTableOffset = 312;
                 if (!std::memcmp(&buffer[index + GpuVoltageTableOffset], &vmax, sizeof(vmax))) {
                     std::memcpy(voltData.voltTable, &buffer[index + GpuVoltageTableOffset], sizeof(voltData.voltTable));
-                    voltData.voltTableAddress = base + memoryInfo.addr + GpuVoltageTableOffset + index;
+
+                    // Validate: every nonzero entry must be a plausible GPU voltage (mV).
+                    // PCV layout has shifted on some firmwares, so offset 312 may land on
+                    // a pointer array whose first u32 *coincidentally* matches vmax. The
+                    // bogus entries that follow are heap pointers (>2 billion). Reject
+                    // the cache outright in that case — writing it back via PcvHijack
+                    // would clobber unrelated PCV data and cause PCV to abort (2162-0002).
+                    bool valid = true;
+                    for (std::size_t i = 0; valid && i < std::size(voltData.voltTable); ++i) {
+                        for (std::size_t j = 0; j < std::size(voltData.voltTable[i]); ++j) {
+                            const u32 v = voltData.voltTable[i][j];
+                            if (v != 0 && (v < 400 || v > 1500)) {
+                                valid = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (valid) {
+                        voltData.voltTableAddress = base + memoryInfo.addr + GpuVoltageTableOffset + index;
+                    } else {
+                        std::memset(voltData.voltTable, 0, sizeof(voltData.voltTable));
+                        voltData.voltTableAddress = 0;
+                        fileUtils::LogLine("[dvfs] gpu volt table FAILED validation — PCV layout mismatch, hijack disabled");
+                    }
                 }
 
                 constexpr u32 CpuVoltageTableOffset = 0xB8;
@@ -390,8 +415,16 @@ namespace board {
                     fileUtils::LogLine("[dvfs] cpu volt %d: %u mV", i, cpuVoltTable[i]);
                 }
 
-                for(int i = 0; i < (int)std::size(voltData.voltTable); ++i) {
-                    fileUtils::LogLine("[dvfs] gpu volt %d: %u mV", i, voltData.voltTable[i]);
+                fileUtils::LogLine("[dvfs] voltTableAddress: 0x%lx", voltData.voltTableAddress);
+                // Fixed loop: voltTable is u32[6][32], must use [i][j] to get actual values
+                int gpuVoltIdx = 0;
+                for (std::size_t i = 0; i < std::size(voltData.voltTable); ++i) {
+                    for (std::size_t j = 0; j < std::size(voltData.voltTable[i]); ++j) {
+                        if (voltData.voltTable[i][j] != 0) {
+                            fileUtils::LogLine("[dvfs] gpu volt[%d][%d]=%u: %u mV", (int)i, (int)j, gpuVoltIdx, voltData.voltTable[i][j]);
+                        }
+                        gpuVoltIdx++;
+                    }
                 }
                 return;
             }
@@ -403,13 +436,24 @@ namespace board {
     }
 
     void PcvHijackGpuVolts(u32 vmin) {
+        // If CacheGpuVoltTable rejected the scan (bad PCV layout for this firmware)
+        // or it never ran, do not attempt the hijack. Writing to address 0 in PCV's
+        // process memory, or writing garbage to a valid address, will crash PCV.
+        if (voltData.voltTableAddress == 0) {
+            fileUtils::LogLine("[dvfs] PcvHijackGpuVolts(%u): SKIP — no valid voltTableAddress", vmin);
+            return;
+        }
+
+        if (voltData.ramVmin == vmin) {
+            fileUtils::LogLine("[dvfs] PcvHijackGpuVolts(%u): SKIP — already at this vmin", vmin);
+            return;
+        }
+
+        fileUtils::LogLine("[dvfs] PcvHijackGpuVolts(%u): writing to 0x%lx", vmin, voltData.voltTableAddress);
+
         u32 table[192];
         static_assert(sizeof(table) == sizeof(voltData.voltTable), "Invalid gpu voltage table size!");
         std::memcpy(table, voltData.voltTable, sizeof(voltData.voltTable));
-
-        if (voltData.ramVmin == vmin) {
-            return;
-        }
 
         for (u32 i = 0; i < std::size(table); ++i) {
             if (table[i] && table[i] <= vmin) {

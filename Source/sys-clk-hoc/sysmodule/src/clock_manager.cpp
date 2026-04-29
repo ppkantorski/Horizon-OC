@@ -31,7 +31,6 @@
 #include "process_management.hpp"
 #include "errors.hpp"
 #include "ipc_service.hpp"
-#include "kip.hpp"
 #include <i2c.h>
 #include "board/display_refresh_rate.hpp"
 #include <cstdio>
@@ -39,9 +38,7 @@
 #include "config.hpp"
 #include "integrations.hpp"
 #include <nxExt/cpp/lockable_mutex.h>
-#include "kip.hpp"
 #include "governor.hpp"
-#include "display/aula.hpp"
 
 #define HOSPPC_HAS_BOOST (hosversionAtLeast(7,0,0))
 
@@ -49,8 +46,10 @@ namespace clockManager {
 
 
     bool gRunning = false;
-    LockableMutex gContextMutex;
+    LockableMutex gContextMutex;                                             // guards gContext (tick + governor threads)
+    LockableMutex gSnapshotMutex;                                            // guards gContextSnapshot (tick + IPC thread only)
     HocClkContext gContext = {};
+    HocClkContext gContextSnapshot = {};  // IPC-visible snapshot; updated at end of each Tick()
     FreqTable gFreqTable[HocClkModule_EnumMax];
     std::uint64_t gLastTempLogNs = 0;
     std::uint64_t gLastFreqLogNs = 0;
@@ -221,14 +220,10 @@ namespace clockManager {
         static u32 tick = 0;
         if(++tick > 10) {
             tick = 0;
-            
             if (config::GetConfigValue(HocClkConfigValue_BatteryChargeCurrent)) {
                 I2c_Bq24193_SetFastChargeCurrentLimit(config::GetConfigValue(HocClkConfigValue_BatteryChargeCurrent));
             }
             I2c_BuckConverter_SetMvOut(&I2c_Display, config::GetConfigValue(HocClkConfigValue_DisplayVoltage));
-
-            AulaDisplay::SetDisplayColorMode((AulaColorMode)config::GetConfigValue(HocClkConfigValue_AulaDisplayColorPreset));
-
         }
     }
 
@@ -236,6 +231,9 @@ namespace clockManager {
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
         u32 vmin = board::GetMinimumGpuVmin(targetHz / 1000000, board::GetGpuSpeedoBracket());
+
+        fileUtils::LogLine("[dvfs] DVFSBeforeSet: targetHz=%u, bracket=%u, vmin=%u, offset=%d",
+            targetHz, board::GetGpuSpeedoBracket(), vmin, dvfsOffset);
 
         if (vmin) {
             vmin += dvfsOffset;
@@ -407,7 +405,9 @@ namespace clockManager {
                         targetHz / 1000000, targetHz / 100000 - targetHz / 1000000 * 10
                     );
 
-                    if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko && targetHz > oldHz && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
+                    if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko
+                        && targetHz > oldHz
+                        && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                         DVFSBeforeSet(targetHz);
                     }
 
@@ -418,9 +418,12 @@ namespace clockManager {
                         HandleCpuUv();
                     }
 
-                    if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko && targetHz < oldHz && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
+                    if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko
+                        && targetHz < oldHz
+                        && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                         DVFSAfterSet(targetHz);
                     }
+
                 }
             } else {
                 HandleFreqReset((HocClkModule)module, isBoost);
@@ -458,6 +461,10 @@ namespace clockManager {
                 board::SetHz(HocClkModule_GPU, ~0);
                 board::ResetToStockGpu();
             }
+            // Hardware settle time before SetClocks reapplies new clocks.
+            // PCV needs a tick interval after we tear down the hijack and
+            // reset GPU state, otherwise EMC clock change at high freqs may
+            // race against PCV's voltage management.
             WaitForNextTick();
         }
 
@@ -568,7 +575,6 @@ namespace clockManager {
         gLastTempLogNs = 0;
         gLastCsvWriteNs = 0;
 
-        kip::GetKipData();
 
         board::FuseData *fuse = board::GetFuseData();
 
@@ -594,6 +600,13 @@ namespace clockManager {
 
         gContext.isUsingRetroSuper = integrations::GetRETROSuperStatus();
         governor::startThreads();
+
+        // Seed IPC snapshot so the first GetCurrentContext() call returns valid data
+        // even before the first Tick() completes.
+        {
+            std::scoped_lock lock{gSnapshotMutex};
+            gContextSnapshot = gContext;
+        }
     }
 
     void Exit()
@@ -603,8 +616,8 @@ namespace clockManager {
 
     HocClkContext GetCurrentContext()
     {
-        std::scoped_lock lock{gContextMutex};
-        return gContext;
+        std::scoped_lock lock{gSnapshotMutex};
+        return gContextSnapshot;
     }
 
     void SetRunning(bool running)
@@ -627,7 +640,12 @@ namespace clockManager {
 
     void Tick()
     {
+        // Hold gContextMutex to guard gContext against concurrent governor-thread writes.
+        // Governor threads take this same lock before modifying gContext.freqs[CPU/GPU/Display].
+        // GetCurrentContext() (IPC) reads gContextSnapshot under gSnapshotMutex — a completely
+        // separate lock — so it is never blocked by holding gContextMutex here.
         std::scoped_lock lock{gContextMutex};
+
         std::uint32_t mode = 0;
         Result rc = apmExtGetCurrentPerformanceConfiguration(&mode);
         ASSERT_RESULT_OK(rc, "apmExtGetCurrentPerformanceConfiguration");
@@ -640,13 +658,28 @@ namespace clockManager {
         if (RefreshContext() || config::Refresh()) {
             SetClocks(isBoost);
         }
+
+        // Publish completed context to the IPC-visible snapshot under a brief lock.
+        // GetCurrentContext() only touches gContextSnapshot, so it never blocks on heavy work.
+        {
+            std::scoped_lock lock{gSnapshotMutex};
+            gContextSnapshot = gContext;
+        }
     }
 
     void WaitForNextTick()
     {
-        if (board::GetHz(HocClkModule_MEM) > 665000000)
-            svcSleepThread(config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL);
-        else
-            svcSleepThread(5000 * 1000000ULL); // 5 seconds in sleep mode
+        // Always use the configured polling interval.
+        //
+        // The original code slept for 5 seconds when mem ≤ 665 MHz, intending to
+        // detect Switch sleep/suspend mode.  In practice the condition fires any time
+        // the sysmodule starts before a game clock profile is applied, or when the
+        // config targets 665 MHz — causing multi-second stalls in the tick loop that
+        // make the overlay stall and clocks stop being managed.
+        //
+        // 300 ms ticks even during genuine sleep mode are harmless: nothing changes
+        // while the screen is off, so the tick just re-reads the same state and sleeps
+        // again.  The battery cost of ~200 extra wakeups per minute is negligible.
+        svcSleepThread(config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL);
     }
 } // namespace clockManager
