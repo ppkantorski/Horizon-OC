@@ -125,7 +125,7 @@ Refer to COMPILATION.md
 * 1152 → mariko hiOpt-15mV max clock
 * 1075 → mariko hiOpt max clock. absolute max clock on erista. very dangerous
 * 998 → NVIDIA T210 (erista) rating
-* 960 (erista only) → erista high uv/hiOpt - 15mV safe max clock
+* 960 (erista only) → erista high uv/hiOpt-15mV safe max clock
 * 921 → erista no UV max clock
 * 844
 * 768 → official docked
