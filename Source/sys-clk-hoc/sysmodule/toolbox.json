@@ -1,5 +1,6 @@
 {
 	"name": "sys-clk-hoc",
 	"tid": "00FF0000636C6BFF",
-	"requires_reboot": false
+	"requires_reboot": false,
+	"version": "2.1.0"
 }
