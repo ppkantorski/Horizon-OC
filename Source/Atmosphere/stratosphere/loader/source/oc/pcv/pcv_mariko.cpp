@@ -734,12 +734,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         }
     }
 
-    bool patchedMtc = false;
     Result MemFreqMtcTable(u32 *ptr) {
-        if (C.marikoEmcMaxClock <= EmcClkOSLimit || patchedMtc) {
-            R_SKIP();
-        }
-
         static const DramId dramId = [] {
             DramId id = GetDramId();
             return id;
@@ -763,6 +758,10 @@ namespace ams::ldr::hoc::pcv::mariko {
         MarikoMtcTable *table = reinterpret_cast<MarikoMtcTable *>(startPtr + mtcOffset);
         R_UNLESS(R_SUCCEEDED(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault)), ldr::ResultInvalidMtcTable());
 
+        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
+            R_SKIP();
+        }
+
         PrepareMtcMemoryRegion(startPtr, table);
         table = reinterpret_cast<MarikoMtcTable *>(startPtr);
 
@@ -781,7 +780,6 @@ namespace ams::ldr::hoc::pcv::mariko {
             MemMtcPllmbDivisor(&table[i]);
         }
 
-        patchedMtc = true;
         R_SUCCEED();
     }
 
