@@ -106,7 +106,9 @@ namespace config {
             if (kval_end > kval_start) {
                 for (unsigned int kval = kval_start; kval < kval_end; kval++) {
                     if (!strcmp(key, hocclkFormatConfigValue((HocClkConfigValue)kval, false))) {
-                        input = strtoul(value, NULL, 0);
+                        // Use strtoll so negative values (e.g. dvfs_offset=-80) are
+                        // parsed correctly and survive the implicit cast to s32 at read-time.
+                        input = (std::uint64_t)(std::int64_t)strtoll(value, NULL, 0);
                         if (!hocclkValidConfigValue((HocClkConfigValue)kval, input)) {
                             input = hocclkDefaultConfigValue((HocClkConfigValue)kval);
                             fileUtils::LogLine("[cfg] Invalid value for key '%s' in section '%s': using default %d", key, section, input);
@@ -376,8 +378,14 @@ namespace config {
             iniKeys.reserve(kvEnd - kvStart + 1);
             iniValues.reserve(kvEnd - kvStart);
             for (unsigned int kval = kvStart; kval < kvEnd; kval++) {
-                if (!hocclkValidConfigValue((HocClkConfigValue)kval, configValues->values[kval]) ||
-                   configValues->values[kval] == hocclkDefaultConfigValue((HocClkConfigValue)kval)) {
+                if (!hocclkValidConfigValue((HocClkConfigValue)kval, configValues->values[kval])) {
+                    continue;
+                }
+                // Always persist DVFSMode so the overlay can always read it back correctly.
+                // All other values equal to their default are omitted to keep the ini clean.
+                bool isDefault = configValues->values[kval] == hocclkDefaultConfigValue((HocClkConfigValue)kval);
+                bool forceWrite = (kval == HocClkConfigValue_DVFSMode);
+                if (isDefault && !forceWrite) {
                     continue;
                 }
                 iniValues.push_back(std::to_string(configValues->values[kval]));
