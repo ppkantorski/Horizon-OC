@@ -681,7 +681,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
     Result MtcValidateAllTables(MarikoMtcTable *tableStart, const u32 *validationList, u32 tableCount) {
         for (u32 i = 0; i < tableCount; ++i) {
-            R_UNLESS(R_SUCCEEDED(VerifyMtcTable(&tableStart[i], validationList[i])), ldr::ResultInvalidMtcTable());
+            R_TRY(VerifyMtcTable(&tableStart[i], validationList[i]));
         }
 
         R_SUCCEED();
@@ -703,9 +703,9 @@ namespace ams::ldr::hoc::pcv::mariko {
         return MtcTableIndex_Invalid;
     }
 
-    NORETURN void AbortInvalidDramId() {
+    NORETURN void AbortInvalidMtc(const char *crashMsg) {
         panic::SmcError(panic::Emc);
-        CRASH("Invalid dram id\n");
+        CRASH(crashMsg);
     }
 
     u32 GetMtcOffset(MtcTableIndex index) {
@@ -734,12 +734,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         }
     }
 
-    bool patchedMtc = false;
     Result MemFreqMtcTable(u32 *ptr) {
-        if (C.marikoEmcMaxClock <= EmcClkOSLimit || patchedMtc) {
-            R_SKIP();
-        }
-
         static const DramId dramId = [] {
             DramId id = GetDramId();
             return id;
@@ -749,7 +744,7 @@ namespace ams::ldr::hoc::pcv::mariko {
             MtcTableIndex idx = GetMtcDramIndex(dramId);
             /* If for some reason this happens, there is no chance of recovering this. */
             if (idx == MtcTableIndex_Invalid) {
-                AbortInvalidDramId();
+                AbortInvalidMtc("Invalid dramId");
             }
             return idx;
         }();
@@ -758,22 +753,26 @@ namespace ams::ldr::hoc::pcv::mariko {
         static const u32 mtcOffset = GetMtcOffset(mtcIndex);
 
         /* Offset from 1600MHz pointer to 204Mhz table start. */
-        constexpr u32 StartAdjustment = offsetof(MarikoMtcTable, rate_khz) + sizeof(MarikoMtcTable) * 2;
+        constexpr u32 StartAdjustment = offsetof(MarikoMtcTable, rate_khz) + sizeof(MarikoMtcTable) * (mariko::MtcTableCountDefault - 1);
         u8 *startPtr = reinterpret_cast<u8 *>(ptr) - StartAdjustment;
         MarikoMtcTable *table = reinterpret_cast<MarikoMtcTable *>(startPtr + mtcOffset);
-        R_UNLESS(R_SUCCEEDED(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault)), ldr::ResultInvalidMtcTable());
+        R_TRY(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault));
+
+        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
+            R_SKIP();
+        }
 
         PrepareMtcMemoryRegion(startPtr, table);
         table = reinterpret_cast<MarikoMtcTable *>(startPtr);
 
         if (R_FAILED(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault))) {
-            panic::SmcError(panic::Emc);
+            AbortInvalidMtc("Failed mtc validation");
         }
 
         MtcExtendTables(table);
 
         if (R_FAILED(MtcValidateAllTables(table, newEmcList.data(), newEmcList.size()))) {
-            panic::SmcError(panic::Emc);
+            AbortInvalidMtc("Failed mtc validation");
         }
 
         for (u32 i = mariko::MtcTableCountDefault; i < newEmcList.size(); ++i) {
@@ -781,7 +780,6 @@ namespace ams::ldr::hoc::pcv::mariko {
             MemMtcPllmbDivisor(&table[i]);
         }
 
-        patchedMtc = true;
         R_SUCCEED();
     }
 
@@ -1111,9 +1109,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         for (auto &entry : patches) {
             LOGGING("%s Count: %zu", entry.description, entry.patched_count);
             if (R_FAILED(entry.CheckResult())) {
-                #if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
-                    panic::SmcError(panic::Patch);
-                #endif
+                panic::SmcError(panic::Patch);
 
                 CRASH(entry.description);
             }

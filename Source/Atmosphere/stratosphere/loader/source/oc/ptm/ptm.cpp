@@ -21,11 +21,7 @@
 namespace ams::ldr::hoc::ptm {
 
     Result CpuPtmBoost(perf_conf_entry* entry) {
-        #ifdef ATMOSPHERE_IS_STRATOSPHERE
         bool isMariko = (spl::GetSocType() == spl::SocType_Mariko);
-        #else
-        bool isMariko = true;
-        #endif
 
         if (!C.eristaCpuBoostClock || !C.marikoCpuBoostClock) {
             R_SUCCEED();
@@ -76,11 +72,7 @@ namespace ams::ldr::hoc::ptm {
         PatcherEntry<perf_conf_entry> cpuPtmBoostPatch = { "CPU Ptm Boost", &CpuPtmBoost, 2, };
         PatcherEntry<perf_conf_entry> memPtmPatch = { "MEM Ptm", &MemPtm, 16, };
 
-        #ifdef ATMOSPHERE_IS_STRATOSPHERE
         bool isMariko = (spl::GetSocType() == spl::SocType_Mariko);
-        #else
-        bool isMariko = true;
-        #endif
 
         for (u32 i = 0; i < entryCnt; i++) {
             perf_conf_entry *entry = confTable + i;

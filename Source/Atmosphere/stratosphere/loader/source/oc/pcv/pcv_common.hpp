@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "../mtc_timing_table.hpp"
+
 namespace ams::ldr::hoc::pcv {
 
     typedef struct cvb_coefficients {

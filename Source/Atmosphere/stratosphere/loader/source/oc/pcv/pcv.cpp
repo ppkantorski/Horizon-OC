@@ -162,17 +162,13 @@ namespace ams::ldr::hoc::pcv {
 
         for (auto &v : validators) {
             if (R_FAILED(v.check())) {
-                #if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
-                    panic::SmcError(v.panic);
-                #endif
-
+                panic::SmcError(v.panic);
                 CRASH("Validation FAIL");
             }
         }
     }
 
     void Patch(uintptr_t mapped_nso, size_t nso_size) {
-        #ifdef ATMOSPHERE_IS_STRATOSPHERE
         SafetyCheck();
 
         bool isMariko = (spl::GetSocType() == spl::SocType_Mariko);
@@ -181,8 +177,6 @@ namespace ams::ldr::hoc::pcv {
         } else {
             erista::Patch(mapped_nso, nso_size);
         }
-
-        #endif
     }
 
 }

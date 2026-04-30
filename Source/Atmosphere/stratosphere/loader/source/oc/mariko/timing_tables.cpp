@@ -14,7 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../mtc_timing_value.hpp"
+#include "../oc_common.hpp"
 #include "timing_tables.hpp"
 
 namespace ams::ldr::hoc::pcv::mariko {

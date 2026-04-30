@@ -480,9 +480,7 @@ namespace ams::ldr::hoc::pcv::erista {
         for (auto &entry : patches) {
             LOGGING("%s Count: %zu", entry.description, entry.patched_count);
             if (R_FAILED(entry.CheckResult())) {
-                #if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
-                    panic::SmcError(panic::Patch);
-                #endif
+                panic::SmcError(panic::Patch);
 
                 CRASH(entry.description);
             }
