@@ -95,8 +95,16 @@ namespace config {
         int BrowseIniFunc(const char* section, const char* key, const char* value, void* userdata) {
             (void)userdata;
             std::uint64_t input;
+            unsigned int kval_start = 0, kval_end = 0;
             if (!strcmp(section, CONFIG_VAL_SECTION)) {
-                for (unsigned int kval = 0; kval < HocClkConfigValue_EnumMax; kval++) {
+                kval_start = 0;
+                kval_end = KipConfigValue_hpMode;
+            } else if (!strcmp(section, CONFIG_KIP_SECTION)) {
+                kval_start = KipConfigValue_hpMode;
+                kval_end = HocClkConfigValue_EnumMax;
+            }
+            if (kval_end > kval_start) {
+                for (unsigned int kval = kval_start; kval < kval_end; kval++) {
                     if (!strcmp(key, hocclkFormatConfigValue((HocClkConfigValue)kval, false))) {
                         input = strtoul(value, NULL, 0);
                         if (!hocclkValidConfigValue((HocClkConfigValue)kval, input)) {
@@ -107,7 +115,6 @@ namespace config {
                         return 1;
                     }
                 }
-
                 fileUtils::LogLine("[cfg] Skipping key '%s' in section '%s': Unrecognized config value", key, section);
                 return 1;
             }
@@ -362,30 +369,34 @@ namespace config {
     bool SetConfigValues(HocClkConfigValueList* configValues, bool immediate) {
         std::scoped_lock lock{gConfigMutex};
 
-        std::vector<const char*> iniKeys;
-        std::vector<std::string> iniValues;
-        iniKeys.reserve(HocClkConfigValue_EnumMax + 1);
-        iniValues.reserve(HocClkConfigValue_EnumMax);
-
-        for (unsigned int kval = 0; kval < HocClkConfigValue_EnumMax; kval++) {
-            if (!hocclkValidConfigValue((HocClkConfigValue)kval, configValues->values[kval]) ||
-               configValues->values[kval] == hocclkDefaultConfigValue((HocClkConfigValue)kval)) {
-                continue;
+        // Write overlay-managed values to [values], kip hardware values to [system]
+        auto writeSection = [&](const char* section, unsigned int kvStart, unsigned int kvEnd) -> bool {
+            std::vector<const char*> iniKeys;
+            std::vector<std::string> iniValues;
+            iniKeys.reserve(kvEnd - kvStart + 1);
+            iniValues.reserve(kvEnd - kvStart);
+            for (unsigned int kval = kvStart; kval < kvEnd; kval++) {
+                if (!hocclkValidConfigValue((HocClkConfigValue)kval, configValues->values[kval]) ||
+                   configValues->values[kval] == hocclkDefaultConfigValue((HocClkConfigValue)kval)) {
+                    continue;
+                }
+                iniValues.push_back(std::to_string(configValues->values[kval]));
+                iniKeys.push_back(hocclkFormatConfigValue((HocClkConfigValue)kval, false));
             }
-            iniValues.push_back(std::to_string(configValues->values[kval]));
-            iniKeys.push_back(hocclkFormatConfigValue((HocClkConfigValue)kval, false));
+            iniKeys.push_back(NULL);
+            std::vector<const char*> valuePointers;
+            valuePointers.reserve(iniValues.size() + 1);
+            for (const auto& val : iniValues) {
+                valuePointers.push_back(val.c_str());
+            }
+            valuePointers.push_back(NULL);
+            return ini_putsection(section, iniKeys.data(), valuePointers.data(), gPath.c_str()) != 0;
+        };
+
+        if (!writeSection(CONFIG_VAL_SECTION, 0, KipConfigValue_hpMode)) {
+            return false;
         }
-
-        iniKeys.push_back(NULL);
-
-        std::vector<const char*> valuePointers;
-        valuePointers.reserve(iniValues.size() + 1);
-        for (const auto& val : iniValues) {
-            valuePointers.push_back(val.c_str());
-        }
-        valuePointers.push_back(NULL);
-
-        if (!ini_putsection(CONFIG_VAL_SECTION, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
+        if (!writeSection(CONFIG_KIP_SECTION, KipConfigValue_hpMode, HocClkConfigValue_EnumMax)) {
             return false;
         }
 
@@ -428,7 +439,8 @@ namespace config {
         }
         valuePointers.push_back(NULL);
 
-        if (!ini_putsection(CONFIG_VAL_SECTION, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
+        const char* section = (kval >= KipConfigValue_hpMode) ? CONFIG_KIP_SECTION : CONFIG_VAL_SECTION;
+        if (!ini_putsection(section, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
             fileUtils::LogLine("[cfg] Failed to reset config value %u in INI", kval);
             return false;
         }
@@ -463,7 +475,8 @@ namespace config {
         valuePointers.push_back(iniValues[0].c_str());
         valuePointers.push_back(NULL);
 
-        if (!ini_putsection(CONFIG_VAL_SECTION, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
+        const char* section = (kval >= KipConfigValue_hpMode) ? CONFIG_KIP_SECTION : CONFIG_VAL_SECTION;
+        if (!ini_putsection(section, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
             return false;
         }
 

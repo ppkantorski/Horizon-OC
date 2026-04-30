@@ -48,6 +48,7 @@ namespace clockManager {
 
     bool gRunning = false;
     bool gPrevEnabled = true; // matches main()'s initial config::SetEnabled(true)
+    bool gPrevIsBoost = false;
     LockableMutex gContextMutex;                                             // guards gContext (tick + governor threads)
     LockableMutex gSnapshotMutex;                                            // guards gContextSnapshot (tick + IPC thread only)
     HocClkContext gContext = {};
@@ -420,8 +421,14 @@ namespace clockManager {
                 continue;
             }
 
-            // Skip CPU when deferred to boost mode OR when the CPU governor is active
-            if ((skipCpuDueToBoost || noCPU) && module == HocClkModule_CPU)
+            // Skip CPU when deferred to boost mode OR when the CPU governor is active.
+            // Exception: when OverwriteBoostMode is set AND we're in boost, the governor
+            // yields to us (it now sleeps instead of looping), so the tick thread must
+            // apply the configured CPU target here.  Without this carve-out the governor's
+            // isCpuGovernorEnabled=true would make noCPU=true and skip CPU, leaving
+            // nobody to apply the user's boost-clock override.
+            bool governorOwnerCpu = noCPU && !(isBoost && (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode));
+            if ((skipCpuDueToBoost || governorOwnerCpu) && module == HocClkModule_CPU)
                 continue;
             if (noGPU && module == HocClkModule_GPU)
                 continue;
@@ -501,13 +508,21 @@ namespace clockManager {
                 board::PcvHijackGpuVolts(0);
                 board::SetHz(HocClkModule_GPU, ~0);
                 board::ResetToStockGpu();
+                // Hardware settle time: PCV needs a full tick interval after the
+                // DVFS hijack is torn down and GPU state is reset, otherwise an
+                // EMC clock change at high frequencies can race against PCV's
+                // voltage management.
+                //
+                // This sleep belongs INSIDE the DVFS-hijack block.  It was
+                // previously placed after the closing brace, making it run on
+                // every app/profile change on every device — causing an
+                // unnecessary 300 ms stall at every game launch on Erista and
+                // on Mariko with DVFSMode != Hijack.  During that stall boost
+                // mode could start, meaning the tick woke up with a stale
+                // isBoost=false and applied the plain profile clock for one
+                // extra tick before eventually landing on the boost target.
+                WaitForNextTick();
             }
-            fileUtils::LogLine("[mgr] hasChanged: WaitForNextTick");
-            // Hardware settle time before SetClocks reapplies new clocks.
-            // PCV needs a tick interval after we tear down the hijack and
-            // reset GPU state, otherwise EMC clock change at high freqs may
-            // race against PCV's voltage management.
-            WaitForNextTick();
             fileUtils::LogLine("[mgr] hasChanged: done");
         }
 
@@ -733,6 +748,42 @@ namespace clockManager {
 
         bool contextOrConfigChanged = RefreshContext() || config::Refresh();
 
+        // Re-read boost state after RefreshContext().
+        //
+        // RefreshContext() calls WaitForNextTick() (a full polling-interval
+        // sleep, typically 300 ms) whenever an app or profile change is
+        // detected — which is exactly what happens at a loading-screen
+        // transition.  Boost mode almost always starts during that sleep.
+        // If we kept the isBoost value read at the top of Tick(), SetClocks()
+        // would see isBoost=false even though boost is now active, and would
+        // push the CPU to the plain profile clock (X) for one whole tick:
+        //
+        //   X  →  ~1785 (APM boost)  →  X  (stale isBoost=false)
+        //   →  2600  (next tick, isBoost re-read correctly)  →  X
+        //
+        // Refreshing here collapses that to:
+        //
+        //   X  →  ~1785 (APM boost)  →  2600  →  X
+        //
+        rc = apmExtGetCurrentPerformanceConfiguration(&mode);
+        ASSERT_RESULT_OK(rc, "apmExtGetCurrentPerformanceConfiguration (post-refresh)");
+        isBoost = apmExtIsBoostMode(mode);
+
+        // Detect boost state transitions so we can force a SetClocks call the
+        // instant boost starts or ends, even if RefreshContext hasn't caught up
+        // with the hardware clock change yet.
+        bool boostChanged = (isBoost != gPrevIsBoost);
+        gPrevIsBoost = isBoost;
+
+        // While boost+OverwriteBoostMode is active, force SetClocks every tick.
+        // APM can re-assert the default boost clock (~1785 MHz) between our
+        // polling intervals; actively re-applying each tick ensures we reclaim
+        // the configured target within one tick interval rather than waiting for
+        // RefreshContext to detect the hardware deviation on a future tick.
+        // The nearestHz != gContext.freqs guard inside SetClocks prevents
+        // unnecessary board::SetHz calls when the clock is already correct.
+        bool overrideBoostActive = isBoost && (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode);
+
         if (!enabled) {
             // Disabled: reset to stock on the first disabled tick and again
             // on any context change (app/profile switch, override removed,
@@ -741,9 +792,10 @@ namespace clockManager {
                 board::ResetToStock();
             }
         } else {
-            // Enabled: apply configured clocks when (re-)enabled or when
-            // app/profile/config changes are detected.
-            if (enabledChanged || contextOrConfigChanged) {
+            // Enabled: apply configured clocks when (re-)enabled, on any
+            // context/config change, on boost state transitions, or on every
+            // tick while an active boost override needs to be maintained.
+            if (enabledChanged || contextOrConfigChanged || boostChanged || overrideBoostActive) {
                 SetClocks(isBoost);
             }
         }

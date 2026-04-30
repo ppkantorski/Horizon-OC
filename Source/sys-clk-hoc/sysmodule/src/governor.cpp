@@ -136,7 +136,13 @@ namespace governor {
                 isCpuGovernorInBoostMode = true;
                 downHoldRemaining        = 0;
                 lastHz                   = 0;
-                continue; // TODO: figure out a way to get boost clock easily and set it instead of just skipping the governor
+                // The tick thread handles CPU freq during boost when OverwriteBoostMode
+                // is set (see SetClocks).  We yield here so we don't spin as a
+                // busy-loop, which wasted a full CPU core and kept isCpuGovernorEnabled
+                // true -- causing the tick thread to skip CPU because of noCPU, so
+                // nobody actually applied the user's boost clock target.
+                svcSleepThread(POLL_NS);
+                continue;
             } else if (!apmExtIsBoostMode(mode)) {
                 isCpuGovernorInBoostMode = false;
             }

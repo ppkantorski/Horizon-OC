@@ -30,6 +30,7 @@
 #include <switch.h>
 
 #define CONFIG_VAL_SECTION "values"
+#define CONFIG_KIP_SECTION "system"
 
 namespace config {
 
