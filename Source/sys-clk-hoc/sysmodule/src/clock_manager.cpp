@@ -47,6 +47,7 @@ namespace clockManager {
 
 
     bool gRunning = false;
+    bool gPrevEnabled = true; // matches main()'s initial config::SetEnabled(true)
     LockableMutex gContextMutex;                                             // guards gContext (tick + governor threads)
     LockableMutex gSnapshotMutex;                                            // guards gContextSnapshot (tick + IPC thread only)
     HocClkContext gContext = {};
@@ -350,12 +351,33 @@ namespace clockManager {
         std::uint32_t maxHz = 0;
         std::uint32_t nearestHz = 0;
 
-        if (isBoost && !config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode)) {
+        // BUG FIX: Clock drops (CPU/GPU fall to stock randomly in games).
+        //
+        // Root cause: the early "return" here exited SetClocks() entirely
+        // whenever the system was in boost mode and OverwriteBoostMode was
+        // off, leaving GPU and MEM completely unmanaged.
+        //
+        // The problematic sequence:
+        //   1. App/profile change → RefreshContext() calls ResetToStock() +
+        //      WaitForNextTick(), then re-reads hardware (now at stock) into
+        //      gContext.freqs.  Returns true.
+        //   2. SetClocks() called with isBoost=true (common at game launch).
+        //   3. Old code returned early → GPU/MEM left at stock.
+        //   4. gContext.freqs[GPU/MEM] == board::GetHz(GPU/MEM) == stock.
+        //   5. Next tick: RefreshContext() detects no change → SetClocks()
+        //      never called again → GPU/MEM permanently stuck at stock
+        //      until some other incidental change triggered a new call.
+        //
+        // Fix: replace the early return with a flag that skips only CPU
+        // (which is the only thing boost mode should control).  GPU and
+        // MEM continue to be applied normally.
+        bool skipCpuDueToBoost = isBoost && !config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode);
+        if (skipCpuDueToBoost) {
             u32 boostFreq = board::GetHz(HocClkModule_CPU);
             if (boostFreq / 1000000 > 1785) {
                 board::SetHz(HocClkModule_CPU, boostFreq);
             }
-            return; // Return if we aren't overwriting boost mode
+            // Intentionally NOT returning here — GPU and MEM still need to be managed.
         }
 
         bool returnRaw = false; // Return a value scaled to MHz instead of raw value
@@ -398,7 +420,8 @@ namespace clockManager {
                 continue;
             }
 
-            if (noCPU && module == HocClkModule_CPU)
+            // Skip CPU when deferred to boost mode OR when the CPU governor is active
+            if ((skipCpuDueToBoost || noCPU) && module == HocClkModule_CPU)
                 continue;
             if (noGPU && module == HocClkModule_GPU)
                 continue;
@@ -683,8 +706,46 @@ namespace clockManager {
         HandleSafetyFeatures();
         HandleMiscFeatures();
 
-        if (RefreshContext() || config::Refresh()) {
-            SetClocks(isBoost);
+        // ---------------------------------------------------------------
+        // BUG FIX: Enable button was not gating clock management.
+        //
+        // config::Enabled() is set by the overlay's Enable toggle via the
+        // IPC SetEnabled command, but Tick() never checked it — SetClocks()
+        // was called whenever any context/config change was detected,
+        // regardless of the enabled state.  The overlay toggle appeared to
+        // flip visually but had no effect on actual clock management.
+        //
+        // Fix: track the previous enabled state here.  On any transition
+        // (enabled→disabled or disabled→enabled) OR on any normal context/
+        // config change, take the appropriate action:
+        //   • disabled: reset all clocks to stock so we leave the hardware
+        //     in a clean state (also prevents stale OC clocks after an app
+        //     switch while the module is disabled).
+        //   • enabled:  apply configured clocks immediately on re-enable,
+        //     not only on the next incidental context change.
+        // ---------------------------------------------------------------
+        bool enabled = config::Enabled();
+        bool enabledChanged = (enabled != gPrevEnabled);
+        if (enabledChanged) {
+            fileUtils::LogLine("[mgr] Enabled changed: %s", enabled ? "on" : "off");
+            gPrevEnabled = enabled;
+        }
+
+        bool contextOrConfigChanged = RefreshContext() || config::Refresh();
+
+        if (!enabled) {
+            // Disabled: reset to stock on the first disabled tick and again
+            // on any context change (app/profile switch, override removed,
+            // etc.) so OC clocks don't persist while the module is off.
+            if (enabledChanged || contextOrConfigChanged) {
+                board::ResetToStock();
+            }
+        } else {
+            // Enabled: apply configured clocks when (re-)enabled or when
+            // app/profile/config changes are detected.
+            if (enabledChanged || contextOrConfigChanged) {
+                SetClocks(isBoost);
+            }
         }
 
         // Publish completed context to the IPC-visible snapshot under a brief lock.
