@@ -508,10 +508,11 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
             return 1963ULL;
 
         case HocClkConfigValue_ThermalThrottle:
-        case HocClkConfigValue_HandheldTDP:
         case HocClkConfigValue_IsFirstLoad:
         case HocClkConfigValue_DVFSMode:
             return 1ULL;
+        case HocClkConfigValue_HandheldTDP:
+            return 0ULL;
         case HocClkConfigValue_ThermalThrottleThreshold:
             return 70ULL;
         case HocClkConfigValue_HandheldTDPLimit:
