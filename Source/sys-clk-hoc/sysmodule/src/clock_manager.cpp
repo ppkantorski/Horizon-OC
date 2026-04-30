@@ -49,6 +49,7 @@ namespace clockManager {
     bool gRunning = false;
     bool gPrevEnabled = true; // matches main()'s initial config::SetEnabled(true)
     bool gPrevIsBoost = false;
+    s32  s_lastDvfsOffset = INT32_MIN; // sentinel: "never applied"
     LockableMutex gContextMutex;                                             // guards gContext (tick + governor threads)
     LockableMutex gSnapshotMutex;                                            // guards gContextSnapshot (tick + IPC thread only)
     HocClkContext gContext = {};
@@ -230,75 +231,65 @@ namespace clockManager {
         }
     }
 
-    void DVFSBeforeSet(u32 targetHz)
+    void DVFSBeforeSet(u32 memTargetHz)
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
-        u32 vmin = board::GetMinimumGpuVmin(targetHz / 1000000, board::GetGpuSpeedoBracket());
+        u32 vmin = board::GetMinimumGpuVmin(memTargetHz / 1000000, board::GetGpuSpeedoBracket());
+        if (vmin) vmin += dvfsOffset;
 
-        fileUtils::LogLine("[dvfs] DVFSBeforeSet: targetHz=%u, bracket=%u, vmin=%u, offset=%d",
-            targetHz, board::GetGpuSpeedoBracket(), vmin, dvfsOffset);
+        fileUtils::LogLine("[dvfs] DVFSBeforeSet: memHz=%u, vmin=%u, offset=%d",
+            memTargetHz, vmin, dvfsOffset);
 
-        if (vmin) {
-            vmin += dvfsOffset;
-        }
+        // Write table as max(original+offset, vmin) for every entry — one unified pass.
+        board::SyncGpuVoltTable(dvfsOffset, vmin);
 
-        board::PcvHijackGpuVolts(vmin);
-
-        /* Update the voltage. */
-        if (I2c_BuckConverter_GetMvOut(&I2c_Mariko_GPU) < vmin) {
+        // Raise hardware voltage immediately if below the required floor.
+        // Only raises (never lowers), so safe to call unconditionally.
+        if (vmin && I2c_BuckConverter_GetMvOut(&I2c_Mariko_GPU) < vmin) {
             I2c_BuckConverter_SetMvOut(&I2c_Mariko_GPU, vmin);
         }
 
         gContext.voltages[HocClkVoltage_GPU] = vmin * 1000;
     }
 
-    void DVFSAfterSet(u32 targetHz)
+    void DVFSAfterSet(u32 memTargetHz)
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
         dvfsOffset = std::max(dvfsOffset, -80);
-        u32 vmin = board::GetMinimumGpuVmin(targetHz / 1000000, board::GetGpuSpeedoBracket());
+        u32 vmin = board::GetMinimumGpuVmin(memTargetHz / 1000000, board::GetGpuSpeedoBracket());
+        if (vmin) vmin += dvfsOffset;
 
-        if (vmin) {
-            vmin += dvfsOffset;
-        }
+        fileUtils::LogLine("[dvfs] DVFSAfterSet: memHz=%u, newFloor=%u, offset=%d",
+            memTargetHz, vmin, dvfsOffset);
 
-        u32 maxHz = GetMaxAllowedHz(HocClkModule_GPU, gContext.profile);
-        u32 nearestHz = GetNearestHz(HocClkModule_GPU, targetHz, maxHz);
+        // Write correct table: max(original+offset, newFloor) for every entry.
+        // Because we start from the original table, entries that were previously
+        // raised to the old (higher) floor are now written back to their lower
+        // correct values — fixing the "voltage stuck at old floor" problem.
+        board::SyncGpuVoltTable(dvfsOffset, vmin);
 
-        fileUtils::LogLine("[dvfs] DVFSAfterSet: targetHz=%u, vmin=%u, nearestGpuHz=%u", targetHz, vmin, nearestHz);
-
-        board::PcvHijackGpuVolts(vmin);
-
-        if (targetHz) {
-            fileUtils::LogLine("[dvfs] DVFSAfterSet: SetHz(GPU, MAX) then SetHz(GPU, %u)", nearestHz);
-            board::SetHz(HocClkModule_GPU, ~0);
-            board::SetHz(HocClkModule_GPU, nearestHz);
-        } else {
-            fileUtils::LogLine("[dvfs] DVFSAfterSet: SetHz(GPU, MAX) then ResetToStockGpu");
-            board::SetHz(HocClkModule_GPU, ~0);
-            board::ResetToStockGpu();
-        }
         fileUtils::LogLine("[dvfs] DVFSAfterSet: done");
     }
 
-    // Like DVFSAfterSet but without the internal SetHz calls — used when the
-    // GPU clock was already changed by the normal SetHz path (e.g. a direct
-    // GPU clock transition) and we only need to update the voltage to match.
-    void DVFSVoltUpdate(u32 targetHz)
+    // Called after a GPU clock change to keep the voltage table in sync.
+    // Uses the CURRENT MEM frequency to compute the floor — NOT the GPU frequency,
+    // which would incorrectly return 0 for GPU <= 1600 MHz and wipe the floor.
+    void DVFSVoltUpdate()
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
         dvfsOffset = std::max(dvfsOffset, -80);
-        u32 vmin = board::GetMinimumGpuVmin(targetHz / 1000000, board::GetGpuSpeedoBracket());
 
-        if (vmin) {
-            vmin += dvfsOffset;
+        u32 memHz = gContext.freqs[HocClkModule_MEM];
+        u32 floor = board::GetMinimumGpuVmin(memHz / 1000000, board::GetGpuSpeedoBracket());
+        if (floor) {
+            s32 f = (s32)floor + dvfsOffset;
+            floor = (f > 0) ? (u32)f : 0;
         }
 
-        fileUtils::LogLine("[dvfs] DVFSVoltUpdate: targetHz=%u, vmin=%u, offset=%d",
-            targetHz, vmin, dvfsOffset);
+        fileUtils::LogLine("[dvfs] DVFSVoltUpdate: memHz=%u, floor=%u, offset=%d",
+            memHz, floor, dvfsOffset);
 
-        board::PcvHijackGpuVolts(vmin);
-        gContext.voltages[HocClkVoltage_GPU] = vmin * 1000;
+        board::SyncGpuVoltTable(dvfsOffset, floor);
     }
 
     void HandleCpuUv()
@@ -325,13 +316,13 @@ namespace clockManager {
             u32 maxHz = GetMaxAllowedHz(HocClkModule_GPU, gContext.profile);
             u32 nearestHz = GetNearestHz(HocClkModule_GPU, targetHz, maxHz);
 
-            fileUtils::LogLine("[dvfs] DVFSReset: SetHz(GPU, MAX) then targetHz=%u nearestHz=%u", targetHz, nearestHz);
-            board::SetHz(HocClkModule_GPU, ~0);
+            fileUtils::LogLine("[dvfs] DVFSReset: targetHz=%u nearestHz=%u", targetHz, nearestHz);
             if (targetHz) {
                 board::SetHz(HocClkModule_GPU, nearestHz);
             } else {
                 board::ResetToStockGpu();
             }
+            s_lastDvfsOffset = INT32_MIN; // force re-apply when DVFS re-enables
             fileUtils::LogLine("[dvfs] DVFSReset: done");
         }
     }
@@ -453,6 +444,25 @@ namespace clockManager {
             if (noGPU && module == HocClkModule_GPU)
                 continue;
 
+            // Sync the GPU voltage table whenever dvfs_offset changes.
+            // Compute the DVFS floor from the current MEM frequency so the floor
+            // is always respected regardless of when this fires (boot, reset, slider).
+            // Done BEFORE SetHz so PCV uses the correct table on this transition.
+            if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
+                && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
+                s32 currentOffset = (s32)config::GetConfigValue(HocClkConfigValue_DVFSOffset);
+                if (currentOffset != s_lastDvfsOffset) {
+                    u32 memHz   = gContext.freqs[HocClkModule_MEM];
+                    u32 floor   = board::GetMinimumGpuVmin(memHz / 1000000, board::GetGpuSpeedoBracket());
+                    if (floor) {
+                        s32 f = (s32)floor + currentOffset;
+                        floor = (f > 0) ? (u32)f : 0;
+                    }
+                    board::SyncGpuVoltTable(currentOffset, floor);
+                    s_lastDvfsOffset = currentOffset;
+                }
+            }
+
             if (targetHz) {
                 maxHz = GetMaxAllowedHz((HocClkModule)module, gContext.profile);
                 nearestHz = GetNearestHz((HocClkModule)module, targetHz, maxHz);
@@ -466,13 +476,6 @@ namespace clockManager {
                     );
 
                     if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko
-                        && targetHz > oldHz
-                        && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
-                        DVFSBeforeSet(targetHz);
-                    }
-
-                    // GPU going UP: raise voltage before raising the clock.
-                    if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
                         && targetHz > oldHz
                         && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                         DVFSBeforeSet(targetHz);
@@ -502,7 +505,7 @@ namespace clockManager {
                     if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
                         && targetHz < oldHz
                         && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
-                        DVFSVoltUpdate(nearestHz);
+                        DVFSVoltUpdate();
                     }
 
                 }
@@ -510,13 +513,7 @@ namespace clockManager {
                 HandleFreqReset((HocClkModule)module, isBoost);
             }
 
-            // Always keep GPU voltage in sync with current freq + offset on every tick
-            // so that a dvfs_offset change takes effect immediately even when GPU freq
-            // is not transitioning.  This must be outside the nearestHz != freqs[] guard.
-            if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
-                && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
-                DVFSVoltUpdate(gContext.freqs[module]);
-            }
+
         }
     }
 
@@ -549,7 +546,6 @@ namespace clockManager {
             if (board::GetSocType() == HocClkSocType_Mariko && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                 fileUtils::LogLine("[mgr] hasChanged: PcvHijackGpuVolts(0) + GPU reset");
                 board::PcvHijackGpuVolts(0);
-                board::SetHz(HocClkModule_GPU, ~0);
                 board::ResetToStockGpu();
                 // Hardware settle time: PCV needs a full tick interval after the
                 // DVFS hijack is torn down and GPU state is reset, otherwise an
