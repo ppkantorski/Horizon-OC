@@ -268,6 +268,19 @@ namespace clockManager {
         // correct values — fixing the "voltage stuck at old floor" problem.
         board::SyncGpuVoltTable(dvfsOffset, vmin);
 
+        // PCV only re-evaluates its voltage table when a clock-rate change is
+        // requested for the GPU.  Writing the table alone (SyncGpuVoltTable) is
+        // not enough — without an actual SetHz call PCV never picks up the new
+        // floor and the GPU voltage stays at the old (higher) value.
+        // Mirror HOC's pattern: bounce GPU to ~0 then restore the current target
+        // so PCV traverses the freshly-written DVFS table and applies the
+        // correct voltage immediately.
+        u32 gpuHz = gContext.freqs[HocClkModule_GPU];
+        if (gpuHz) {
+            board::SetHz(HocClkModule_GPU, ~0u);
+            board::SetHz(HocClkModule_GPU, gpuHz);
+        }
+
         fileUtils::LogLine("[dvfs] DVFSAfterSet: done");
     }
 
@@ -290,6 +303,17 @@ namespace clockManager {
             memHz, floor, dvfsOffset);
 
         board::SyncGpuVoltTable(dvfsOffset, floor);
+
+        // Same rationale as DVFSAfterSet: PCV only reads the voltage table on a
+        // GPU SetHz call.  The SetHz(GPU) that triggered this function already ran
+        // with the OLD table, so PCV's voltage reflects the old floor.  Bounce the
+        // GPU clock to force PCV to traverse the freshly-written table and lower
+        // the voltage to the correct post-downscale level.
+        u32 gpuHz = gContext.freqs[HocClkModule_GPU];
+        if (gpuHz) {
+            board::SetHz(HocClkModule_GPU, ~0u);
+            board::SetHz(HocClkModule_GPU, gpuHz);
+        }
     }
 
     void HandleCpuUv()
@@ -318,8 +342,10 @@ namespace clockManager {
 
             fileUtils::LogLine("[dvfs] DVFSReset: targetHz=%u nearestHz=%u", targetHz, nearestHz);
             if (targetHz) {
+                board::SetHz(HocClkModule_GPU, ~0u);
                 board::SetHz(HocClkModule_GPU, nearestHz);
             } else {
+                board::SetHz(HocClkModule_GPU, ~0u);
                 board::ResetToStockGpu();
             }
             s_lastDvfsOffset = INT32_MIN; // force re-apply when DVFS re-enables
