@@ -234,16 +234,23 @@ namespace clockManager {
     void DVFSBeforeSet(u32 memTargetHz)
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
-        u32 vmin = board::GetMinimumGpuVmin(memTargetHz / 1000000, board::GetGpuSpeedoBracket());
-        if (vmin) vmin += dvfsOffset;
+        // Raw DVFS floor: the minimum GPU voltage the memory controller needs at
+        // this MEM speed.  The offset adjusts this floor up or down — it does NOT
+        // shift every table entry.  PcvHijackGpuVolts only raises entries that are
+        // naturally BELOW the adjusted floor; GPU frequency entries already above the
+        // floor are never touched.  This is intentional: the slider is for fine-tuning
+        // the RAM OC stability margin, not for general GPU UV.
+        u32 rawFloor = board::GetMinimumGpuVmin(memTargetHz / 1000000, board::GetGpuSpeedoBracket());
+        s32 adjusted = (s32)rawFloor + dvfsOffset;
+        u32 vmin = (u32)std::max(0, std::min(1000, adjusted));
 
-        fileUtils::LogLine("[dvfs] DVFSBeforeSet: memHz=%u, vmin=%u, offset=%d",
-            memTargetHz, vmin, dvfsOffset);
+        fileUtils::LogLine("[dvfs] DVFSBeforeSet: memHz=%u, rawFloor=%u, offset=%d, vmin=%u",
+            memTargetHz, rawFloor, dvfsOffset, vmin);
 
-        // Write table as max(original+offset, vmin) for every entry — one unified pass.
-        board::SyncGpuVoltTable(dvfsOffset, vmin);
+        board::PcvHijackGpuVolts(vmin);
 
         // Raise hardware voltage immediately if below the required floor.
+        // This covers the gap between the table write and the next PCV GPU event.
         // Only raises (never lowers), so safe to call unconditionally.
         if (vmin && I2c_BuckConverter_GetMvOut(&I2c_Mariko_GPU) < vmin) {
             I2c_BuckConverter_SetMvOut(&I2c_Mariko_GPU, vmin);
@@ -255,27 +262,23 @@ namespace clockManager {
     void DVFSAfterSet(u32 memTargetHz)
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
-        dvfsOffset = std::max(dvfsOffset, -80);
-        u32 vmin = board::GetMinimumGpuVmin(memTargetHz / 1000000, board::GetGpuSpeedoBracket());
-        if (vmin) vmin += dvfsOffset;
+        u32 rawFloor = board::GetMinimumGpuVmin(memTargetHz / 1000000, board::GetGpuSpeedoBracket());
+        s32 adjusted = (s32)rawFloor + dvfsOffset;
+        u32 vmin = (u32)std::max(0, std::min(1000, adjusted));
 
-        fileUtils::LogLine("[dvfs] DVFSAfterSet: memHz=%u, newFloor=%u, offset=%d",
-            memTargetHz, vmin, dvfsOffset);
+        fileUtils::LogLine("[dvfs] DVFSAfterSet: memHz=%u, rawFloor=%u, offset=%d, vmin=%u",
+            memTargetHz, rawFloor, dvfsOffset, vmin);
 
-        // Write correct table: max(original+offset, newFloor) for every entry.
-        // Because we start from the original table, entries that were previously
-        // raised to the old (higher) floor are now written back to their lower
-        // correct values — fixing the "voltage stuck at old floor" problem.
-        board::SyncGpuVoltTable(dvfsOffset, vmin);
+        // PcvHijackGpuVolts restores the original table when vmin=0 (MEM downscale
+        // below DVFS threshold), and raises entries below the floor for higher speeds.
+        // Entries naturally above the floor are never modified.
+        board::PcvHijackGpuVolts(vmin);
 
-        // PCV only re-evaluates its voltage table when a clock-rate change is
-        // requested for the GPU.  Writing the table alone (SyncGpuVoltTable) is
-        // not enough — without an actual SetHz call PCV never picks up the new
-        // floor and the GPU voltage stays at the old (higher) value.
-        // Mirror HOC's pattern: bounce GPU to ~0 then restore the current target
-        // so PCV traverses the freshly-written DVFS table and applies the
-        // correct voltage immediately.
-        u32 gpuHz = gContext.freqs[HocClkModule_GPU];
+        // PCV only re-evaluates its voltage table when a GPU clock-rate change arrives.
+        // Bounce the GPU clock so PCV traverses the freshly-written table immediately.
+        // Use board::GetHz (live hardware read) so the bounce fires even when no GPU
+        // override is active (gContext.freqs[GPU] is 0 in that case).
+        u32 gpuHz = board::GetHz(HocClkModule_GPU);
         if (gpuHz) {
             board::SetHz(HocClkModule_GPU, ~0u);
             board::SetHz(HocClkModule_GPU, gpuHz);
@@ -285,31 +288,23 @@ namespace clockManager {
     }
 
     // Called after a GPU clock change to keep the voltage table in sync.
-    // Uses the CURRENT MEM frequency to compute the floor — NOT the GPU frequency,
-    // which would incorrectly return 0 for GPU <= 1600 MHz and wipe the floor.
+    // Uses the CURRENT MEM frequency to compute the floor — NOT the GPU frequency.
     void DVFSVoltUpdate()
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
-        dvfsOffset = std::max(dvfsOffset, -80);
-
         u32 memHz = gContext.freqs[HocClkModule_MEM];
-        u32 floor = board::GetMinimumGpuVmin(memHz / 1000000, board::GetGpuSpeedoBracket());
-        if (floor) {
-            s32 f = (s32)floor + dvfsOffset;
-            floor = (f > 0) ? (u32)f : 0;
-        }
+        u32 rawFloor = board::GetMinimumGpuVmin(memHz / 1000000, board::GetGpuSpeedoBracket());
+        s32 adjusted = (s32)rawFloor + dvfsOffset;
+        u32 vmin = (u32)std::max(0, std::min(1000, adjusted));
 
-        fileUtils::LogLine("[dvfs] DVFSVoltUpdate: memHz=%u, floor=%u, offset=%d",
-            memHz, floor, dvfsOffset);
+        fileUtils::LogLine("[dvfs] DVFSVoltUpdate: memHz=%u, rawFloor=%u, offset=%d, vmin=%u",
+            memHz, rawFloor, dvfsOffset, vmin);
 
-        board::SyncGpuVoltTable(dvfsOffset, floor);
+        board::PcvHijackGpuVolts(vmin);
 
-        // Same rationale as DVFSAfterSet: PCV only reads the voltage table on a
-        // GPU SetHz call.  The SetHz(GPU) that triggered this function already ran
-        // with the OLD table, so PCV's voltage reflects the old floor.  Bounce the
-        // GPU clock to force PCV to traverse the freshly-written table and lower
-        // the voltage to the correct post-downscale level.
-        u32 gpuHz = gContext.freqs[HocClkModule_GPU];
+        // The SetHz(GPU) that triggered this function already ran with the old table.
+        // Bounce to force PCV to traverse the freshly-written table now.
+        u32 gpuHz = board::GetHz(HocClkModule_GPU);
         if (gpuHz) {
             board::SetHz(HocClkModule_GPU, ~0u);
             board::SetHz(HocClkModule_GPU, gpuHz);
@@ -470,22 +465,31 @@ namespace clockManager {
             if (noGPU && module == HocClkModule_GPU)
                 continue;
 
-            // Sync the GPU voltage table whenever dvfs_offset changes.
-            // Compute the DVFS floor from the current MEM frequency so the floor
-            // is always respected regardless of when this fires (boot, reset, slider).
-            // Done BEFORE SetHz so PCV uses the correct table on this transition.
+            // Re-apply the DVFS floor when the GPU vmin offset slider changes.
+            // The offset adjusts rawFloor+dvfsOffset — only entries below that adjusted
+            // floor are raised; entries naturally above the floor are untouched.
+            // Bounce the GPU clock after so PCV re-reads the newly-written table.
             if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
                 && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                 s32 currentOffset = (s32)config::GetConfigValue(HocClkConfigValue_DVFSOffset);
                 if (currentOffset != s_lastDvfsOffset) {
-                    u32 memHz   = gContext.freqs[HocClkModule_MEM];
-                    u32 floor   = board::GetMinimumGpuVmin(memHz / 1000000, board::GetGpuSpeedoBracket());
-                    if (floor) {
-                        s32 f = (s32)floor + currentOffset;
-                        floor = (f > 0) ? (u32)f : 0;
-                    }
-                    board::SyncGpuVoltTable(currentOffset, floor);
+                    u32 memHz = board::GetHz(HocClkModule_MEM); // live read, not stale cache
+                    u32 rawFloor = board::GetMinimumGpuVmin(memHz / 1000000, board::GetGpuSpeedoBracket());
+                    s32 adj = (s32)rawFloor + currentOffset;
+                    u32 vmin = (u32)std::max(0, std::min(1000, adj));
+                    fileUtils::LogLine("[dvfs] offset changed %d -> %d, memHz=%u, rawFloor=%u, vmin=%u",
+                        s_lastDvfsOffset, currentOffset, memHz, rawFloor, vmin);
+                    board::PcvHijackGpuVolts(vmin);
                     s_lastDvfsOffset = currentOffset;
+                    // Bounce GPU so PCV traverses the freshly-written table.
+                    // MUST use board::GetHz (live hardware read) — gContext.freqs[GPU]
+                    // is 0 when no GPU override is active, which would silently skip
+                    // the bounce.
+                    u32 gpuHz = board::GetHz(HocClkModule_GPU);
+                    if (gpuHz) {
+                        board::SetHz(HocClkModule_GPU, ~0u);
+                        board::SetHz(HocClkModule_GPU, gpuHz);
+                    }
                 }
             }
 

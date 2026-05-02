@@ -482,52 +482,6 @@ namespace board {
         fileUtils::LogLine("[dvfs] voltage set to %u mV", vmin);
     }
 
-    // Patch PCV's in-memory GPU voltage table with a signed mV offset applied to
-    // every valid entry.  Returns the delta (newOffset - oldOffset) so the caller
-    // (clock_manager, which has i2c.h) can also push the delta to hardware via I2C.
-    // oldOffset == INT32_MIN is treated as 0 ("never applied" sentinel).
-    // Write the GPU voltage table as: max(original[i] + offsetMv, dvfsFloor) for each entry.
-    // This is the single authoritative table-write path — it handles the user offset AND
-    // the DVFS safety floor in one pass.  Always use this instead of PcvHijackGpuVolts
-    // for table writes so neither mechanism can silently overwrite the other.
-    // dvfsFloor = GetMinimumGpuVmin(currentMEMMHz, bracket); 0 = no floor.
-    void SyncGpuVoltTable(s32 offsetMv, u32 dvfsFloor)
-    {
-        if (voltData.voltTableAddress == 0) {
-            fileUtils::LogLine("[dvfs] SyncGpuVoltTable: no voltTableAddress, skipped");
-            return;
-        }
-
-        fileUtils::LogLine("[dvfs] SyncGpuVoltTable: offset=%d floor=%u", offsetMv, dvfsFloor);
-
-        u32 table[192];
-        static_assert(sizeof(table) == sizeof(voltData.voltTable));
-        std::memcpy(table, voltData.voltTable, sizeof(table));  // start from original
-
-        for (u32 i = 0; i < std::size(table); ++i) {
-            if (table[i] < 400 || table[i] > 1500) continue;
-            s32 adjusted = (s32)table[i] + offsetMv;
-            if (adjusted < 400)  adjusted = 400;
-            if (adjusted > 1500) adjusted = 1500;
-            // Enforce DVFS floor: required minimum GPU voltage for current MEM speed.
-            if (dvfsFloor > 0 && (u32)adjusted < dvfsFloor)
-                adjusted = (s32)dvfsFloor;
-            table[i] = (u32)adjusted;
-        }
-
-        Handle handle = GetPcvHandle();
-        if (handle != INVALID_HANDLE) {
-            Result rc = svcWriteDebugProcessMemory(handle, table, voltData.voltTableAddress, sizeof(table));
-            svcCloseHandle(handle);
-            if (R_SUCCEEDED(rc)) {
-                voltData.ramVmin = dvfsFloor;
-                fileUtils::LogLine("[dvfs] SyncGpuVoltTable: written OK");
-            } else {
-                fileUtils::LogLine("[dvfs] SyncGpuVoltTable: write failed 0x%x", rc);
-            }
-        }
-    }
-
     u32 GetMinimumGpuVmin(u32 freqMhz, u32 bracket) {
         static const u32 ramTable[][22] = {
             { 2133, 2200, 2266, 2300, 2366, 2400, 2433, 2466, 2533, 2566, 2600, 2633, 2700, 2733, 2766, 2833, 2866, 2900, 2933, 3033, 3066, 3100, },
