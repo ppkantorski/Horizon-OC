@@ -39,6 +39,7 @@ typedef enum {
 
     HocClkConfigValue_UncappedClocks,
     HocClkConfigValue_OverwriteBoostMode,
+    HocClkConfigValue_ReverseNXSync,
 
     HocClkConfigValue_EristaMaxCpuClock,
     HocClkConfigValue_MarikoMaxCpuClock,
@@ -223,6 +224,8 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "Uncapped Clocks" : "uncapped_clocks";
         case HocClkConfigValue_OverwriteBoostMode:
             return pretty ? "Overwrite Boost Mode" : "ow_boost";
+        case HocClkConfigValue_ReverseNXSync:
+            return pretty ? "Sync ReverseNX" : "reversenx_sync";
 
         case HocClkConfigValue_EristaMaxCpuClock:
             return pretty ? "CPU Max Clock" : "cpu_max_e";
@@ -492,6 +495,7 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
         case HocClkConfigValue_CsvWriteIntervalMs:
         case HocClkConfigValue_UncappedClocks:
         case HocClkConfigValue_OverwriteBoostMode:
+        case HocClkConfigValue_ReverseNXSync:
         case HocClkConfigValue_BatteryChargeCurrent:
         case HocClkConfigValue_OverwriteRefreshRate:
         case HocClkConfigValue_GPUScheduling:
@@ -549,6 +553,7 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_CsvWriteIntervalMs:
         case HocClkConfigValue_UncappedClocks:
         case HocClkConfigValue_OverwriteBoostMode:
+        case HocClkConfigValue_ReverseNXSync:
         case HocClkConfigValue_ThermalThrottle:
         case HocClkConfigValue_HandheldTDP:
         case HocClkConfigValue_OverwriteRefreshRate:
