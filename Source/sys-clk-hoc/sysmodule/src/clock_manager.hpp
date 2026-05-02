@@ -55,6 +55,14 @@ namespace clockManager {
     void Initialize();
     void Exit();
 
+    // Idempotent cleanup that restores PCV's GPU voltage table and bounces
+    // the GPU regulator. Safe to call from any thread; safe to call multiple
+    // times. Used by both the natural exit path (clockManager::Exit) and the
+    // graceful-shutdown IPC handler so the table is restored synchronously
+    // before the IPC reply is sent — guaranteeing PCV is clean before the
+    // caller (e.g. ovlSysmodules) is allowed to force-kill the process.
+    void PrepareForShutdown();
+
     HocClkContext GetCurrentContext();
 
     void SetRunning(bool running);

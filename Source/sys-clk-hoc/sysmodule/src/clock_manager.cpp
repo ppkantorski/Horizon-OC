@@ -25,6 +25,7 @@
  */
 
 #include "clock_manager.hpp"
+#include <atomic>
 #include <cstring>
 #include "file_utils.hpp"
 #include "board/board.hpp"
@@ -234,12 +235,10 @@ namespace clockManager {
     void DVFSBeforeSet(u32 memTargetHz)
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
-        // Raw DVFS floor: the minimum GPU voltage the memory controller needs at
-        // this MEM speed.  The offset adjusts this floor up or down — it does NOT
-        // shift every table entry.  PcvHijackGpuVolts only raises entries that are
-        // naturally BELOW the adjusted floor; GPU frequency entries already above the
-        // floor are never touched.  This is intentional: the slider is for fine-tuning
-        // the RAM OC stability margin, not for general GPU UV.
+        // SyncGpuVoltTable applies max(original[i] + offset, rawFloor) for every
+        // table entry.  The offset shifts the whole voltage-frequency curve; the
+        // floor only clamps upward when RAM OC requires it.
+        // vmin (adjusted floor) is used only for the direct I2C safety raise below.
         u32 rawFloor = board::GetMinimumGpuVmin(memTargetHz / 1000000, board::GetGpuSpeedoBracket());
         s32 adjusted = (s32)rawFloor + dvfsOffset;
         u32 vmin = (u32)std::max(0, std::min(1000, adjusted));
@@ -247,7 +246,7 @@ namespace clockManager {
         fileUtils::LogLine("[dvfs] DVFSBeforeSet: memHz=%u, rawFloor=%u, offset=%d, vmin=%u",
             memTargetHz, rawFloor, dvfsOffset, vmin);
 
-        board::PcvHijackGpuVolts(vmin);
+        board::SyncGpuVoltTable(dvfsOffset, rawFloor);
 
         // Raise hardware voltage immediately if below the required floor.
         // This covers the gap between the table write and the next PCV GPU event.
@@ -269,10 +268,10 @@ namespace clockManager {
         fileUtils::LogLine("[dvfs] DVFSAfterSet: memHz=%u, rawFloor=%u, offset=%d, vmin=%u",
             memTargetHz, rawFloor, dvfsOffset, vmin);
 
-        // PcvHijackGpuVolts restores the original table when vmin=0 (MEM downscale
-        // below DVFS threshold), and raises entries below the floor for higher speeds.
-        // Entries naturally above the floor are never modified.
-        board::PcvHijackGpuVolts(vmin);
+        // SyncGpuVoltTable applies max(original[i] + offset, rawFloor) for every
+        // entry — offset shifts the whole curve, floor only clamps upward at high RAM.
+        // PcvHijackGpuVolts(0) in DVFSReset/hasChanged still handles table restore.
+        board::SyncGpuVoltTable(dvfsOffset, rawFloor);
 
         // PCV only re-evaluates its voltage table when a GPU clock-rate change arrives.
         // Bounce the GPU clock so PCV traverses the freshly-written table immediately.
@@ -300,7 +299,7 @@ namespace clockManager {
         fileUtils::LogLine("[dvfs] DVFSVoltUpdate: memHz=%u, rawFloor=%u, offset=%d, vmin=%u",
             memHz, rawFloor, dvfsOffset, vmin);
 
-        board::PcvHijackGpuVolts(vmin);
+        board::SyncGpuVoltTable(dvfsOffset, rawFloor);
 
         // The SetHz(GPU) that triggered this function already ran with the old table.
         // Bounce to force PCV to traverse the freshly-written table now.
@@ -465,9 +464,10 @@ namespace clockManager {
             if (noGPU && module == HocClkModule_GPU)
                 continue;
 
-            // Re-apply the DVFS floor when the GPU vmin offset slider changes.
-            // The offset adjusts rawFloor+dvfsOffset — only entries below that adjusted
-            // floor are raised; entries naturally above the floor are untouched.
+            // Re-apply DVFS table when the GPU vmin offset slider changes.
+            // SyncGpuVoltTable applies max(original[i] + offset, rawFloor) for every
+            // entry — so the offset shifts the whole voltage curve and the floor only
+            // clamps upward when RAM OC requires it.
             // Bounce the GPU clock after so PCV re-reads the newly-written table.
             if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
                 && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
@@ -475,11 +475,9 @@ namespace clockManager {
                 if (currentOffset != s_lastDvfsOffset) {
                     u32 memHz = board::GetHz(HocClkModule_MEM); // live read, not stale cache
                     u32 rawFloor = board::GetMinimumGpuVmin(memHz / 1000000, board::GetGpuSpeedoBracket());
-                    s32 adj = (s32)rawFloor + currentOffset;
-                    u32 vmin = (u32)std::max(0, std::min(1000, adj));
-                    fileUtils::LogLine("[dvfs] offset changed %d -> %d, memHz=%u, rawFloor=%u, vmin=%u",
-                        s_lastDvfsOffset, currentOffset, memHz, rawFloor, vmin);
-                    board::PcvHijackGpuVolts(vmin);
+                    fileUtils::LogLine("[dvfs] offset changed %d -> %d, memHz=%u, rawFloor=%u",
+                        s_lastDvfsOffset, currentOffset, memHz, rawFloor);
+                    board::SyncGpuVoltTable(currentOffset, rawFloor);
                     s_lastDvfsOffset = currentOffset;
                     // Bounce GPU so PCV traverses the freshly-written table.
                     // MUST use board::GetHz (live hardware read) — gContext.freqs[GPU]
@@ -744,9 +742,80 @@ namespace clockManager {
         }
     }
 
+    namespace {
+        // Tracks whether PrepareForShutdown has already done its work. Using
+        // an atomic flag makes the function safe to call from both the IPC
+        // dispatcher thread (via ExitHandler) and the main thread (via Exit).
+        std::atomic<bool> s_shutdownPrepared{false};
+    }
+
+    void PrepareForShutdown()
+    {
+        // Compare-and-set guard: first caller wins, subsequent calls are
+        // no-ops. The IPC path runs first when ovlSysmodules sends cmd 3;
+        // Exit() then calls this again as a safety net for natural shutdowns.
+        bool expected = false;
+        if (!s_shutdownPrepared.compare_exchange_strong(expected, true)) {
+            return;
+        }
+
+        // IMPORTANT: this function does NOT set gRunning=false. The caller
+        // (ExitHandler or Exit) is responsible for the loop-exit signal,
+        // and must do so AFTER this function returns. Setting it here
+        // would let the main loop start tearing down ipcService while our
+        // svc calls below are still in flight — racing the IPC server
+        // teardown against in-flight requests, which crashes the process.
+        //
+        // The cleanup sequence below mirrors the proven hasChanged pattern
+        // (clock_manager.cpp ~line 573). This ordering matters CRITICALLY:
+        //
+        //   1. ResetToStock() FIRST — brings CPU/GPU/MEM all back to stock.
+        //      The MEM transition is the key step: dropping RAM from a high
+        //      OC (e.g. 2600 MHz) back to stock causes PCV to perform its
+        //      normal regulated RAM transition, lowering the GPU voltage
+        //      requirement in the process. This puts PCV into a low-RAM
+        //      state where the modified and original GPU voltage tables
+        //      are equivalent for the regulated voltage.
+        //
+        //   2. PcvHijackGpuVolts(0) — restores the original GPU voltage
+        //      table now that PCV is in a low-RAM state. The voltage delta
+        //      between the modified and restored table at this point is
+        //      small or zero, so PCV's internal sanity checks pass.
+        //
+        //   3. ResetToStockGpu() — bounces the GPU clock so PCV picks up
+        //      the restored table. NOTE: do NOT use SetHz(GPU, ~0u) here
+        //      like DVFSReset does. The ~0u flush is only safe inside
+        //      DVFSReset's tight ~0u → real_hz pair where it's transient.
+        //      Standalone, with apm lookups in between, it leaves PCV in
+        //      an invalid state long enough to abort with 2162-0002.
+        //
+        // Skipping step 1 (the original v6 bug) caused PCV abort 2162-0002
+        // whenever a user toggled the sysmodule off while RAM OC was active:
+        // we tried to swing the GPU voltage table down by 80 mV while RAM
+        // was still pinned at 2600 MHz, which violates PCV's consistency
+        // checks between RAM frequency and GPU voltage requirements.
+
+        if (board::GetSocType() == HocClkSocType_Mariko
+            && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
+            fileUtils::LogLine("[dvfs] PrepareForShutdown: ResetToStock (drops RAM first)");
+            board::ResetToStock();
+
+            fileUtils::LogLine("[dvfs] PrepareForShutdown: restoring GPU voltage table");
+            board::PcvHijackGpuVolts(0);
+
+            fileUtils::LogLine("[dvfs] PrepareForShutdown: bouncing GPU to apply restored table");
+            board::ResetToStockGpu();
+        }
+    }
+
     void Exit()
     {
         governor::exitThreads();
+
+        // Idempotent: if the IPC handler already restored PCV (cooperative
+        // shutdown via ovlSysmodules cmd 3), this is a no-op. If we got here
+        // some other way, this does the cleanup now.
+        PrepareForShutdown();
     }
 
     HocClkContext GetCurrentContext()

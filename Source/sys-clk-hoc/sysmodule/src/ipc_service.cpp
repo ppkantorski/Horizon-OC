@@ -237,6 +237,23 @@ namespace ipcService {
 
         Result ExitHandler()
         {
+            // Run the cleanup BEFORE signaling the main loop to exit. This
+            // preserves the ordering of the original handler — the loop and
+            // the IPC service both stay fully alive while we do svc work
+            // (PCV restore, GPU bounce). Setting gRunning=false first would
+            // let the main thread start tearing down ipcService while our
+            // svc calls are still in flight, racing the server teardown.
+            //
+            // Sequence guarantee:
+            //   1. PrepareForShutdown completes (PCV is clean, GPU bounced)
+            //   2. SetRunning(false) flips the flag
+            //   3. We return; ipc framework sends the reply to ovlSysmodules
+            //   4. Main loop's next iteration sees gRunning=false, exits,
+            //      runs Exit() which is idempotent for our work
+            //   5. ovlSysmodules either sees the process exit naturally (poll
+            //      hits PID-not-found) or, after timeout, force-kills it.
+            //      Either way, PCV was already restored in step 1.
+            clockManager::PrepareForShutdown();
             clockManager::SetRunning(false);
             return 0;
         }

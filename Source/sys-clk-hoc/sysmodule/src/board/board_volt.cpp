@@ -482,6 +482,54 @@ namespace board {
         fileUtils::LogLine("[dvfs] voltage set to %u mV", vmin);
     }
 
+    // Applies max(original[i] + offsetMv, dvfsFloor) to every valid entry in the
+    // GPU voltage table and writes the result to PCV's live memory.
+    // - offsetMv shifts the entire voltage-frequency curve (negative = UV, positive = OV)
+    // - dvfsFloor is the RAM OC stability minimum — only clamps upward, never applied at
+    //   stock RAM speeds (pass 0 when MEM is at or below the DVFS threshold)
+    // PcvHijackGpuVolts(0) is still used by DVFSReset/hasChanged to restore the original table.
+    void SyncGpuVoltTable(s32 offsetMv, u32 dvfsFloor) {
+        if (voltData.voltTableAddress == 0) {
+            fileUtils::LogLine("[dvfs] SyncGpuVoltTable: SKIP — no valid voltTableAddress");
+            return;
+        }
+
+        fileUtils::LogLine("[dvfs] SyncGpuVoltTable: offset=%d, floor=%u, writing to 0x%lx",
+            offsetMv, dvfsFloor, voltData.voltTableAddress);
+
+        u32 table[192];
+        static_assert(sizeof(table) == sizeof(voltData.voltTable), "Invalid gpu voltage table size!");
+        std::memcpy(table, voltData.voltTable, sizeof(voltData.voltTable));
+
+        for (u32 i = 0; i < std::size(table); ++i) {
+            if (table[i] == 0)
+                continue;
+            s32 v = (s32)table[i] + offsetMv;
+            if (v < 0) v = 0;
+            if (dvfsFloor > 0 && (u32)v < dvfsFloor)
+                v = (s32)dvfsFloor;
+            if (v > 1000) v = 1000;
+            table[i] = (u32)v;
+        }
+
+        Handle handle = GetPcvHandle();
+        if (handle == INVALID_HANDLE) {
+            fileUtils::LogLine("Invalid handle!");
+            return;
+        }
+
+        Result rc = svcWriteDebugProcessMemory(handle, table, voltData.voltTableAddress, sizeof(table));
+
+        if (R_SUCCEEDED(rc)) {
+            // Use UINT32_MAX as the sentinel so PcvHijackGpuVolts(0) in DVFSReset
+            // never falsely early-exits (ramVmin==0 would match vmin=0 and skip restore).
+            voltData.ramVmin = UINT32_MAX;
+        }
+
+        svcCloseHandle(handle);
+        fileUtils::LogLine("[dvfs] SyncGpuVoltTable: done");
+    }
+
     u32 GetMinimumGpuVmin(u32 freqMhz, u32 bracket) {
         static const u32 ramTable[][22] = {
             { 2133, 2200, 2266, 2300, 2366, 2400, 2433, 2466, 2533, 2566, 2600, 2633, 2700, 2733, 2766, 2833, 2866, 2900, 2933, 3033, 3066, 3100, },

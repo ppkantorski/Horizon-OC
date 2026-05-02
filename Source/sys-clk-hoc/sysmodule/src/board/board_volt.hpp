@@ -48,6 +48,7 @@ namespace board {
     u32 GetVoltage(HocClkVoltage voltage);
     void CacheGpuVoltTable();
     void PcvHijackGpuVolts(u32 vmin);
+    void SyncGpuVoltTable(s32 offsetMv, u32 dvfsFloor);
     u32 GetMinimumGpuVmin(u32 freqMhz, u32 bracket);
 
 }

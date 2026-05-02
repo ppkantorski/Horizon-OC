@@ -2,5 +2,8 @@
 	"name": "sys-clk-hoc",
 	"tid": "00FF0000636C6BFF",
 	"requires_reboot": false,
-	"version": "2.1.0"
+	"version": "2.1.0",
+	"graceful_shutdown_service": "sys:clk",
+	"graceful_shutdown_cmd": 3,
+	"graceful_shutdown_timeout_ms": 1000
 }
