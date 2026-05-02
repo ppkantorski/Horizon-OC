@@ -28,6 +28,8 @@
 #include <hocclk.h>
 #include <nxExt.h>
 #include "board.hpp"
+#include "../config.hpp"
+#include "../integrations.hpp"
 
 namespace board {
 
@@ -35,6 +37,22 @@ namespace board {
         u32 mode = 0;
         Result rc = apmExtGetPerformanceMode(&mode);
         ASSERT_RESULT_OK(rc, "apmExtGetPerformanceMode");
+
+        // ReverseNX sync: if enabled, let SaltyNX's displaySync field override
+        // the physical dock state.  Bit 0 = forced handheld, bit 1 = forced docked.
+        // Only override when the bit is actually set; fall through to normal
+        // detection when neither bit is set (ReverseNX not active for this title).
+        if (config::GetConfigValue(HocClkConfigValue_ReverseNXSync)) {
+            u8 ds = integrations::GetDisplaySync();
+            if (ds & 0x02) {
+                // ReverseNX forcing docked — treat as docked regardless of hardware
+                return HocClkProfile_Docked;
+            } else if (ds & 0x01) {
+                // ReverseNX forcing handheld — skip the APM docked check and fall
+                // through to charger-type detection so handheld sub-profiles still work
+                mode = 0;
+            }
+        }
 
         if (mode) {
             return HocClkProfile_Docked;

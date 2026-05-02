@@ -79,7 +79,7 @@ enum SysClkIpcCmd
 #define SYSCLK_PROFILE_ENUMMAX  5   // Handheld..Docked
 #define SYSCLK_CONFIG_ENUMMAX   5   // PollingIntervalMs..CsvWriteIntervalMs
 
-// SysClkContext: sizeof = 104 bytes (uint8_t enabled pads to align uint64_t appId)
+// SysClkContext: sizeof = 116 bytes
 typedef struct {
     uint8_t  enabled;                              // +0
     // 7 bytes compiler padding (uint64_t alignment)
@@ -92,7 +92,9 @@ typedef struct {
     int32_t  power[2];                             // +68 (Now,Avg)
     uint32_t ramLoad[2];                           // +76 (All,CPU)
     uint32_t realVolts[4];                         // +84 (CPU, GPU, packed_VDD2_VDDQ, SOC)
-                                                   // total raw = 100 → padded to 104
+    // HOC extension: per-component die temperatures (milliCelsius)
+    uint32_t componentTemps[3];                    // +100 (CPU die, GPU die, MEM/PLLX)
+                                                   // total raw = 112 → padded to 116
 } SysClkContext_Wire;
 
 // SysClkTitleProfileList: 5*3*4 = 60 bytes
@@ -143,6 +145,12 @@ static SysClkContext_Wire TranslateContext(const HocClkContext& hoc)
     ctx.temps[0] = hoc.temps[HocClkThermalSensor_SOC];
     ctx.temps[1] = hoc.temps[HocClkThermalSensor_PCB];
     ctx.temps[2] = hoc.temps[HocClkThermalSensor_Skin];
+
+    // Per-component die temperatures for the overlay's HOC temp-row feature.
+    // MEM uses the PLLX sensor on Mariko (closest proxy for memory die temp).
+    ctx.componentTemps[0] = hoc.temps[HocClkThermalSensor_CPU];
+    ctx.componentTemps[1] = hoc.temps[HocClkThermalSensor_GPU];
+    ctx.componentTemps[2] = hoc.temps[HocClkThermalSensor_MEM];
 
     ctx.power[0] = hoc.power[HocClkPowerSensor_Now];
     ctx.power[1] = hoc.power[HocClkPowerSensor_Avg];

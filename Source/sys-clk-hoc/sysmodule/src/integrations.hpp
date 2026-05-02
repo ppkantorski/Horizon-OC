@@ -65,5 +65,9 @@ namespace integrations {
     void LoadSaltyNX();
     u8 GetSaltyNXFPS();
     u16 GetSaltyNXResolutionHeight();
+    // Returns the raw displaySync byte from the SaltyNX shared block.
+    // Bit 0 = handheld forced, bit 1 = docked forced.
+    // Returns 0 if SaltyNX shared memory is not available or the block is not found.
+    u8 GetDisplaySync();
 
 }
