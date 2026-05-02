@@ -41,6 +41,7 @@
 #include "board/board.hpp"
 #include "errors.hpp"
 #include "file_utils.hpp"
+#include <climits>
 
 namespace config {
 
@@ -52,6 +53,10 @@ namespace config {
         std::string gPath;
         time_t gMtime = 0;
         std::atomic_bool gEnabled{false};
+        // Set when any config value is written in-memory via IPC (SetConfigValues /
+        // SetConfigValue with immediate=true).  Consumed by Tick() to call SetClocks()
+        // right away, bypassing the FAT mtime detection which has 2-second resolution.
+        std::atomic_bool gConfigDirty{false};
         std::uint32_t gOverrideFreqs[HocClkModule_EnumMax];
         std::map<std::tuple<std::uint64_t, HocClkProfile, HocClkModule>, std::uint32_t> gProfileMHzMap;
         std::map<std::uint64_t, std::uint8_t> gProfileCountMap;
@@ -223,6 +228,34 @@ namespace config {
             return true;
         }
         return false;
+    }
+
+    bool PollDvfsOffset() {
+        // Read dvfs_offset directly from the INI on every tick.
+        //
+        // The overlay writes this key straight to the file without calling IPC,
+        // so gConfigDirty is never set and Refresh() misses rapid successive
+        // writes because FAT mtime has 2-second resolution.  ini_getl() is a
+        // cheap targeted key lookup (no full file scan) that lets us react
+        // within one tick (≈300 ms default) regardless of mtime.
+        //
+        // LONG_MIN is our sentinel for "key absent" — treat as 0 mV (default).
+        std::scoped_lock lock{gConfigMutex};
+        const char* key = hocclkFormatConfigValue(HocClkConfigValue_DVFSOffset, false);
+        long raw = ini_getl(CONFIG_VAL_SECTION, key, LONG_MIN, gPath.c_str());
+        int32_t fileMV  = (raw == LONG_MIN) ? 0 : static_cast<int32_t>(raw);
+        int32_t cachedMV = static_cast<int32_t>(static_cast<int64_t>(
+                               configValues[HocClkConfigValue_DVFSOffset]));
+        if (fileMV != cachedMV) {
+            configValues[HocClkConfigValue_DVFSOffset] =
+                static_cast<uint64_t>(static_cast<int64_t>(fileMV));
+            return true;
+        }
+        return false;
+    }
+
+    bool ConsumeConfigDirty() {
+        return gConfigDirty.exchange(false);
     }
 
     bool HasProfilesLoaded() {
@@ -416,6 +449,9 @@ namespace config {
                     config::configValues[kval] = hocclkDefaultConfigValue((HocClkConfigValue)kval);
                 }
             }
+            // Signal Tick() to call SetClocks() on the next tick without waiting
+            // for the FAT mtime to advance (2-second resolution on SD cards).
+            gConfigDirty.store(true);
         }
 
         return true;

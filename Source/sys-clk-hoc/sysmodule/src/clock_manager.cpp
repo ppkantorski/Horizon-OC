@@ -461,10 +461,10 @@ namespace clockManager {
             bool governorOwnerCpu = noCPU && !(isBoost && (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode));
             if ((skipCpuDueToBoost || governorOwnerCpu) && module == HocClkModule_CPU)
                 continue;
-            if (noGPU && module == HocClkModule_GPU)
-                continue;
-
             // Re-apply DVFS table when the GPU vmin offset slider changes.
+            // MUST run before the noGPU governor-skip below — the governor manages
+            // GPU *frequency* but the voltage table must still be updated whenever
+            // the DVFSOffset config value changes, regardless of who owns scheduling.
             // SyncGpuVoltTable applies max(original[i] + offset, rawFloor) for every
             // entry — so the offset shifts the whole voltage curve and the floor only
             // clamps upward when RAM OC requires it.
@@ -490,6 +490,9 @@ namespace clockManager {
                     }
                 }
             }
+
+            if (noGPU && module == HocClkModule_GPU)
+                continue;
 
             if (targetHz) {
                 maxHz = GetMaxAllowedHz((HocClkModule)module, gContext.profile);
@@ -884,7 +887,11 @@ namespace clockManager {
             gPrevEnabled = enabled;
         }
 
-        bool contextOrConfigChanged = RefreshContext() || config::Refresh();
+        bool contextOrConfigChanged = RefreshContext() || config::Refresh() || config::ConsumeConfigDirty()
+                                    // PollDvfsOffset() reads dvfs_offset directly from the INI every tick.
+                                    // This catches direct file writes from the overlay (which bypass IPC and
+                                    // therefore bypass gConfigDirty) faster than the FAT mtime path.
+                                    || config::PollDvfsOffset();
 
         // Re-read boost state after RefreshContext().
         //
