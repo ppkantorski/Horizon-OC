@@ -198,6 +198,8 @@ typedef enum {
     KipConfigValue_t7_tWTR_fine_tune,
 
     KipCrc32,
+
+    HocClkConfigValue_AllowGoverning,  // HOC: enable per-profile governor (0=off, 1=on)
     HocClkConfigValue_EnumMax,
 } HocClkConfigValue;
 
@@ -272,6 +274,8 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case HocClkConfigValue_LiveCpuUv:
             return pretty ? "Live CPU Undervolt" : "live_cpu_uv";
 
+        case HocClkConfigValue_AllowGoverning:
+            return pretty ? "Allow Governing" : "allow_governing";
         case HocClkConfigValue_EnableExperimentalSettings:
             return pretty ? "Enable Experimental Settings" : "enable_experimental_settings";
 
@@ -558,6 +562,7 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_HandheldTDP:
         case HocClkConfigValue_OverwriteRefreshRate:
         case HocClkConfigValue_IsFirstLoad:
+        case HocClkConfigValue_AllowGoverning:
         case HocClkConfigValue_EnableExperimentalSettings:
         case HocClkConfigValue_LiveCpuUv:
         case HocClkConfigValue_GPUSchedulingMethod:
