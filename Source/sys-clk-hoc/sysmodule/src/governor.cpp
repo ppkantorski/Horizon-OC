@@ -40,6 +40,19 @@ namespace governor {
 
     void HandleGovernor(uint32_t targetHz)
     {
+        // If governing is globally disabled, deactivate all governors and bail.
+        if (!config::GetConfigValue(HocClkConfigValue_AllowGoverning)) {
+            if (isCpuGovernorEnabled) { board::ResetToStockCpu(); }
+            if (isGpuGovernorEnabled) { board::ResetToStockGpu(); }
+            isCpuGovernorEnabled  = false;
+            isGpuGovernorEnabled  = false;
+            isVRREnabled          = false;
+            lastCpuGovernorState  = false;
+            lastGpuGovernorState  = false;
+            lastVrrGovernorState  = false;
+            return;
+        }
+
         u32 tempTargetHz = clockManager::gContext.overrideFreqs[HocClkModule_Governor];
         if (!tempTargetHz) {
             tempTargetHz = config::GetAutoClockHz(clockManager::gContext.applicationId, HocClkModule_Governor, clockManager::gContext.profile, true);

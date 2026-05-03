@@ -185,14 +185,17 @@ static SysClkContext_Wire TranslateContext(const HocClkContext& hoc)
     return ctx;
 }
 
-static HocClkTitleProfileList ToHocProfileList(const SysClkTitleProfileList_Wire& wire)
+static HocClkTitleProfileList ToHocProfileList(const SysClkTitleProfileList_Wire& wire, std::uint64_t tid)
 {
     HocClkTitleProfileList hoc = {};
+    // Load the current stored profile first so Governor (and Display) are preserved.
+    // Without this, every SetProfiles call from the overlay would zero out Governor.
+    config::GetProfiles(tid, &hoc);
+    // Overwrite only CPU / GPU / MEM from the wire format.
     for (int p = 0; p < SYSCLK_PROFILE_ENUMMAX; p++) {
         hoc.mhzMap[p][HocClkModule_CPU] = wire.mhzMap[p][0];
         hoc.mhzMap[p][HocClkModule_GPU] = wire.mhzMap[p][1];
         hoc.mhzMap[p][HocClkModule_MEM] = wire.mhzMap[p][2];
-        // Display and Governor slots remain 0 — not managed by this overlay
     }
     return hoc;
 }
@@ -291,7 +294,7 @@ namespace ipcService {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
-            HocClkTitleProfileList hocProfiles = ToHocProfileList(args->profiles);
+            HocClkTitleProfileList hocProfiles = ToHocProfileList(args->profiles, args->tid);
             if (!config::SetProfiles(args->tid, &hocProfiles, true)) {
                 return HOCCLK_ERROR(ConfigSaveFailed);
             }
