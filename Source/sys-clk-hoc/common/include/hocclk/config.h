@@ -72,6 +72,12 @@ typedef enum {
     HocClkConfigValue_MemoryFrequencyMeasurementMode,
     HocClkConfigValue_RamDisplayUnit,
     HocClkConfigValue_IsFirstLoad,
+    // MUST stay before KipConfigValue_custRev so BrowseIniFunc finds it in
+    // the [values] INI section (indices 0..KipConfigValue_hpMode-1).
+    // The overlay writes "allow_governing" to [values]; if this enum value
+    // were placed after KipCrc32 (as it was before), BrowseIniFunc would
+    // search [system] instead and never find it — defaulting to 0 always.
+    HocClkConfigValue_AllowGoverning,  // HOC: enable per-profile governor (0=off, 1=on)
 
     KipConfigValue_custRev,
     // KipConfigValue_mtcConf,
@@ -199,7 +205,6 @@ typedef enum {
 
     KipCrc32,
 
-    HocClkConfigValue_AllowGoverning,  // HOC: enable per-profile governor (0=off, 1=on)
     HocClkConfigValue_EnumMax,
 } HocClkConfigValue;
 
