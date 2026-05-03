@@ -38,5 +38,6 @@ namespace governor {
     void startThreads();
     void exitThreads();
     void HandleGovernor(uint32_t targetHz);
+    // Single merged thread handling CPU + GPU + VRR governor loops.
     void GovernorThread(void* arg);
 }

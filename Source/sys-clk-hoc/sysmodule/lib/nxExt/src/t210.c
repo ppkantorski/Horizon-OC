@@ -262,7 +262,7 @@ static void _clock_update_freqs(void)
 
     g_emc_bw_all = (u64)emc_freq * 16 * g_emc_lall / 1000000;
     g_emc_bw_cpu = (u64)emc_freq * 16 * g_emc_lcpu / 1000000;
-    g_emc_bw_gpu = g_emc_bw_all > g_emc_bw_cpu ? g_emc_bw_all - g_emc_bw_cpu : 0;
+    g_emc_bw_gpu = g_emc_bw_all - g_emc_bw_cpu;
 }
 
 

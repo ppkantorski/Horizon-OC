@@ -20,9 +20,9 @@
 #include <hocclk/clock_manager.h>
 namespace governor {
 
-    #define POLL_NS 5'000'000  // 5 ms  – governor poll rate
-    #define DOWN_HOLD_TICKS 10         // 50 ms – how long to in POLL_NS to hold while ramping down
-    #define STEP_UTIL 900        // multiplier for step calculations
+    #define POLL_NS 5'000'000       // 5 ms  – governor poll rate
+    #define DOWN_HOLD_TICKS 10      // 50 ms – how long to hold in POLL_NS while ramping down
+    #define STEP_UTIL 900           // multiplier for step calculations
 
     bool isGpuGovernorEnabled = false;
     bool isCpuGovernorEnabled = false;
@@ -33,10 +33,8 @@ namespace governor {
     bool isCpuGovernorInBoostMode = false;
     bool isVRREnabled = false;
 
-    // thread handles
-    Thread cpuGovernorTHREAD;
-    Thread gpuGovernorTHREAD;
-    Thread vrrTHREAD;
+    // Single merged governor thread (CPU + GPU + VRR)
+    Thread governorTHREAD;
 
     void HandleGovernor(uint32_t targetHz)
     {
@@ -76,22 +74,21 @@ namespace governor {
 
         isCpuGovernorEnabled = newCpuGovernorState;
         isGpuGovernorEnabled = newGpuGovernorState;
-        isVRREnabled = newVrrGovernorState;
+        isVRREnabled         = newVrrGovernorState;
 
-        if (newCpuGovernorState == false && lastCpuGovernorState == true) {
-            svcSleepThread(100'000'000); // thread syncing. probably a cleaner way to do this but hey, it works!
+        // No 100ms sync sleeps needed — everything runs in one thread now.
+        if (newCpuGovernorState == false && lastCpuGovernorState == true)
             board::ResetToStockCpu();
-        }
-        if (newGpuGovernorState == false && lastGpuGovernorState == true) {
-            svcSleepThread(100'000'000);
+        if (newGpuGovernorState == false && lastGpuGovernorState == true)
             board::ResetToStockGpu();
-        }
-        if (newVrrGovernorState == false && lastVrrGovernorState == true) {
-            svcSleepThread(100'000'000);
+        if (newVrrGovernorState == false && lastVrrGovernorState == true)
             board::ResetToStockDisplay();
-        }
+
         if (newCpuGovernorState != lastCpuGovernorState || newGpuGovernorState != lastGpuGovernorState || newVrrGovernorState != lastVrrGovernorState) {
-            fileUtils::LogLine("[mgr] Governor state changed: CPU %s, GPU %s, VRR %s", newCpuGovernorState ? "enabled" : "disabled", newGpuGovernorState ? "enabled" : "disabled", newVrrGovernorState ? "enabled" : "disabled");
+            fileUtils::LogLine("[mgr] Governor state changed: CPU %s, GPU %s, VRR %s",
+                newCpuGovernorState ? "enabled" : "disabled",
+                newGpuGovernorState ? "enabled" : "disabled",
+                newVrrGovernorState ? "enabled" : "disabled");
             lastCpuGovernorState = newCpuGovernorState;
             lastGpuGovernorState = newGpuGovernorState;
             lastVrrGovernorState = newVrrGovernorState;
@@ -126,250 +123,189 @@ namespace governor {
         return hz;
     }
 
-    void CpuGovernorThread(void* arg)
-    {
-        (void)arg;
-
-        u32 downHoldRemaining = 0;
-        u32 lastHz            = 0;
-        u32 minHz = 612;
-        u32 tick = 0;
-        for (;;) {
-            if (!clockManager::gRunning || !isCpuGovernorEnabled) {
-                downHoldRemaining = 0;
-                lastHz            = 0;
-                svcSleepThread(POLL_NS);
-                continue;
-            }
-
-            u32 mode = 0;
-            Result rc = apmExtGetCurrentPerformanceConfiguration(&mode);
-
-            if (R_SUCCEEDED(rc) && apmExtIsBoostMode(mode)) {
-                isCpuGovernorInBoostMode = true;
-                downHoldRemaining        = 0;
-                lastHz                   = 0;
-                // The tick thread handles CPU freq during boost when OverwriteBoostMode
-                // is set (see SetClocks).  We yield here so we don't spin as a
-                // busy-loop, which wasted a full CPU core and kept isCpuGovernorEnabled
-                // true -- causing the tick thread to skip CPU because of noCPU, so
-                // nobody actually applied the user's boost clock target.
-                svcSleepThread(POLL_NS);
-                continue;
-            } else if (!apmExtIsBoostMode(mode)) {
-                isCpuGovernorInBoostMode = false;
-            }
-
-            auto& table = clockManager::gFreqTable[HocClkModule_CPU];
-
-            if (table.count == 0)
-                continue;
-
-            std::scoped_lock lock{clockManager::gContextMutex};
-
-            u32 cpuLoad    = board::GetPartLoad(HocClkPartLoad_CPUMax);
-
-            u32 tableMaxHz = table.list[table.count - 1];
-            u32 desiredHz  = SchedutilTargetHz(cpuLoad, tableMaxHz);
-            u32 targetHz   = ResolveTargetHz(HocClkModule_CPU);
-            u32 maxHz      = clockManager::GetMaxAllowedHz(HocClkModule_CPU, clockManager::gContext.profile);
-
-            if (targetHz && desiredHz > targetHz)
-                desiredHz = targetHz;
-
-            if (maxHz && desiredHz > maxHz)
-                desiredHz = maxHz;
-
-            u32 newHz = table.list[TableIndexForHz(table, desiredHz)];
-
-            // ramp up fast, go down slow
-            bool goingDown = (lastHz != 0) && (newHz < lastHz);
-
-            if (!goingDown)
-                downHoldRemaining = 0;
-            else if (downHoldRemaining == 0)
-                downHoldRemaining = DOWN_HOLD_TICKS;
-
-            if (downHoldRemaining > 0)
-                downHoldRemaining--;
-
-            if (++tick > 50) {
-                minHz = config::GetConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq);
-                tick = 0;
-            }
-
-            if (newHz < minHz)
-                newHz = minHz;
-
-            if ((!goingDown || (downHoldRemaining == 0)) && clockManager::IsAssignableHz(HocClkModule_CPU, newHz)) {
-                board::SetHz(HocClkModule_CPU, newHz);
-                clockManager::gContext.freqs[HocClkModule_CPU] = newHz;
-                lastHz = newHz;
-            }
-
-            svcSleepThread(POLL_NS);
-        }
-    }
-
+    // Merged governor thread: handles CPU, GPU, and VRR in one loop.
+    // Previously three separate threads; merged to save two thread stacks
+    // (~16 KB each) and eliminate the 100 ms sync sleeps that were needed
+    // to sequence state transitions across threads.
     void GovernorThread(void* arg)
     {
         (void)arg;
 
-        u32 downHoldRemaining = 0;
-        u32 lastHz            = 0;
+        u32 cpuDownHoldRemaining = 0;
+        u32 cpuLastHz            = 0;
+        u32 gpuDownHoldRemaining = 0;
+        u32 gpuLastHz            = 0;
+        u32 cpuMinHz             = 612;
+        u32 cpuMinTick           = 0;
+        u8  vrrFocusTick         = 0;
+        u8  vrrTick              = 0;
 
         for (;;) {
-            if (!clockManager::gRunning || !isGpuGovernorEnabled) {
-                downHoldRemaining = 0;
-                lastHz            = 0;
+            if (!clockManager::gRunning) {
                 svcSleepThread(POLL_NS);
                 continue;
             }
 
-            auto& table = clockManager::gFreqTable[HocClkModule_GPU];
-            if (table.count == 0)
-                continue;
+            // ── CPU governor ──────────────────────────────────────────────
+            if (isCpuGovernorEnabled) {
+                u32 mode = 0;
+                Result rc = apmExtGetCurrentPerformanceConfiguration(&mode);
 
-            std::scoped_lock lock{clockManager::gContextMutex};
+                if (R_SUCCEEDED(rc) && apmExtIsBoostMode(mode)) {
+                    isCpuGovernorInBoostMode = true;
+                    cpuDownHoldRemaining     = 0;
+                    cpuLastHz                = 0;
+                    // The tick thread handles CPU freq during boost.
+                } else {
+                    if (apmExtIsBoostMode(mode) == false)
+                        isCpuGovernorInBoostMode = false;
 
-            u32 gpuLoad    = board::GetPartLoad(HocClkPartLoad_GPU);
-            u32 tableMaxHz = table.list[table.count - 1];
-            u32 desiredHz  = SchedutilTargetHz(gpuLoad, tableMaxHz);
-            u32 targetHz   = ResolveTargetHz(HocClkModule_GPU);
-            u32 maxHz      = clockManager::GetMaxAllowedHz(HocClkModule_GPU, clockManager::gContext.profile);
+                    auto& cpuTable = clockManager::gFreqTable[HocClkModule_CPU];
+                    if (cpuTable.count > 0) {
+                        std::scoped_lock lock{clockManager::gContextMutex};
 
-            if (targetHz && desiredHz > targetHz)
-                desiredHz = targetHz;
+                        u32 cpuLoad    = board::GetPartLoad(HocClkPartLoad_CPUMax);
+                        u32 tableMaxHz = cpuTable.list[cpuTable.count - 1];
+                        u32 desiredHz  = SchedutilTargetHz(cpuLoad, tableMaxHz);
+                        u32 targetHz   = ResolveTargetHz(HocClkModule_CPU);
+                        u32 maxHz      = clockManager::GetMaxAllowedHz(HocClkModule_CPU, clockManager::gContext.profile);
 
-            if (maxHz && desiredHz > maxHz)
-                desiredHz = maxHz;
+                        if (targetHz && desiredHz > targetHz) desiredHz = targetHz;
+                        if (maxHz    && desiredHz > maxHz)    desiredHz = maxHz;
 
-            u32 newHz = table.list[TableIndexForHz(table, desiredHz)];
-            bool goingDown = (lastHz != 0) && (newHz < lastHz);
+                        u32 newHz = cpuTable.list[TableIndexForHz(cpuTable, desiredHz)];
+                        bool goingDown = (cpuLastHz != 0) && (newHz < cpuLastHz);
 
-            if (!goingDown)
-                downHoldRemaining = 0;
-            else if (downHoldRemaining == 0)
-                downHoldRemaining = DOWN_HOLD_TICKS;
+                        if (!goingDown)
+                            cpuDownHoldRemaining = 0;
+                        else if (cpuDownHoldRemaining == 0)
+                            cpuDownHoldRemaining = DOWN_HOLD_TICKS;
 
-            if (downHoldRemaining > 0)
-                downHoldRemaining--;
+                        if (cpuDownHoldRemaining > 0)
+                            cpuDownHoldRemaining--;
 
-            if ((!goingDown || (downHoldRemaining == 0)) && clockManager::IsAssignableHz(HocClkModule_GPU, newHz)) {
-                board::SetHz(HocClkModule_GPU, newHz);
-                clockManager::gContext.freqs[HocClkModule_GPU] = newHz;
-                lastHz = newHz;
+                        if (++cpuMinTick > 50) {
+                            cpuMinHz = config::GetConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq);
+                            cpuMinTick = 0;
+                        }
+
+                        if (newHz < cpuMinHz)
+                            newHz = cpuMinHz;
+
+                        if ((!goingDown || (cpuDownHoldRemaining == 0)) && clockManager::IsAssignableHz(HocClkModule_CPU, newHz)) {
+                            board::SetHz(HocClkModule_CPU, newHz);
+                            clockManager::gContext.freqs[HocClkModule_CPU] = newHz;
+                            cpuLastHz = newHz;
+                        }
+                    }
+                }
+            } else {
+                cpuDownHoldRemaining = 0;
+                cpuLastHz            = 0;
             }
 
-            svcSleepThread(POLL_NS);
-        }
-    }
+            // ── GPU governor ──────────────────────────────────────────────
+            if (isGpuGovernorEnabled) {
+                auto& gpuTable = clockManager::gFreqTable[HocClkModule_GPU];
+                if (gpuTable.count > 0) {
+                    std::scoped_lock lock{clockManager::gContextMutex};
 
-    void VRRThread(void* arg)
-    {
-        (void)arg;
+                    u32 gpuLoad    = board::GetPartLoad(HocClkPartLoad_GPU);
+                    u32 tableMaxHz = gpuTable.list[gpuTable.count - 1];
+                    u32 desiredHz  = SchedutilTargetHz(gpuLoad, tableMaxHz);
+                    u32 targetHz   = ResolveTargetHz(HocClkModule_GPU);
+                    u32 maxHz      = clockManager::GetMaxAllowedHz(HocClkModule_GPU, clockManager::gContext.profile);
 
-        u8 tick = 0, tick2 = 0;
-        for (;;) {
-            if (!clockManager::gRunning || clockManager::gContext.profile == HocClkProfile_Docked || !isVRREnabled) {
-                svcSleepThread(POLL_NS);
-                continue;
+                    if (targetHz && desiredHz > targetHz) desiredHz = targetHz;
+                    if (maxHz    && desiredHz > maxHz)    desiredHz = maxHz;
+
+                    u32 newHz = gpuTable.list[TableIndexForHz(gpuTable, desiredHz)];
+                    bool goingDown = (gpuLastHz != 0) && (newHz < gpuLastHz);
+
+                    if (!goingDown)
+                        gpuDownHoldRemaining = 0;
+                    else if (gpuDownHoldRemaining == 0)
+                        gpuDownHoldRemaining = DOWN_HOLD_TICKS;
+
+                    if (gpuDownHoldRemaining > 0)
+                        gpuDownHoldRemaining--;
+
+                    if ((!goingDown || (gpuDownHoldRemaining == 0)) && clockManager::IsAssignableHz(HocClkModule_GPU, newHz)) {
+                        board::SetHz(HocClkModule_GPU, newHz);
+                        clockManager::gContext.freqs[HocClkModule_GPU] = newHz;
+                        gpuLastHz = newHz;
+                    }
+                }
+            } else {
+                gpuDownHoldRemaining = 0;
+                gpuLastHz            = 0;
             }
 
-            std::scoped_lock lock{clockManager::gContextMutex};
-            
-            if(++tick2 > 100) {
-                bool isApplicationOutOfFocus = false;
-                Result rc = processManagement::isApplicationOutOfFocus(&isApplicationOutOfFocus);
-                if(R_FAILED(rc)) {
-                    svcSleepThread(POLL_NS);
-                    continue;
+            // ── VRR governor ──────────────────────────────────────────────
+            if (isVRREnabled && clockManager::gContext.profile != HocClkProfile_Docked
+                             && clockManager::gContext.isSaltyNXInstalled) {
+                bool skipVrr = false;
+
+                if (++vrrFocusTick > 100) {
+                    vrrFocusTick = 0;
+                    bool isApplicationOutOfFocus = false;
+                    Result rc = processManagement::isApplicationOutOfFocus(&isApplicationOutOfFocus);
+                    if (R_FAILED(rc) || isApplicationOutOfFocus) {
+                        board::ResetToStockDisplay();
+                        skipVrr = true;
+                    }
                 }
 
-                if(isApplicationOutOfFocus) {
-                    board::ResetToStockDisplay();
-                    svcSleepThread(POLL_NS);
-                    continue;
-                }
-            }
+                if (!skipVrr) {
+                    u8 fps = integrations::GetSaltyNXFPS();
 
-            u8 fps;
+                    if (fps != 254) {
+                        std::scoped_lock lock{clockManager::gContextMutex};
 
-            if (clockManager::gContext.isSaltyNXInstalled) {
-                fps = integrations::GetSaltyNXFPS();
-            } else {
-                svcSleepThread(~0ULL); // effectively disable the thread if SaltyNX isn't installed, as there's no point in it running
-                continue;
-            }
+                        u32 targetHz = clockManager::gContext.overrideFreqs[HocClkModule_Display];
+                        if (!targetHz) {
+                            targetHz = config::GetAutoClockHz(clockManager::gContext.applicationId, HocClkModule_Display, clockManager::gContext.profile, false);
+                            if (!targetHz)
+                                targetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Display, clockManager::gContext.profile, false);
+                        }
 
-            if (fps == 254) {
-                svcSleepThread(POLL_NS);
-                continue;
-            }
-            // if(appletGetFocusState() != AppletFocusState_InFocus) {
-            //     board::ResetToStockDisplay();
-            //     continue;
-            // }
+                        u8 maxDisplay = targetHz ? (u8)targetHz : 60;
+                        u8 minDisplay = board::GetConsoleType() == HocClkConsoleType_Aula ? 45 : 40;
 
-            u32 targetHz = clockManager::gContext.overrideFreqs[HocClkModule_Display];
-            if (!targetHz) {
-                targetHz = config::GetAutoClockHz(clockManager::gContext.applicationId, HocClkModule_Display, clockManager::gContext.profile, false);
-                if (!targetHz)
-                    targetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Display, clockManager::gContext.profile, false);
-            }
+                        if (maxDisplay != minDisplay) {
+                            if (fps >= minDisplay && fps <= maxDisplay) {
+                                board::SetHz(HocClkModule_Display, fps);
+                                clockManager::gContext.freqs[HocClkModule_Display] = fps;
+                                clockManager::gContext.realFreqs[HocClkModule_Display] = fps;
+                            } else {
+                                for (u32 i = 0; i < 10; i++) {
+                                    u32 compareHz = fps * i;
+                                    if (compareHz >= minDisplay && compareHz <= maxDisplay) {
+                                        board::SetHz(HocClkModule_Display, compareHz);
+                                        clockManager::gContext.freqs[HocClkModule_Display] = compareHz;
+                                        clockManager::gContext.realFreqs[HocClkModule_Display] = compareHz;
+                                        break;
+                                    }
+                                }
+                            }
 
-            u8 maxDisplay;
-            if (targetHz) {
-                maxDisplay = targetHz;
-            } else {
-                maxDisplay = 60; // don't assume display stuff!
-            }
-
-            u8 minDisplay = board::GetConsoleType() == HocClkConsoleType_Aula ? 45 : 40;
-            if (maxDisplay == minDisplay)
-                continue;
-
-            if (fps >= minDisplay && fps <= maxDisplay) {
-                board::SetHz(HocClkModule_Display, fps);
-                clockManager::gContext.freqs[HocClkModule_Display] = fps;
-                clockManager::gContext.realFreqs[HocClkModule_Display] = fps;
-            } else {
-                for (u32 i = 0; i < 10; i++) {
-                    u32 compareHz = fps * i;
-                    if (compareHz >= minDisplay && compareHz <= maxDisplay) {
-                        board::SetHz(HocClkModule_Display, compareHz);
-                        clockManager::gContext.freqs[HocClkModule_Display] = compareHz;
-                        clockManager::gContext.realFreqs[HocClkModule_Display] = compareHz;
-                        break;
+                            if (++vrrTick > 50) {
+                                vrrTick = 0;
+                                board::SetHz(HocClkModule_Display, maxDisplay);
+                                svcSleepThread(50'000'000);
+                            }
+                        }
                     }
                 }
             }
 
-            if (++tick > 50) {
-                board::SetHz(HocClkModule_Display, maxDisplay);
-                tick = 0;
-                svcSleepThread(50'000'000);
-            }
-
             svcSleepThread(POLL_NS);
         }
     }
 
-    
     void startThreads() {
-
         threadCreate(
-            &cpuGovernorTHREAD,
-            CpuGovernorThread,
-            nullptr,
-            NULL,
-            0x2000,
-            0x3F,
-            -2
-        );
-
-        threadCreate(
-            &gpuGovernorTHREAD,
+            &governorTHREAD,
             GovernorThread,
             nullptr,
             NULL,
@@ -377,25 +313,10 @@ namespace governor {
             0x3F,
             -2
         );
-
-        threadCreate(
-            &vrrTHREAD,
-            VRRThread,
-            nullptr,
-            NULL,
-            0x2000,
-            0x3F,
-            -2
-        );
-
-        threadStart(&cpuGovernorTHREAD);
-        threadStart(&gpuGovernorTHREAD);
-        threadStart(&vrrTHREAD);
+        threadStart(&governorTHREAD);
     }
 
     void exitThreads() {
-        threadClose(&cpuGovernorTHREAD);
-        threadClose(&gpuGovernorTHREAD);
-        threadClose(&vrrTHREAD);
+        threadClose(&governorTHREAD);
     }
 }
