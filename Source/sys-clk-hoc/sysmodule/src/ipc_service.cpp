@@ -94,7 +94,11 @@ typedef struct {
     uint32_t realVolts[4];                         // +84 (CPU, GPU, packed_VDD2_VDDQ, SOC)
     // HOC extension: per-component die temperatures (milliCelsius)
     uint32_t componentTemps[3];                    // +100 (CPU die, GPU die, MEM/PLLX)
-                                                   // total raw = 112 → padded to 116
+    // HOC extension: temporary governor override packed value
+    // bits 7:0 = CPU governor, bits 15:8 = GPU governor
+    // (0=DoNotOverride, 1=Disabled, 2=Enabled per component)
+    uint32_t governorOverride;                     // +112
+                                                   // total = 116
 } SysClkContext_Wire;
 
 // SysClkTitleProfileList: 5*3*4 = 60 bytes
@@ -151,6 +155,7 @@ static SysClkContext_Wire TranslateContext(const HocClkContext& hoc)
     ctx.componentTemps[0] = hoc.temps[HocClkThermalSensor_CPU];
     ctx.componentTemps[1] = hoc.temps[HocClkThermalSensor_GPU];
     ctx.componentTemps[2] = hoc.temps[HocClkThermalSensor_MEM];
+    ctx.governorOverride  = hoc.overrideFreqs[HocClkModule_Governor];
 
     ctx.power[0] = hoc.power[HocClkPowerSensor_Now];
     ctx.power[1] = hoc.power[HocClkPowerSensor_Avg];
