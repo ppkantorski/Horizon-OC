@@ -38,6 +38,10 @@ namespace config {
     void Exit();
 
     bool Refresh();
+    // Force a full config reload from disk regardless of FAT mtime. Use when the
+    // overlay has written keys directly to config.ini without going through IPC,
+    // so the 2-second mtime resolution would otherwise leave the cache stale.
+    void ForceRefresh();
     // Read dvfs_offset directly from the INI on every tick, bypassing the FAT
     // 2-second mtime resolution.  Returns true (and updates the cached value)
     // when the file value differs from what is currently in memory — i.e. when
@@ -47,6 +51,10 @@ namespace config {
     // since the last call.  Used by Tick() to trigger SetClocks() immediately
     // on IPC-driven changes without waiting for the FAT mtime to advance.
     bool ConsumeConfigDirty();
+    // Signal the clock manager to call SetClocks() on the next tick without
+    // waiting for FAT mtime to advance. Call after any in-memory state update
+    // that should take effect immediately (e.g. SetProfiles via IPC).
+    void MarkConfigDirty();
     bool HasProfilesLoaded();
 
     std::uint8_t GetProfileCount(std::uint64_t tid);

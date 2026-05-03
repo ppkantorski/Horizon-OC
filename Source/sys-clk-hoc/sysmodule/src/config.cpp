@@ -230,6 +230,16 @@ namespace config {
         return false;
     }
 
+    void ForceRefresh() {
+        // Reload from disk unconditionally, ignoring FAT mtime.
+        // Called by the IPC SetProfiles handler so that governor values written
+        // directly to config.ini by the overlay are picked up before we build
+        // the merged HocClkTitleProfileList — otherwise the stale in-memory
+        // cache would zero-out the governor and ini_putsection would erase it.
+        std::scoped_lock lock{gConfigMutex};
+        Load();
+    }
+
     bool PollDvfsOffset() {
         // Read dvfs_offset directly from the INI on every tick.
         //
@@ -256,6 +266,10 @@ namespace config {
 
     bool ConsumeConfigDirty() {
         return gConfigDirty.exchange(false);
+    }
+
+    void MarkConfigDirty() {
+        gConfigDirty.store(true);
     }
 
     bool HasProfilesLoaded() {
@@ -414,10 +428,15 @@ namespace config {
                 if (!hocclkValidConfigValue((HocClkConfigValue)kval, configValues->values[kval])) {
                     continue;
                 }
-                // Always persist DVFSMode so the overlay can always read it back correctly.
-                // All other values equal to their default are omitted to keep the ini clean.
+                // Always persist DVFSMode and AllowGoverning so they survive any
+                // SetConfigValues call regardless of whether the in-memory cache
+                // happened to be stale when the call arrived.  Without this,
+                // a 2-second FAT mtime window could cause the overlay's direct
+                // allow_governing=1 write to be silently erased on the next
+                // IPC SetConfigValues (e.g. changing polling interval).
                 bool isDefault = configValues->values[kval] == hocclkDefaultConfigValue((HocClkConfigValue)kval);
-                bool forceWrite = (kval == HocClkConfigValue_DVFSMode);
+                bool forceWrite = (kval == HocClkConfigValue_DVFSMode) ||
+                                  (kval == HocClkConfigValue_AllowGoverning);
                 if (isDefault && !forceWrite) {
                     continue;
                 }

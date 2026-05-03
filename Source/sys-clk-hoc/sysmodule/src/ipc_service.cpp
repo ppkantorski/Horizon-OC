@@ -294,10 +294,23 @@ namespace ipcService {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
+            // Force a full config reload before merging profiles.
+            //
+            // The overlay writes governor packed values (e.g. handheld_governor=2)
+            // directly to config.ini without going through IPC SetProfiles.
+            // FAT mtime has 2-second granularity, so the normal Refresh() cycle
+            // may not have picked up the write yet.  Without this call,
+            // ToHocProfileList reads a stale in-memory cache with governor=0,
+            // then ini_putsection rewrites the TID section and erases the key.
+            config::ForceRefresh();
             HocClkTitleProfileList hocProfiles = ToHocProfileList(args->profiles, args->tid);
             if (!config::SetProfiles(args->tid, &hocProfiles, true)) {
                 return HOCCLK_ERROR(ConfigSaveFailed);
             }
+            // Trigger immediate SetClocks() on the next tick — the overlay
+            // calls SetProfiles after writing governor directly to disk, so
+            // the tick loop must not wait for FAT mtime to advance.
+            config::MarkConfigDirty();
             return 0;
         }
 
@@ -309,7 +322,9 @@ namespace ipcService {
 
         Result SetOverride(SysClkIpc_SetOverride_Args_Wire* args)
         {
-            if (args->module >= SYSCLK_MODULE_ENUMMAX) {
+            // Allow CPU(0), GPU(1), MEM(2), and Governor(3) overrides.
+            // Display(4) is driven by VRR and is not settable via this IPC bridge.
+            if (args->module > HocClkModule_Governor) {
                 return HOCCLK_ERROR(Generic);
             }
             config::SetOverrideHz((HocClkModule)args->module, args->hz);
@@ -333,6 +348,15 @@ namespace ipcService {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
+            // Force a full config reload from disk before merging.
+            //
+            // The overlay writes allow_governing directly to config.ini (not through
+            // IPC).  If SetConfigValues arrives within the 2-second FAT mtime window,
+            // the in-memory cache still shows allow_governing=0.  Without this call,
+            // GetConfigValues() returns the stale 0, and the subsequent SetConfigValues
+            // call omits allow_governing from the [values] section — erasing the user's
+            // change.  ForceRefresh() guarantees the cache reflects the current file.
+            config::ForceRefresh();
             // Read the current full config from in-memory, overwrite only the
             // wire-exposed values (indices 0..SYSCLK_CONFIG_ENUMMAX-1), then
             // persist the whole struct in one call.
