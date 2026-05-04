@@ -535,7 +535,10 @@ namespace config {
                 if (isDefault && !forceWrite) {
                     continue;
                 }
-                iniValues.push_back(std::to_string(configValues->values[kval]));
+                // Cast to int64_t so signed values (e.g. dvfs_offset = -20) are
+                // written as "-20" rather than "18446744073709551596".
+                // BrowseIniFunc reads back with strtoll, so both sides agree on sign.
+                iniValues.push_back(std::to_string((std::int64_t)configValues->values[kval]));
                 iniKeys.push_back(hocclkFormatConfigValue((HocClkConfigValue)kval, false));
             }
             iniKeys.push_back(NULL);
@@ -625,7 +628,7 @@ namespace config {
         iniValues.reserve(1);
 
         iniKeys.push_back(hocclkFormatConfigValue(kval, false));
-        iniValues.push_back(std::to_string(value));
+        iniValues.push_back(std::to_string((std::int64_t)value));
         iniKeys.push_back(NULL);
 
         std::vector<const char*> valuePointers;

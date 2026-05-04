@@ -482,9 +482,10 @@ namespace board {
         fileUtils::LogLine("[dvfs] voltage set to %u mV", vmin);
     }
 
-    // Applies max(original[i] + offsetMv, dvfsFloor) to every valid entry in the
+    // Applies max(original[i], dvfsFloor + offsetMv) to every valid entry in the
     // GPU voltage table and writes the result to PCV's live memory.
-    // - offsetMv shifts the entire voltage-frequency curve (negative = UV, positive = OV)
+    // - offsetMv shifts the floor (negative = lower floor = less forced raise).
+    //   Natural voltages above the adjusted floor are NEVER modified by the offset.
     // - dvfsFloor is the RAM OC stability minimum — only clamps upward, never applied at
     //   stock RAM speeds (pass 0 when MEM is at or below the DVFS threshold)
     // PcvHijackGpuVolts(0) is still used by DVFSReset/hasChanged to restore the original table.
@@ -494,8 +495,16 @@ namespace board {
             return;
         }
 
-        fileUtils::LogLine("[dvfs] SyncGpuVoltTable: offset=%d, floor=%u, writing to 0x%lx",
-            offsetMv, dvfsFloor, voltData.voltTableAddress);
+        // adjustedFloor = floor + offset; clamp to [0, 1000].
+        // If dvfsFloor is 0 (stock RAM, no floor), adjustedFloor stays 0 and the
+        // offset has no effect — matching Scenario A in the DVFS table.
+        s32 adjustedFloor = 0;
+        if (dvfsFloor > 0) {
+            adjustedFloor = std::max(0, std::min(1000, (s32)dvfsFloor + offsetMv));
+        }
+
+        fileUtils::LogLine("[dvfs] SyncGpuVoltTable: offset=%d, floor=%u, adjFloor=%d, writing to 0x%lx",
+            offsetMv, dvfsFloor, adjustedFloor, voltData.voltTableAddress);
 
         u32 table[192];
         static_assert(sizeof(table) == sizeof(voltData.voltTable), "Invalid gpu voltage table size!");
@@ -504,11 +513,11 @@ namespace board {
         for (u32 i = 0; i < std::size(table); ++i) {
             if (table[i] == 0)
                 continue;
-            s32 v = (s32)table[i] + offsetMv;
-            if (v < 0) v = 0;
-            if (dvfsFloor > 0 && (u32)v < dvfsFloor)
-                v = (s32)dvfsFloor;
-            if (v > 1000) v = 1000;
+            // Natural voltage is never lowered — only raised to the adjusted floor
+            // when the floor exceeds it (RAM OC stability requirement).
+            s32 v = (s32)table[i];
+            if (adjustedFloor > 0 && v < adjustedFloor)
+                v = adjustedFloor;
             table[i] = (u32)v;
         }
 

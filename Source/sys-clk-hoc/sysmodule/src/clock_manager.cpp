@@ -235,9 +235,9 @@ namespace clockManager {
     void DVFSBeforeSet(u32 memTargetHz)
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
-        // SyncGpuVoltTable applies max(original[i] + offset, rawFloor) for every
-        // table entry.  The offset shifts the whole voltage-frequency curve; the
-        // floor only clamps upward when RAM OC requires it.
+        // SyncGpuVoltTable applies max(original[i], rawFloor + offset) for every
+        // table entry.  The offset shifts the floor (negative = lower floor, less
+        // forced raise); natural voltages above the adjusted floor are never changed.
         // vmin (adjusted floor) is used only for the direct I2C safety raise below.
         u32 rawFloor = board::GetMinimumGpuVmin(memTargetHz / 1000000, board::GetGpuSpeedoBracket());
         s32 adjusted = (s32)rawFloor + dvfsOffset;
@@ -268,8 +268,8 @@ namespace clockManager {
         fileUtils::LogLine("[dvfs] DVFSAfterSet: memHz=%u, rawFloor=%u, offset=%d, vmin=%u",
             memTargetHz, rawFloor, dvfsOffset, vmin);
 
-        // SyncGpuVoltTable applies max(original[i] + offset, rawFloor) for every
-        // entry — offset shifts the whole curve, floor only clamps upward at high RAM.
+        // SyncGpuVoltTable applies max(original[i], rawFloor + offset) for every
+        // entry — offset shifts the floor, natural voltages above it are untouched.
         // PcvHijackGpuVolts(0) in DVFSReset/hasChanged still handles table restore.
         board::SyncGpuVoltTable(dvfsOffset, rawFloor);
 
@@ -465,9 +465,9 @@ namespace clockManager {
             // MUST run before the noGPU governor-skip below — the governor manages
             // GPU *frequency* but the voltage table must still be updated whenever
             // the DVFSOffset config value changes, regardless of who owns scheduling.
-            // SyncGpuVoltTable applies max(original[i] + offset, rawFloor) for every
-            // entry — so the offset shifts the whole voltage curve and the floor only
-            // clamps upward when RAM OC requires it.
+            // SyncGpuVoltTable applies max(original[i], rawFloor + offset) for every
+            // entry — offset shifts the floor down/up; natural voltages above the
+            // adjusted floor are never modified by the offset directly.
             // Bounce the GPU clock after so PCV re-reads the newly-written table.
             if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
                 && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
