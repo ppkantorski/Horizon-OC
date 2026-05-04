@@ -277,6 +277,20 @@ namespace config {
         return gLoaded;
     }
 
+    void SyncAllowGoverningFromFile() {
+        // Targeted ini_getl for allow_governing — picks up values written directly
+        // by the overlay without triggering a full Load()/Close() cycle.
+        // Called from SetConfigValuesHandler before building the write payload so
+        // the freshly-written overlay value is preserved when we rewrite [values].
+        std::scoped_lock lock{gConfigMutex};
+        const char* key = hocclkFormatConfigValue(HocClkConfigValue_AllowGoverning, false);
+        long defaultVal = static_cast<long>(hocclkDefaultConfigValue(HocClkConfigValue_AllowGoverning));
+        long val = ini_getl(CONFIG_VAL_SECTION, key, defaultVal, gPath.c_str());
+        if (hocclkValidConfigValue(HocClkConfigValue_AllowGoverning, static_cast<uint64_t>(val))) {
+            configValues[HocClkConfigValue_AllowGoverning] = static_cast<uint64_t>(val);
+        }
+    }
+
     std::uint32_t GetAutoClockHz(std::uint64_t tid, HocClkModule module, HocClkProfile profile, bool returnRaw) {
         std::scoped_lock lock{gConfigMutex};
         switch (profile) {
@@ -310,6 +324,41 @@ namespace config {
 
         char section[17] = {0};
         snprintf(section, sizeof(section), "%016lX", tid);
+
+        // Before building the write list, preserve any existing values
+        // for modules that are NOT sent over IPC (Governor=3, Display=4).
+        // The overlay writes governor keys directly to config.ini without using IPC,
+        // so gProfileMHzMap may not have the value yet if Refresh() hasn't run.
+        // Two-level lookup: in-memory map first (fast), then ini_getl from disk
+        // (fallback for writes that arrived within the 2-second FAT mtime window).
+        // Both are safe here — we already hold gConfigMutex.
+        {
+            char sec[17] = {0};
+            snprintf(sec, sizeof(sec), "%016lX", tid);
+
+            std::uint32_t* mhz = &profiles->mhz[0];
+            for (unsigned int profile = 0; profile < HocClkProfile_EnumMax; profile++) {
+                for (unsigned int module = 0; module < HocClkModule_EnumMax; module++) {
+                    if (*mhz == 0 && module >= HocClkModule_Governor) {
+                        std::uint32_t existing = FindClockMHz(tid, (HocClkModule)module, (HocClkProfile)profile);
+                        if (!existing) {
+                            // Not in memory yet — fall back to a targeted ini_getl so
+                            // we don't erase a governor the overlay just wrote to disk.
+                            char govkey[64] = {0};
+                            snprintf(govkey, sizeof(govkey), "%s_%s",
+                                board::GetProfileName((HocClkProfile)profile, false),
+                                board::GetModuleName((HocClkModule)module, false));
+                            long val = ini_getl(sec, govkey, 0, gPath.c_str());
+                            existing = (val > 0) ? static_cast<std::uint32_t>(val) : 0u;
+                        }
+                        if (existing) {
+                            *mhz = existing;  // patch in-place; loops below see it
+                        }
+                    }
+                    mhz++;
+                }
+            }
+        }
 
         std::vector<std::string> keys;
         std::vector<std::string> values;
@@ -367,6 +416,52 @@ namespace config {
         }
 
         return true;
+    }
+
+    void SetProfileGovernors(std::uint64_t tid, const std::uint32_t* packed5) {
+        std::scoped_lock lock{gConfigMutex};
+
+        // 1. Update the Governor slot in gProfileMHzMap for all profiles.
+        for (unsigned int profile = 0; profile < HocClkProfile_EnumMax; profile++) {
+            auto key = std::make_tuple(tid, (HocClkProfile)profile, HocClkModule_Governor);
+            if (packed5[profile]) {
+                gProfileMHzMap[key] = packed5[profile];
+            } else {
+                gProfileMHzMap.erase(key);
+            }
+        }
+
+        // 2. Rebuild the entire TID section from the now-updated in-memory map so
+        //    CPU/GPU/MEM entries are preserved alongside the new governor values.
+        char section[17] = {0};
+        snprintf(section, sizeof(section), "%016lX", tid);
+
+        std::vector<std::string> keys, values;
+        keys.reserve((int)HocClkProfile_EnumMax * (int)HocClkModule_EnumMax);
+        values.reserve((int)HocClkProfile_EnumMax * (int)HocClkModule_EnumMax);
+
+        for (unsigned int profile = 0; profile < HocClkProfile_EnumMax; profile++) {
+            for (unsigned int module = 0; module < HocClkModule_EnumMax; module++) {
+                std::uint32_t mhz = FindClockMHz(tid, (HocClkModule)module, (HocClkProfile)profile);
+                if (mhz) {
+                    keys.push_back(std::string(board::GetProfileName((HocClkProfile)profile, false)) +
+                                   "_" + board::GetModuleName((HocClkModule)module, false));
+                    values.push_back(std::to_string(mhz));
+                }
+            }
+        }
+
+        std::vector<const char*> keyPtrs, valPtrs;
+        keyPtrs.reserve(keys.size() + 1);
+        valPtrs.reserve(values.size() + 1);
+        for (size_t i = 0; i < keys.size(); i++) {
+            keyPtrs.push_back(keys[i].c_str());
+            valPtrs.push_back(values[i].c_str());
+        }
+        keyPtrs.push_back(nullptr);
+        valPtrs.push_back(nullptr);
+
+        ini_putsection(section, keyPtrs.data(), valPtrs.data(), gPath.c_str());
     }
 
     std::uint8_t GetProfileCount(std::uint64_t tid) {

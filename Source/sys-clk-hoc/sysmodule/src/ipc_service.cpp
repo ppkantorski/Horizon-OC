@@ -69,6 +69,9 @@ enum SysClkIpcCmd
     SysClkIpcCmd_GetConfigValues   = 9,
     SysClkIpcCmd_SetConfigValues   = 10,
     SysClkIpcCmd_GetFreqList       = 11,
+    // HOC-only: governor packed values per profile
+    SysClkIpcCmd_GetProfileGovernors = 12,
+    SysClkIpcCmd_SetProfileGovernors = 13,
 };
 
 // ---------------------------------------------------------------------------
@@ -128,6 +131,16 @@ typedef struct {
     uint32_t module;
     uint32_t maxCount;
 } SysClkIpc_GetFreqList_Args_Wire;
+
+// Governor IPC wire types (HOC-only, cmds 12/13)
+typedef struct {
+    uint32_t packed[SYSCLK_PROFILE_ENUMMAX];  // one packed u32 per SysClkProfile
+} SysClkProfileGovernorList_Wire;             // 5 × 4 = 20 bytes
+
+typedef struct {
+    uint64_t tid;
+    SysClkProfileGovernorList_Wire governors;
+} SysClkIpc_SetProfileGovernors_Args_Wire;    // 8 + 20 = 28 bytes
 
 // ---------------------------------------------------------------------------
 // HOC → wire translation
@@ -190,17 +203,21 @@ static SysClkContext_Wire TranslateContext(const HocClkContext& hoc)
     return ctx;
 }
 
-static HocClkTitleProfileList ToHocProfileList(const SysClkTitleProfileList_Wire& wire, std::uint64_t tid)
+static HocClkTitleProfileList ToHocProfileList(const SysClkTitleProfileList_Wire& wire)
 {
     HocClkTitleProfileList hoc = {};
-    // Load the current stored profile first so Governor (and Display) are preserved.
-    // Without this, every SetProfiles call from the overlay would zero out Governor.
-    config::GetProfiles(tid, &hoc);
-    // Overwrite only CPU / GPU / MEM from the wire format.
+
+    // Only fill CPU / GPU / MEM from the wire format.
+    // Governor and Display preservation is handled inside config::SetProfiles,
+    // which already holds gConfigMutex and can call FindClockMHz directly —
+    // avoiding the lock/unlock/relock races that broke profiles when we tried
+    // to do this via config::GetProfiles() here.
     for (int p = 0; p < SYSCLK_PROFILE_ENUMMAX; p++) {
         hoc.mhzMap[p][HocClkModule_CPU] = wire.mhzMap[p][0];
         hoc.mhzMap[p][HocClkModule_GPU] = wire.mhzMap[p][1];
         hoc.mhzMap[p][HocClkModule_MEM] = wire.mhzMap[p][2];
+        // Governor (slot 3) and Display (slot 4) stay 0 here;
+        // config::SetProfiles preserves any existing in-memory values for them.
     }
     return hoc;
 }
@@ -299,22 +316,18 @@ namespace ipcService {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
-            // Force a full config reload before merging profiles.
-            //
-            // The overlay writes governor packed values (e.g. handheld_governor=2)
-            // directly to config.ini without going through IPC SetProfiles.
-            // FAT mtime has 2-second granularity, so the normal Refresh() cycle
-            // may not have picked up the write yet.  Without this call,
-            // ToHocProfileList reads a stale in-memory cache with governor=0,
-            // then ini_putsection rewrites the TID section and erases the key.
-            config::ForceRefresh();
-            HocClkTitleProfileList hocProfiles = ToHocProfileList(args->profiles, args->tid);
+            // ToHocProfileList only fills CPU/GPU/MEM from the wire.
+            // Governor/Display preservation happens inside config::SetProfiles,
+            // which already holds gConfigMutex and reads them via FindClockMHz
+            // with an ini_getl fallback for direct-to-disk overlay writes.
+            HocClkTitleProfileList hocProfiles = ToHocProfileList(args->profiles);
             if (!config::SetProfiles(args->tid, &hocProfiles, true)) {
                 return HOCCLK_ERROR(ConfigSaveFailed);
             }
-            // Trigger immediate SetClocks() on the next tick — the overlay
-            // calls SetProfiles after writing governor directly to disk, so
-            // the tick loop must not wait for FAT mtime to advance.
+            // Signal the clock manager to call SetClocks() on the next tick.
+            // Needed for resets (Y button): ini_putsection may write within the
+            // same 2-second FAT mtime window as the previous write, so Refresh()
+            // won't detect the change — without this the old clock stays active.
             config::MarkConfigDirty();
             return 0;
         }
@@ -353,26 +366,21 @@ namespace ipcService {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
-            // Force a full config reload from disk before merging.
+            // Sync allow_governing from file before building the write payload.
             //
-            // The overlay writes allow_governing directly to config.ini (not through
-            // IPC).  If SetConfigValues arrives within the 2-second FAT mtime window,
-            // the in-memory cache still shows allow_governing=0.  Without this call,
-            // GetConfigValues() returns the stale 0, and the subsequent SetConfigValues
-            // call omits allow_governing from the [values] section — erasing the user's
-            // change.  ForceRefresh() guarantees the cache reflects the current file.
-            config::ForceRefresh();
+            // ForceRefresh() was removed here for the same reason as in SetProfiles:
+            // its Load()/Close() cycle clears gProfileMHzMap and can trigger a silent
+            // file-rename failure that leaves config.ini deleted.
+            //
+            // Instead, we do a targeted ini_getl for allow_governing so the freshly-
+            // written overlay value is in the in-memory configValues[] array before
+            // writeSection builds the [values] section.  The forceWrite guard in
+            // writeSection ensures allow_governing is always emitted even when equal
+            // to the default, so it will never be silently dropped.
+            config::SyncAllowGoverningFromFile();
             // Read the current full config from in-memory, overwrite only the
             // wire-exposed values (indices 0..SYSCLK_CONFIG_ENUMMAX-1), then
             // persist the whole struct in one call.
-            //
-            // BUG that was here:
-            //   SetConfigValue(i, newVal, /*immediate=*/false) writes each key
-            //   to the INI file but deliberately SKIPS updating configValues[i]
-            //   in memory.  GetConfigValues() then reads the still-stale
-            //   in-memory array, and the subsequent SetConfigValues() call
-            //   overwrites the INI with those stale values — silently discarding
-            //   everything the loop just wrote.
             HocClkConfigValueList full;
             config::GetConfigValues(&full);
             for (int i = 0; i < SYSCLK_CONFIG_ENUMMAX; i++) {
@@ -396,6 +404,30 @@ namespace ipcService {
                 return HOCCLK_ERROR(Generic);
             }
             clockManager::GetFreqList((HocClkModule)args->module, out_list, args->maxCount, out_count);
+            return 0;
+        }
+
+        // Cmd 12: GetProfileGovernors (HOC-only)
+        // Returns the packed governor value for every profile for a given TID.
+        Result GetProfileGovernors(std::uint64_t* tid, SysClkProfileGovernorList_Wire* out_governors)
+        {
+            if (!config::HasProfilesLoaded()) return HOCCLK_ERROR(ConfigNotLoaded);
+            HocClkTitleProfileList hocProfiles = {};
+            config::GetProfiles(*tid, &hocProfiles);
+            for (int p = 0; p < SYSCLK_PROFILE_ENUMMAX; p++) {
+                out_governors->packed[p] = hocProfiles.mhzMap[p][HocClkModule_Governor];
+            }
+            return 0;
+        }
+
+        // Cmd 13: SetProfileGovernors (HOC-only)
+        // Stores packed governor values in gProfileMHzMap and rewrites the TID
+        // section in config.ini, then signals the clock manager to apply immediately.
+        Result SetProfileGovernors(SysClkIpc_SetProfileGovernors_Args_Wire* args)
+        {
+            if (!config::HasProfilesLoaded()) return HOCCLK_ERROR(ConfigNotLoaded);
+            config::SetProfileGovernors(args->tid, args->governors.packed);
+            config::MarkConfigDirty();
             return 0;
         }
 
@@ -534,6 +566,29 @@ namespace ipcService {
                             hipcGetBufferSize(r->hipc.data.recv_buffers),
                             (std::uint32_t*)out_data
                         );
+                    }
+                    break;
+
+                // -----------------------------------------------------------
+                // Cmd 12: GetProfileGovernors (HOC-only)
+                // serviceDispatchInOut → raw in u64 tid, raw out packed[5] (20 bytes)
+                // -----------------------------------------------------------
+                case SysClkIpcCmd_GetProfileGovernors:
+                    if (r->data.size >= sizeof(std::uint64_t)) {
+                        *out_dataSize = sizeof(SysClkProfileGovernorList_Wire);
+                        return GetProfileGovernors((std::uint64_t*)r->data.ptr,
+                                                   (SysClkProfileGovernorList_Wire*)out_data);
+                    }
+                    break;
+
+                // -----------------------------------------------------------
+                // Cmd 13: SetProfileGovernors (HOC-only)
+                // serviceDispatchIn → raw in {u64 tid, packed[5]} (28 bytes)
+                // -----------------------------------------------------------
+                case SysClkIpcCmd_SetProfileGovernors:
+                    if (r->data.size >= sizeof(SysClkIpc_SetProfileGovernors_Args_Wire)) {
+                        return SetProfileGovernors(
+                            (SysClkIpc_SetProfileGovernors_Args_Wire*)r->data.ptr);
                     }
                     break;
             }

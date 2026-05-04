@@ -52,14 +52,24 @@ namespace config {
     // on IPC-driven changes without waiting for the FAT mtime to advance.
     bool ConsumeConfigDirty();
     // Signal the clock manager to call SetClocks() on the next tick without
-    // waiting for FAT mtime to advance. Call after any in-memory state update
-    // that should take effect immediately (e.g. SetProfiles via IPC).
+    // waiting for FAT mtime to advance. Called after SetProfiles and
+    // SetConfigValues so resets/changes take effect immediately even when
+    // multiple writes land within the same 2-second FAT mtime window.
     void MarkConfigDirty();
     bool HasProfilesLoaded();
+
+    // Targeted INI read for allow_governing from the [values] section.
+    // Updates the in-memory configValues[] entry when the file has a newer
+    // value — avoids a full ForceRefresh() when SetConfigValues is called
+    // before Tick has had time to pick up a direct overlay write.
+    void SyncAllowGoverningFromFile();
 
     std::uint8_t GetProfileCount(std::uint64_t tid);
     void GetProfiles(std::uint64_t tid, HocClkTitleProfileList* out_profiles);
     bool SetProfiles(std::uint64_t tid, HocClkTitleProfileList* profiles, bool immediate);
+    // Set governor packed values for all profiles for a given TID.
+    // Writes to gProfileMHzMap (immediate) and rewrites the TID section in config.ini.
+    void SetProfileGovernors(std::uint64_t tid, const std::uint32_t* packed5);
     std::uint32_t GetAutoClockHz(std::uint64_t tid, HocClkModule module, HocClkProfile profile, bool returnRaw);
 
     void SetEnabled(bool enabled);
