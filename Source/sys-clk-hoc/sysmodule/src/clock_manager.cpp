@@ -50,6 +50,13 @@ namespace clockManager {
     bool gRunning = false;
     bool gPrevEnabled = true; // matches main()'s initial config::SetEnabled(true)
     bool gPrevIsBoost = false;
+
+    // Zero-initialized → starts unsignaled, no autoclear.  Signaled by the
+    // IPC thread (SetEnabled/SetOverride/SetProfiles/SetConfigValues/
+    // SetProfileGovernors) and by SetRunning(false) for clean shutdown.
+    // Waited on with a timeout in WaitForNextTick() so the tick wakes either
+    // when triggered by IPC or when the normal polling interval expires.
+    LEvent gTickWakeEvent = {};
     s32  s_lastDvfsOffset = INT32_MIN; // sentinel: "never applied"
     LockableMutex gContextMutex;                                             // guards gContext (tick + governor threads)
     LockableMutex gSnapshotMutex;                                            // guards gContextSnapshot (tick + IPC thread only)
@@ -591,7 +598,13 @@ namespace clockManager {
                 // mode could start, meaning the tick woke up with a stale
                 // isBoost=false and applied the plain profile clock for one
                 // extra tick before eventually landing on the boost target.
-                WaitForNextTick();
+                //
+                // NOTE: svcSleepThread is used here deliberately instead of
+                // WaitForNextTick().  This is a mandatory hardware timing delay,
+                // not a scheduling wait — it must not be shortened by an IPC
+                // signal.  An early wakeup here could race PCV's voltage
+                // management against an EMC clock change.
+                svcSleepThread(config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL);
             }
             fileUtils::LogLine("[mgr] hasChanged: done");
         }
@@ -830,6 +843,12 @@ namespace clockManager {
     void SetRunning(bool running)
     {
         gRunning = running;
+        // Wake the tick thread immediately so it sees the new gRunning value
+        // without waiting up to pollingIntervalMs.  On SetRunning(false) this
+        // avoids a multi-hundred-ms hang at shutdown.  On SetRunning(true)
+        // the signal is harmless — the first WaitForNextTick() returns
+        // immediately and clears the flag, then normal polling resumes.
+        leventSignal(&gTickWakeEvent);
     }
 
     bool Running()
@@ -966,6 +985,18 @@ namespace clockManager {
         // 300 ms ticks even during genuine sleep mode are harmless: nothing changes
         // while the screen is off, so the tick just re-reads the same state and sleeps
         // again.  The battery cost of ~200 extra wakeups per minute is negligible.
-        svcSleepThread(config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL);
+        //
+        // levent early-wake: the IPC thread signals gTickWakeEvent whenever a
+        // mutating command arrives (SetEnabled, SetOverride, SetProfiles,
+        // SetConfigValues, SetProfileGovernors).  leventWait returns as soon as
+        // either the event is signaled OR the polling interval expires — whichever
+        // comes first — so overlay actions take effect in <1 ms instead of up to
+        // 300 ms.  leventClear resets the flag so the next iteration blocks
+        // normally.  If IPC fires while Tick() is executing (not here), the flag
+        // stays set and the next leventWait returns immediately, ensuring no
+        // signal is ever lost.
+        u64 timeoutNs = config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL;
+        leventWait(&gTickWakeEvent, timeoutNs);
+        leventClear(&gTickWakeEvent);
     }
 } // namespace clockManager

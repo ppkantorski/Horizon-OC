@@ -46,6 +46,13 @@ namespace clockManager {
     extern LockableMutex gSnapshotMutex;  // guards gContextSnapshot (tick + IPC thread only)
     extern HocClkContext gContext;
     extern FreqTable gFreqTable[HocClkModule_EnumMax];
+
+    // Lightweight event used to wake the main tick thread early when a
+    // mutating IPC command arrives (SetEnabled, SetOverride, SetProfiles,
+    // SetConfigValues, SetProfileGovernors).  Zero-initialized → starts
+    // unsignaled, no autoclear.  Thread-safe: leventSignal/leventWait/
+    // leventClear are internally mutex-protected by libnx.
+    extern LEvent gTickWakeEvent;
     extern std::uint64_t gLastTempLogNs;
     extern std::uint64_t gLastFreqLogNs;
     extern std::uint64_t gLastPowerLogNs;

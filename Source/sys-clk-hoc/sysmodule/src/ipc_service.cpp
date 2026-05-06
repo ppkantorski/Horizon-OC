@@ -329,12 +329,17 @@ namespace ipcService {
             // same 2-second FAT mtime window as the previous write, so Refresh()
             // won't detect the change — without this the old clock stays active.
             config::MarkConfigDirty();
+            // Wake the tick thread so the profile change takes effect in <1 ms
+            // instead of up to pollingIntervalMs.
+            leventSignal(&clockManager::gTickWakeEvent);
             return 0;
         }
 
         Result SetEnabled(std::uint8_t* enabled)
         {
             config::SetEnabled(*enabled != 0);
+            // Wake the tick thread so the enable/disable takes effect in <1 ms.
+            leventSignal(&clockManager::gTickWakeEvent);
             return 0;
         }
 
@@ -346,6 +351,8 @@ namespace ipcService {
                 return HOCCLK_ERROR(Generic);
             }
             config::SetOverrideHz((HocClkModule)args->module, args->hz);
+            // Wake the tick thread so the override takes effect in <1 ms.
+            leventSignal(&clockManager::gTickWakeEvent);
             return 0;
         }
 
@@ -389,6 +396,8 @@ namespace ipcService {
             if (!config::SetConfigValues(&full, true)) {
                 return HOCCLK_ERROR(ConfigSaveFailed);
             }
+            // Wake the tick thread so the new config values take effect in <1 ms.
+            leventSignal(&clockManager::gTickWakeEvent);
             return 0;
         }
 
@@ -428,6 +437,8 @@ namespace ipcService {
             if (!config::HasProfilesLoaded()) return HOCCLK_ERROR(ConfigNotLoaded);
             config::SetProfileGovernors(args->tid, args->governors.packed);
             config::MarkConfigDirty();
+            // Wake the tick thread so the governor change takes effect in <1 ms.
+            leventSignal(&clockManager::gTickWakeEvent);
             return 0;
         }
 
