@@ -995,7 +995,7 @@ namespace clockManager {
         // normally.  If IPC fires while Tick() is executing (not here), the flag
         // stays set and the next leventWait returns immediately, ensuring no
         // signal is ever lost.
-        u64 timeoutNs = config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL;
+        const u64 timeoutNs = config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL;
         leventWait(&gTickWakeEvent, timeoutNs);
         leventClear(&gTickWakeEvent);
     }
