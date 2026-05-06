@@ -34,7 +34,7 @@ namespace kip {
     typedef struct {
         u8  cust[4];
         u32 custRev;
-        u32 placeholder;
+        u32 hocVersion;
         u32 hpMode;
         u32 commonEmcMemVolt;
         u32 eristaEmcMaxClock;
