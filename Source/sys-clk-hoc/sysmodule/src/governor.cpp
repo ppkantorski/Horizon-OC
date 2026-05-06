@@ -135,8 +135,7 @@ namespace governor {
         u32 cpuLastHz            = 0;
         u32 gpuDownHoldRemaining = 0;
         u32 gpuLastHz            = 0;
-        u32 cpuMinHz             = 612;
-        u32 cpuMinTick           = 0;
+        u32 cpuMinHz             = 0;   // refreshed every governor tick from config
         u8  vrrFocusTick         = 0;
         u8  vrrTick              = 0;
 
@@ -176,18 +175,29 @@ namespace governor {
                         u32 newHz = cpuTable.list[TableIndexForHz(cpuTable, desiredHz)];
                         bool goingDown = (cpuLastHz != 0) && (newHz < cpuLastHz);
 
-                        if (!goingDown)
+                        if (!goingDown) {
                             cpuDownHoldRemaining = 0;
-                        else if (cpuDownHoldRemaining == 0)
-                            cpuDownHoldRemaining = DOWN_HOLD_TICKS;
+                        } else if (cpuDownHoldRemaining == 0) {
+                            // Asymmetric hold: scale by drop magnitude relative to table max.
+                            // A tiny step (1785→1632) gets ~1 tick (5ms) — low risk, respond fast.
+                            // A large step (2295→612) gets up to DOWN_HOLD_TICKS (50ms) — high
+                            // risk, hold longer to avoid a costly stutter if load spikes back.
+                            // Minimum 1 tick so even a tiny drop gets at least one hold cycle.
+                            // Overflow-safe: promote to u64 before multiply since DOWN_HOLD_TICKS
+                            // * dropHz can exceed u32 for large drops at high frequencies.
+                            u32 dropHz = cpuLastHz - newHz;
+                            cpuDownHoldRemaining = (u32)std::max(1u,
+                                (u32)((u64)DOWN_HOLD_TICKS * dropHz / tableMaxHz));
+                        }
 
                         if (cpuDownHoldRemaining > 0)
                             cpuDownHoldRemaining--;
 
-                        if (++cpuMinTick > 50) {
-                            cpuMinHz = config::GetConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq);
-                            cpuMinTick = 0;
-                        }
+                        // Read minimum floor every governor tick so it stays in sync with
+                        // the tick thread. Previously re-read every 250ms (50 ticks × 5ms),
+                        // meaning a user change via the overlay could be ignored for up to
+                        // 250ms while the tick thread picked it up in under 1ms via levent.
+                        cpuMinHz = config::GetConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq);
 
                         if (newHz < cpuMinHz)
                             newHz = cpuMinHz;
@@ -222,10 +232,15 @@ namespace governor {
                     u32 newHz = gpuTable.list[TableIndexForHz(gpuTable, desiredHz)];
                     bool goingDown = (gpuLastHz != 0) && (newHz < gpuLastHz);
 
-                    if (!goingDown)
+                    if (!goingDown) {
                         gpuDownHoldRemaining = 0;
-                    else if (gpuDownHoldRemaining == 0)
-                        gpuDownHoldRemaining = DOWN_HOLD_TICKS;
+                    } else if (gpuDownHoldRemaining == 0) {
+                        // Same asymmetric hold logic as CPU: proportional to drop magnitude.
+                        // Small GPU step → short hold, large GPU step → longer hold.
+                        u32 dropHz = gpuLastHz - newHz;
+                        gpuDownHoldRemaining = (u32)std::max(1u,
+                            (u32)((u64)DOWN_HOLD_TICKS * dropHz / tableMaxHz));
+                    }
 
                     if (gpuDownHoldRemaining > 0)
                         gpuDownHoldRemaining--;
