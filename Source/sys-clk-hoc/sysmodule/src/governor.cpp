@@ -165,9 +165,23 @@ namespace governor {
 
                         u32 cpuLoad    = board::GetPartLoad(HocClkPartLoad_CPUMax);
                         u32 tableMaxHz = cpuTable.list[cpuTable.count - 1];
-                        u32 desiredHz  = SchedutilTargetHz(cpuLoad, tableMaxHz);
                         u32 targetHz   = ResolveTargetHz(HocClkModule_CPU);
                         u32 maxHz      = clockManager::GetMaxAllowedHz(HocClkModule_CPU, clockManager::gContext.profile);
+
+                        // When no explicit CPU clock is set ("do not override"), cap the
+                        // SchedutilTargetHz reference to stock APM CPU frequency (1020 MHz).
+                        // Without this, the schedutil curve scales against tableMaxHz (the
+                        // OC hardware table max, e.g. 2295 MHz on Mariko), driving the
+                        // governor above stock even at moderate load — e.g. 45% load
+                        // targets 1147 MHz instead of ~567 MHz, providing no battery saving.
+                        // 1020 MHz is the correct stock for all non-boost APM modes.
+                        // Boost is handled by the tick thread; the governor does not run
+                        // during it.  If the user wants above-stock OC, they should set an
+                        // explicit CPU clock in the profile — targetHz will then be non-zero
+                        // and this fallback will not apply.
+                        static constexpr u32 kStockCpuHz = 1020000000u;
+                        u32 scaleMax  = targetHz ? targetHz : kStockCpuHz;
+                        u32 desiredHz = SchedutilTargetHz(cpuLoad, scaleMax);
 
                         if (targetHz && desiredHz > targetHz) desiredHz = targetHz;
                         if (maxHz    && desiredHz > maxHz)    desiredHz = maxHz;
@@ -186,7 +200,7 @@ namespace governor {
                             // Overflow-safe: promote to u64 before multiply since DOWN_HOLD_TICKS
                             // * dropHz can exceed u32 for large drops at high frequencies.
                             u32 dropHz = cpuLastHz - newHz;
-                            cpuDownHoldRemaining = (u32)std::max(1u,
+                            cpuDownHoldRemaining = (u32)std::max((u32)DOWN_HOLD_TICKS / 2,
                                 (u32)((u64)DOWN_HOLD_TICKS * dropHz / tableMaxHz));
                         }
 
@@ -238,7 +252,7 @@ namespace governor {
                         // Same asymmetric hold logic as CPU: proportional to drop magnitude.
                         // Small GPU step → short hold, large GPU step → longer hold.
                         u32 dropHz = gpuLastHz - newHz;
-                        gpuDownHoldRemaining = (u32)std::max(1u,
+                        gpuDownHoldRemaining = (u32)std::max((u32)DOWN_HOLD_TICKS / 2,
                             (u32)((u64)DOWN_HOLD_TICKS * dropHz / tableMaxHz));
                     }
 
