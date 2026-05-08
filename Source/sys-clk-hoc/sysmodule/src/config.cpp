@@ -264,6 +264,27 @@ namespace config {
         return false;
     }
 
+    bool PollCpuGovMinFreq() {
+        // Same rationale as PollDvfsOffset: the overlay writes cpu_gov_min_freq
+        // straight to the INI (no IPC), so FAT mtime (2-second resolution)
+        // causes Refresh() to miss rapid successive writes when the user slides
+        // the trackbar.  ini_getl() is a cheap targeted lookup that lets the
+        // governor react within one tick regardless of mtime.
+        //
+        // LONG_MIN = sentinel for "key absent" → fall back to the sysmodule
+        // default of 612 000 000 Hz.
+        std::scoped_lock lock{gConfigMutex};
+        const char* key = hocclkFormatConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq, false);
+        long raw = ini_getl(CONFIG_VAL_SECTION, key, LONG_MIN, gPath.c_str());
+        uint64_t fileHz   = (raw == LONG_MIN) ? 612000000ULL : static_cast<uint64_t>(raw);
+        uint64_t cachedHz = configValues[HocClkConfigValue_CpuGovernorMinimumFreq];
+        if (fileHz != cachedHz) {
+            configValues[HocClkConfigValue_CpuGovernorMinimumFreq] = fileHz;
+            return true;
+        }
+        return false;
+    }
+
     bool ConsumeConfigDirty() {
         return gConfigDirty.exchange(false);
     }
