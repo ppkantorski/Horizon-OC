@@ -287,13 +287,17 @@ namespace clockManager {
         board::SyncGpuVoltTable(dvfsOffset, rawFloor);
 
         // PCV only re-evaluates its voltage table when a GPU clock-rate change arrives.
-        // Bounce the GPU clock so PCV traverses the freshly-written table immediately.
+        // Send the current frequency back to itself to trigger a table traversal —
+        // clkrstSetClockRate/pcvSetClockRate fires the DVFS evaluation unconditionally,
+        // so same-freq → same-freq still re-reads the freshly-written table.
         // Use board::GetHz (live hardware read) so the bounce fires even when no GPU
         // override is active (gContext.freqs[GPU] is 0 in that case).
+        // GetNearestHz snaps to a valid table entry so PCV receives a well-formed request.
         u32 gpuHz = board::GetHz(HocClkModule_GPU);
         if (gpuHz) {
-            board::SetHz(HocClkModule_GPU, ~0u);
-            board::SetHz(HocClkModule_GPU, gpuHz);
+            u32 maxHz = GetMaxAllowedHz(HocClkModule_GPU, gContext.profile);
+            u32 nearestGpuHz = GetNearestHz(HocClkModule_GPU, gpuHz, maxHz);
+            board::SetHz(HocClkModule_GPU, nearestGpuHz);
         }
 
         fileUtils::LogLine("[dvfs] DVFSAfterSet: done");
