@@ -280,6 +280,26 @@ namespace config {
             changed = true;
         }
 
+        // allow_governing — absent → default (1 = enabled).
+        //
+        // Critical for the "change cpu_gov_min_freq then toggle governing off"
+        // bug: the governor keeps clamping CPU to the new floor until Refresh()
+        // picks up the mtime change (up to 2 seconds on FAT).  Polling here
+        // means HandleGovernor() disables the governor within one tick instead.
+        long defaultAllowGov = static_cast<long>(hocclkDefaultConfigValue(HocClkConfigValue_AllowGoverning));
+        long rawAllow = ini_getl(CONFIG_VAL_SECTION,
+            hocclkFormatConfigValue(HocClkConfigValue_AllowGoverning, false),
+            defaultAllowGov, gPath.c_str());
+        uint64_t fileAllow   = hocclkValidConfigValue(HocClkConfigValue_AllowGoverning,
+                                   static_cast<uint64_t>(rawAllow))
+                               ? static_cast<uint64_t>(rawAllow)
+                               : static_cast<uint64_t>(defaultAllowGov);
+        uint64_t cachedAllow = configValues[HocClkConfigValue_AllowGoverning];
+        if (fileAllow != cachedAllow) {
+            configValues[HocClkConfigValue_AllowGoverning] = fileAllow;
+            changed = true;
+        }
+
         return changed;
     }
 
