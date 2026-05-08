@@ -46,8 +46,7 @@ namespace config {
     // 2-second mtime resolution.  Returns true (and updates the cached value)
     // when the file value differs from what is currently in memory — i.e. when
     // the overlay has written a new value that Refresh() would otherwise miss.
-    bool PollDvfsOffset();
-    bool PollCpuGovMinFreq();
+    bool PollFileConfigValues();
     // Returns true (and clears the flag) if any config value was written via IPC
     // since the last call.  Used by Tick() to trigger SetClocks() immediately
     // on IPC-driven changes without waiting for the FAT mtime to advance.

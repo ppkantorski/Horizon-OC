@@ -940,11 +940,10 @@ namespace clockManager {
 
         bool needsDvfsSleep = false;
         bool contextOrConfigChanged = RefreshContext(needsDvfsSleep) || config::Refresh() || config::ConsumeConfigDirty()
-                                    // PollDvfsOffset() / PollCpuGovMinFreq() read their keys directly from
-                                    // the INI every tick.  This catches overlay file writes (which bypass IPC
-                                    // and therefore bypass gConfigDirty) faster than the FAT mtime path.
-                                    || config::PollDvfsOffset()
-                                    || config::PollCpuGovMinFreq();
+                                    // PollFileConfigValues() reads file-written keys directly from the INI
+                                    // every tick, catching overlay writes that bypass IPC and therefore
+                                    // bypass gConfigDirty faster than the FAT mtime path.
+                                    || config::PollFileConfigValues();
 
         // DVFS settle sleep — done OUTSIDE gContextMutex so the governor thread
         // remains free to re-apply the OverwriteBoostMode clock during the 300 ms

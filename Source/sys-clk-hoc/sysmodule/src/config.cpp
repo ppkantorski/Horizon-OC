@@ -240,49 +240,47 @@ namespace config {
         Load();
     }
 
-    bool PollDvfsOffset() {
-        // Read dvfs_offset directly from the INI on every tick.
+    bool PollFileConfigValues() {
+        // Read file-written config values directly from the INI on every tick.
         //
-        // The overlay writes this key straight to the file without calling IPC,
-        // so gConfigDirty is never set and Refresh() misses rapid successive
-        // writes because FAT mtime has 2-second resolution.  ini_getl() is a
-        // cheap targeted key lookup (no full file scan) that lets us react
-        // within one tick (≈300 ms default) regardless of mtime.
+        // The overlay writes these keys straight to the file without calling
+        // IPC, so gConfigDirty is never set and Refresh() misses rapid
+        // successive writes because FAT mtime has 2-second resolution.
+        // ini_getl() is a cheap targeted key lookup (no full file scan) that
+        // lets us react within one tick (≈300 ms default) regardless of mtime.
         //
-        // LONG_MIN is our sentinel for "key absent" — treat as 0 mV (default).
+        // Both keys are read under a single mutex acquisition to avoid
+        // redundant lock/unlock pairs per tick.
+        //
+        // LONG_MIN is the sentinel for "key absent".
         std::scoped_lock lock{gConfigMutex};
-        const char* key = hocclkFormatConfigValue(HocClkConfigValue_DVFSOffset, false);
-        long raw = ini_getl(CONFIG_VAL_SECTION, key, LONG_MIN, gPath.c_str());
-        int32_t fileMV  = (raw == LONG_MIN) ? 0 : static_cast<int32_t>(raw);
+        bool changed = false;
+
+        // dvfs_offset — absent → treat as 0 mV (default)
+        long rawDvfs = ini_getl(CONFIG_VAL_SECTION,
+            hocclkFormatConfigValue(HocClkConfigValue_DVFSOffset, false),
+            LONG_MIN, gPath.c_str());
+        int32_t fileMV   = (rawDvfs == LONG_MIN) ? 0 : static_cast<int32_t>(rawDvfs);
         int32_t cachedMV = static_cast<int32_t>(static_cast<int64_t>(
                                configValues[HocClkConfigValue_DVFSOffset]));
         if (fileMV != cachedMV) {
             configValues[HocClkConfigValue_DVFSOffset] =
                 static_cast<uint64_t>(static_cast<int64_t>(fileMV));
-            return true;
+            changed = true;
         }
-        return false;
-    }
 
-    bool PollCpuGovMinFreq() {
-        // Same rationale as PollDvfsOffset: the overlay writes cpu_gov_min_freq
-        // straight to the INI (no IPC), so FAT mtime (2-second resolution)
-        // causes Refresh() to miss rapid successive writes when the user slides
-        // the trackbar.  ini_getl() is a cheap targeted lookup that lets the
-        // governor react within one tick regardless of mtime.
-        //
-        // LONG_MIN = sentinel for "key absent" → fall back to the sysmodule
-        // default of 612 000 000 Hz.
-        std::scoped_lock lock{gConfigMutex};
-        const char* key = hocclkFormatConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq, false);
-        long raw = ini_getl(CONFIG_VAL_SECTION, key, LONG_MIN, gPath.c_str());
-        uint64_t fileHz   = (raw == LONG_MIN) ? 612000000ULL : static_cast<uint64_t>(raw);
+        // cpu_gov_min_freq — absent → fall back to sysmodule default 612 MHz
+        long rawHz = ini_getl(CONFIG_VAL_SECTION,
+            hocclkFormatConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq, false),
+            LONG_MIN, gPath.c_str());
+        uint64_t fileHz   = (rawHz == LONG_MIN) ? 612000000ULL : static_cast<uint64_t>(rawHz);
         uint64_t cachedHz = configValues[HocClkConfigValue_CpuGovernorMinimumFreq];
         if (fileHz != cachedHz) {
             configValues[HocClkConfigValue_CpuGovernorMinimumFreq] = fileHz;
-            return true;
+            changed = true;
         }
-        return false;
+
+        return changed;
     }
 
     bool ConsumeConfigDirty() {
