@@ -146,6 +146,33 @@ namespace governor {
                 continue;
             }
 
+            // ── Module-disabled fast path ──────────────────────────────────
+            // When the user toggles Enable OFF via the overlay, config::SetEnabled(false)
+            // is called through IPC and the tick thread's !enabled path calls
+            // board::ResetToStock() to restore hardware clocks.  The governor thread
+            // only checks gRunning (sysmodule shutdown), not config::Enabled(), so
+            // without this check it keeps running: isCpuGovernorEnabled stays true
+            // from the last HandleGovernor() call and the CPU keeps being scaled,
+            // completely defeating the Enable toggle.
+            //
+            // Fix: bail out early when the module is disabled.  No board resets are
+            // needed here — the tick thread already handled that.  We do clear all
+            // governor state so there is no stale momentum (hold counters, last
+            // frequency, boost tracking) when the module is re-enabled.
+            if (!config::Enabled()) {
+                isCpuGovernorEnabled     = false;
+                isGpuGovernorEnabled     = false;
+                isVRREnabled             = false;
+                isCpuGovernorInBoostMode = false;
+                cpuWasInBoost            = false;
+                cpuDownHoldRemaining     = 0;
+                cpuLastHz                = 0;
+                gpuDownHoldRemaining     = 0;
+                gpuLastHz                = 0;
+                svcSleepThread(POLL_NS);
+                continue;
+            }
+
             // ── CPU governor ──────────────────────────────────────────────
             //
             // Read APM mode once here — used both by the governor scaling path
