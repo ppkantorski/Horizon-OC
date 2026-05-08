@@ -53,6 +53,18 @@ namespace clockManager {
     // unsignaled, no autoclear.  Thread-safe: leventSignal/leventWait/
     // leventClear are internally mutex-protected by libnx.
     extern LEvent gTickWakeEvent;
+
+    // Boost-exit debounce deadline (nanoseconds, armTicksToNs).
+    // Non-zero while the debounce window is active after boost ends.
+    // Written by the tick thread in Tick() and by the governor thread on
+    // the cpuJustExitedBoost edge (to cover the DVFS sleep window where
+    // the tick thread is sleeping).  Both writers hold gContextMutex.
+    // Read by the governor's CPU scaling path (also under gContextMutex)
+    // to suppress scaling during brief non-boost inter-pulse gaps.
+    extern u64 s_boostExitDeadlineNs;
+    // Duration of the boost-exit hold window.
+    static constexpr u64 kBoostExitHoldNs = 500'000'000ULL;
+
     extern std::uint64_t gLastTempLogNs;
     extern std::uint64_t gLastFreqLogNs;
     extern std::uint64_t gLastPowerLogNs;

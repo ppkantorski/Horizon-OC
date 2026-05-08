@@ -138,6 +138,7 @@ namespace governor {
         u32 cpuMinHz             = 0;   // refreshed every governor tick from config
         u8  vrrFocusTick         = 0;
         u8  vrrTick              = 0;
+        bool cpuWasInBoost       = false; // tracks previous boost state for exit-edge detection
 
         for (;;) {
             if (!clockManager::gRunning) {
@@ -146,22 +147,92 @@ namespace governor {
             }
 
             // ── CPU governor ──────────────────────────────────────────────
-            if (isCpuGovernorEnabled) {
-                u32 mode = 0;
-                Result rc = apmExtGetCurrentPerformanceConfiguration(&mode);
+            //
+            // Read APM mode once here — used both by the governor scaling path
+            // and the OverwriteBoostMode maintenance block below.
+            u32 cpuApmMode = 0;
+            bool cpuInBoost = false;
+            {
+                Result rc = apmExtGetCurrentPerformanceConfiguration(&cpuApmMode);
+                if (R_SUCCEEDED(rc))
+                    cpuInBoost = apmExtIsBoostMode(cpuApmMode);
+            }
 
-                if (R_SUCCEEDED(rc) && apmExtIsBoostMode(mode)) {
+            // Detect the falling edge of boost (first non-boost tick after boost was active).
+            // Used to run one trailing-edge OverwriteBoostMode correction and to signal the
+            // tick thread so it arms the debounce immediately rather than waiting up to 50 ms.
+            bool cpuJustExitedBoost = (!cpuInBoost && cpuWasInBoost);
+            cpuWasInBoost = cpuInBoost;
+
+            // ── Boost-exit debounce arming (early) ──────────────────────────
+            // MUST happen before the isCpuGovernorEnabled scaling block below.
+            // On the tick where cpuJustExitedBoost first becomes true, the
+            // non-boost scaling path reads s_boostExitDeadlineNs to decide
+            // whether to suppress scaling.  If arming were deferred until after
+            // the scaling block (the old placement), s_boostExitDeadlineNs would
+            // still be 0 on this tick → inDebounce=false → governor scales to
+            // 612 MHz → debounce arms one tick too late.  Moving arming here
+            // ensures the deadline is set before the scaling check reads it.
+            //
+            // Also covers the Mariko DVFS settle sleep (300 ms): the tick thread
+            // releases gContextMutex for the sleep and cannot arm the debounce
+            // until it wakes.  The governor runs every 1–5 ms during that window;
+            // arming here ensures the scaling path is suppressed immediately.
+            if (cpuJustExitedBoost) {
+                std::scoped_lock armLock{clockManager::gContextMutex};
+                if (clockManager::s_boostExitDeadlineNs == 0) {
+                    clockManager::s_boostExitDeadlineNs =
+                        armTicksToNs(armGetSystemTick()) + clockManager::kBoostExitHoldNs;
+                }
+            }
+
+            if (isCpuGovernorEnabled) {
+                if (cpuInBoost) {
+                    // Signal the tick thread on the FIRST boost entry so it wakes
+                    // immediately (< 1 ms) instead of waiting up to 300 ms for its
+                    // normal polling interval.  Without this, there is a window after
+                    // boost starts where the governor has already stepped back but the
+                    // tick thread hasn't yet applied the boost profile clock — causing
+                    // a brief period at whatever frequency the governor left behind.
+                    // One signal per boost entry is enough; the guard prevents spamming
+                    // leventSignal every 5 ms while boost is continuously held.
+                    if (!isCpuGovernorInBoostMode)
+                        leventSignal(&clockManager::gTickWakeEvent);
+
                     isCpuGovernorInBoostMode = true;
                     cpuDownHoldRemaining     = 0;
                     cpuLastHz                = 0;
-                    // The tick thread handles CPU freq during boost.
+                    // OverwriteBoostMode clock applied by the block below.
                 } else {
-                    if (apmExtIsBoostMode(mode) == false)
-                        isCpuGovernorInBoostMode = false;
+                    isCpuGovernorInBoostMode = false;
 
                     auto& cpuTable = clockManager::gFreqTable[HocClkModule_CPU];
                     if (cpuTable.count > 0) {
                         std::scoped_lock lock{clockManager::gContextMutex};
+
+                        // Suppress CPU scaling during the boost-exit debounce window.
+                        //
+                        // When TotK pulses APM boost on/off rapidly during loading, the
+                        // brief non-boost gaps make cpuInBoost=false for a few ms.  The
+                        // tick thread's SetClocks skips CPU via skipCpuForDebounce during
+                        // this window, but the governor has no such guard — it sees non-boost,
+                        // reads near-zero CPU load (loading screens are IO-bound), and drives
+                        // the CPU straight to 612 MHz.  Nobody corrects it back until the
+                        // next boost re-entry + tick-thread cycle (up to 50 ms later).
+                        //
+                        // s_boostExitDeadlineNs is armed by the tick thread on boost exit
+                        // and also by the governor itself (cpuJustExitedBoost arming block
+                        // above, before this scaling section) for coverage during the DVFS
+                        // settle sleep.  Both writers hold gContextMutex.
+                        u64 nowNs = armTicksToNs(armGetSystemTick());
+                        bool inDebounce = (clockManager::s_boostExitDeadlineNs != 0 &&
+                                           nowNs < clockManager::s_boostExitDeadlineNs);
+                        if (inDebounce) {
+                            // Hold off — reset state so there's no stale momentum
+                            // when the debounce expires and scaling resumes.
+                            cpuDownHoldRemaining = 0;
+                            cpuLastHz            = 0;
+                        } else {
 
                         u32 cpuLoad    = board::GetPartLoad(HocClkPartLoad_CPUMax);
                         u32 tableMaxHz = cpuTable.list[cpuTable.count - 1];
@@ -221,11 +292,71 @@ namespace governor {
                             clockManager::gContext.freqs[HocClkModule_CPU] = newHz;
                             cpuLastHz = newHz;
                         }
+                        } // end !inDebounce
                     }
                 }
             } else {
                 cpuDownHoldRemaining = 0;
                 cpuLastHz            = 0;
+            }
+
+            // ── OverwriteBoostMode CPU maintenance ─────────────────────────
+            // When OverwriteBoostMode is active the tick thread applies the
+            // configured boost clock every 50 ms.  APM re-asserts its own
+            // boost clock (1785 MHz) each time the game calls
+            // apmSetPerformanceConfiguration, so the CPU can sit at 1785 for
+            // up to 50 ms between our corrections — producing visible flicker.
+            //
+            // The governor loop runs every 5 ms.  By re-applying the target
+            // here we reduce the APM re-assertion window from 50 ms to 5 ms,
+            // making the flicker effectively imperceptible.
+            //
+            // Also covers the boost EXIT edge (cpuJustExitedBoost):
+            //   • Runs one trailing correction to push the clock back to the
+            //     boost target even though cpuInBoost is now false.  This
+            //     prevents the brief 1785 window that appears during APM's
+            //     own boost→non-boost transition from being held.
+            //   • Signals the tick thread so it arms the debounce within 1 ms
+            //     (vs. waiting up to 50 ms on the fast-tick interval) — the
+            //     debounce then holds the boost clock through any remaining
+            //     TotK-style rapid pulse gaps cleanly.
+            //
+            // Runs regardless of isCpuGovernorEnabled so it works whether or
+            // not the CPU governor is active.  The board::GetHz guard prevents
+            // redundant SetHz calls when the clock is already correct.
+            if ((cpuInBoost || cpuJustExitedBoost) && config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode)) {
+                // Signal tick thread on the first non-boost tick so it arms the
+                // debounce immediately.  One signal per boost-exit edge; the
+                // cpuJustExitedBoost flag is only true for a single governor tick.
+                if (cpuJustExitedBoost) {
+                    leventSignal(&clockManager::gTickWakeEvent);
+                }
+
+                auto& cpuTable = clockManager::gFreqTable[HocClkModule_CPU];
+                if (cpuTable.count > 0) {
+                    std::scoped_lock lock{clockManager::gContextMutex};
+                    u32 targetHz = ResolveTargetHz(HocClkModule_CPU);
+                    if (targetHz) {
+                        u32 maxHz = clockManager::GetMaxAllowedHz(HocClkModule_CPU, clockManager::gContext.profile);
+                        if (maxHz && targetHz > maxHz) targetHz = maxHz;
+                        u32 nearestHz = cpuTable.list[TableIndexForHz(cpuTable, targetHz)];
+                        // IMPORTANT: compare against board::GetHz (live hardware read), NOT
+                        // gContext.freqs (cache).  The tick thread writes gContext.freqs=2601
+                        // after applying OverwriteBoostMode, but APM can re-assert its own
+                        // boost clock (1785 MHz) at any time.  When it does, the hardware is
+                        // at 1785 while gContext.freqs still says 2601 — so the cache-based
+                        // check (nearestHz != gContext.freqs) evaluates 2601 != 2601 = false,
+                        // silently skipping the correction.  APM then holds 1785 for up to
+                        // 50 ms until the tick thread detects the mismatch via its own freq
+                        // loop, producing the visible 2601→1785→2601→1785 oscillation.
+                        // Using board::GetHz here catches every re-assertion within 5 ms.
+                        u32 actualHz = board::GetHz(HocClkModule_CPU);
+                        if (nearestHz != actualHz) {
+                            board::SetHz(HocClkModule_CPU, nearestHz);
+                            clockManager::gContext.freqs[HocClkModule_CPU] = nearestHz;
+                        }
+                    }
+                }
             }
 
             // ── GPU governor ──────────────────────────────────────────────
@@ -328,7 +459,24 @@ namespace governor {
                 }
             }
 
-            svcSleepThread(POLL_NS);
+            // Dynamic poll rate: use 1 ms when OverwriteBoostMode is active and the
+            // CPU is in boost (or just exited boost for the trailing correction tick).
+            // APM can re-assert its own boost clock (1785 MHz) between governor polls;
+            // at 5 ms this produces a visible blip on any monitoring tool.  At 1 ms
+            // the window shrinks to at most 1 ms — imperceptible in practice.
+            //
+            // Why not a levent here instead?  The governor detects boost FASTER than
+            // the tick thread (5 ms vs 50 ms polling), so there is nothing upstream
+            // that could signal the governor earlier than it would detect on its own.
+            // The existing gTickWakeEvent signals (governor→tick on boost entry/exit)
+            // are already the correct direction.  A dynamic sleep is the only lever
+            // that reduces the first-correction latency here.
+            //
+            // The 1 ms rate is only active when OverwriteBoostMode needs it; all
+            // other governor work (CPU scaling, GPU governor, VRR) stays at 5 ms.
+            bool needsFastPoll = (cpuInBoost || cpuJustExitedBoost) &&
+                                 (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode);
+            svcSleepThread(needsFastPoll ? 1'000'000ULL : POLL_NS);
         }
     }
 

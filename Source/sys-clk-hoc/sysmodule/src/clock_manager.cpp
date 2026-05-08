@@ -58,6 +58,12 @@ namespace clockManager {
     // when triggered by IPC or when the normal polling interval expires.
     LEvent gTickWakeEvent = {};
     s32  s_lastDvfsOffset = INT32_MIN; // sentinel: "never applied"
+
+    // Boost-exit debounce.  Set to a future deadline when boost ends; while active,
+    // SetClocks() skips the CPU module so the boost-clock holds during TotK-style
+    // rapid APM pulse gaps.  Cleared to 0 the tick it expires, which also forces
+    // one final SetClocks() call so the non-boost profile is applied cleanly.
+    u64  s_boostExitDeadlineNs = 0;
     LockableMutex gContextMutex;                                             // guards gContext (tick + governor threads)
     LockableMutex gSnapshotMutex;                                            // guards gContextSnapshot (tick + IPC thread only)
     HocClkContext gContext = {};
@@ -466,7 +472,13 @@ namespace clockManager {
             // isCpuGovernorEnabled=true would make noCPU=true and skip CPU, leaving
             // nobody to apply the user's boost-clock override.
             bool governorOwnerCpu = noCPU && !(isBoost && (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode));
-            if ((skipCpuDueToBoost || governorOwnerCpu) && module == HocClkModule_CPU)
+            // Boost-exit debounce: skip CPU entirely while s_boostExitDeadlineNs is active.
+            // Prevents the non-boost CPU preset from flashing in during the brief inter-pulse
+            // non-boost gaps TotK produces on loading screens.  The deadline is cleared (→ 0)
+            // the tick it expires, which forces one final SetClocks call with this flag false,
+            // allowing the normal non-boost path to run exactly once.
+            bool skipCpuForDebounce = (module == HocClkModule_CPU && !isBoost && s_boostExitDeadlineNs != 0);
+            if ((skipCpuDueToBoost || governorOwnerCpu || skipCpuForDebounce) && module == HocClkModule_CPU)
                 continue;
             // Re-apply DVFS table when the GPU vmin offset slider changes.
             // MUST run before the noGPU governor-skip below — the governor manages
@@ -555,14 +567,18 @@ namespace clockManager {
         }
     }
 
-    bool RefreshContext()
+    bool RefreshContext(bool &outNeedsDvfsSleep)
     {
         bool hasChanged = false;
 
         std::uint32_t mode = 0;
         Result rc = apmExtGetCurrentPerformanceConfiguration(&mode);
-        ASSERT_RESULT_OK(rc, "apmExtGetCurrentPerformanceConfiguration");
-
+        if (R_FAILED(rc)) {
+            // APM temporarily unavailable (sleep/wake transition).
+            // Skip the APM-dependent titleId/profile/reset block.
+            // The freq/temp/power loops below still run so telemetry stays live.
+            fileUtils::LogLine("[mgr] RefreshContext: apmExt failed (rc=%08X), skipping APM section", rc);
+        } else {
         std::uint64_t applicationId = processManagement::GetCurrentApplicationId();
         if (applicationId != gContext.applicationId) {
             fileUtils::LogLine("[mgr] TitleID change: %016lX", applicationId);
@@ -580,34 +596,41 @@ namespace clockManager {
         // restore clocks to stock values on app or profile change
         if (hasChanged) {
             fileUtils::LogLine("[mgr] hasChanged: ResetToStock + DVFSReset starting");
-            board::ResetToStock();
+            // CPU is intentionally NOT reset here.  board::ResetToStock() reads the
+            // current APM configuration and applies its cpu_hz — if APM happens to
+            // be between boost pulses at that exact microsecond, it writes 1020 MHz.
+            // On Mariko DVFS-Hijack devices the 300 ms settle sleep that follows
+            // makes this flash visible as a sustained 1020 MHz dip on the initial
+            // game-launch loading screen (the title-ID change fires while APM boost
+            // is already active or about to start).
+            //
+            // In-game loading screens never trigger this path (title ID doesn't
+            // change mid-game), which is why they don't exhibit the same flash.
+            //
+            // Skipping the CPU reset here is safe: SetClocks() is called immediately
+            // after RefreshContext() returns, and it applies the correct CPU target
+            // (boost clock, non-boost preset, or HandleFreqReset→stock) based on the
+            // freshly re-read isBoost state.  The brief window during the DVFS settle
+            // sleep where the previous title's CPU clock is still active is harmless
+            // — the 300 ms sleep is for GPU voltage settling, not CPU stability.
+            board::ResetToStockGpu();
+            board::ResetToStockMem();
             if (board::GetSocType() == HocClkSocType_Mariko && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                 fileUtils::LogLine("[mgr] hasChanged: PcvHijackGpuVolts(0) + GPU reset");
                 board::PcvHijackGpuVolts(0);
                 board::ResetToStockGpu();
-                // Hardware settle time: PCV needs a full tick interval after the
-                // DVFS hijack is torn down and GPU state is reset, otherwise an
-                // EMC clock change at high frequencies can race against PCV's
-                // voltage management.
-                //
-                // This sleep belongs INSIDE the DVFS-hijack block.  It was
-                // previously placed after the closing brace, making it run on
-                // every app/profile change on every device — causing an
-                // unnecessary 300 ms stall at every game launch on Erista and
-                // on Mariko with DVFSMode != Hijack.  During that stall boost
-                // mode could start, meaning the tick woke up with a stale
-                // isBoost=false and applied the plain profile clock for one
-                // extra tick before eventually landing on the boost target.
-                //
-                // NOTE: svcSleepThread is used here deliberately instead of
-                // WaitForNextTick().  This is a mandatory hardware timing delay,
-                // not a scheduling wait — it must not be shortened by an IPC
-                // signal.  An early wakeup here could race PCV's voltage
-                // management against an EMC clock change.
-                svcSleepThread(config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL);
+                // Signal Tick() to do the PCV settle sleep OUTSIDE gContextMutex.
+                // The sleep used to live here while the mutex was held, which blocked
+                // the governor's OverwriteBoostMode maintenance for the full 300 ms —
+                // APM re-asserted 1785 MHz during that window and nobody could correct
+                // it, causing the visible 1785→2601 flicker at game launch.
+                // Tick() will unlock the mutex, sleep, then relock so the governor
+                // runs freely during the hardware settle window.
+                outNeedsDvfsSleep = true;
             }
             fileUtils::LogLine("[mgr] hasChanged: done");
         }
+        } // end R_SUCCEEDED(rc) block
 
         std::uint32_t hz = 0;
         for (unsigned int module = 0; module < HocClkModule_EnumMax; module++) {
@@ -870,11 +893,20 @@ namespace clockManager {
         // Governor threads take this same lock before modifying gContext.freqs[CPU/GPU/Display].
         // GetCurrentContext() (IPC) reads gContextSnapshot under gSnapshotMutex — a completely
         // separate lock — so it is never blocked by holding gContextMutex here.
-        std::scoped_lock lock{gContextMutex};
+        // unique_lock instead of scoped_lock so we can temporarily release the
+        // mutex during the DVFS settle sleep (see needsDvfsSleep below).
+        std::unique_lock<LockableMutex> lock{gContextMutex};
 
         std::uint32_t mode = 0;
         Result rc = apmExtGetCurrentPerformanceConfiguration(&mode);
-        ASSERT_RESULT_OK(rc, "apmExtGetCurrentPerformanceConfiguration");
+        if (R_FAILED(rc)) {
+            // APM temporarily unavailable (e.g. sleep/wake transition).
+            // Skip this tick entirely — the hardware state is undefined
+            // during the transition; attempting clock management here risks
+            // crashing via ASSERT or corrupting PCV voltage state.
+            fileUtils::LogLine("[mgr] Tick: apmExtGetCurrentPerformanceConfiguration failed (rc=%08X), skipping tick", rc);
+            return;
+        }
 
         bool isBoost = apmExtIsBoostMode(mode);
 
@@ -906,31 +938,38 @@ namespace clockManager {
             gPrevEnabled = enabled;
         }
 
-        bool contextOrConfigChanged = RefreshContext() || config::Refresh() || config::ConsumeConfigDirty()
+        bool needsDvfsSleep = false;
+        bool contextOrConfigChanged = RefreshContext(needsDvfsSleep) || config::Refresh() || config::ConsumeConfigDirty()
                                     // PollDvfsOffset() reads dvfs_offset directly from the INI every tick.
                                     // This catches direct file writes from the overlay (which bypass IPC and
                                     // therefore bypass gConfigDirty) faster than the FAT mtime path.
                                     || config::PollDvfsOffset();
 
-        // Re-read boost state after RefreshContext().
+        // DVFS settle sleep — done OUTSIDE gContextMutex so the governor thread
+        // remains free to re-apply the OverwriteBoostMode clock during the 300 ms
+        // PCV hardware settle window.  Previously the sleep lived inside
+        // RefreshContext() while the mutex was held, blocking the governor from
+        // correcting APM's 1785 MHz re-assertion, causing the visible 1785↔2601
+        // flicker at every game launch on Mariko DVFS-Hijack devices.
         //
-        // RefreshContext() calls WaitForNextTick() (a full polling-interval
-        // sleep, typically 300 ms) whenever an app or profile change is
-        // detected — which is exactly what happens at a loading-screen
-        // transition.  Boost mode almost always starts during that sleep.
-        // If we kept the isBoost value read at the top of Tick(), SetClocks()
-        // would see isBoost=false even though boost is now active, and would
-        // push the CPU to the plain profile clock (X) for one whole tick:
-        //
-        //   X  →  ~1785 (APM boost)  →  X  (stale isBoost=false)
-        //   →  2600  (next tick, isBoost re-read correctly)  →  X
-        //
-        // Refreshing here collapses that to:
-        //
-        //   X  →  ~1785 (APM boost)  →  2600  →  X
-        //
+        // Safety: this sleep is a mandatory hardware timing delay (PCV voltage
+        // settling after DVFSHijack teardown), not a scheduling wait — svcSleepThread
+        // is used deliberately and must not be cut short by an IPC signal.
+        if (needsDvfsSleep) {
+            lock.unlock();
+            svcSleepThread(config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL);
+            lock.lock();
+        }
+
+        // Re-read boost state after RefreshContext() (and the DVFS settle sleep
+        // if one occurred).  The sleep window is where boost mode typically
+        // starts on a new game launch — re-reading here ensures SetClocks() sees
+        // the correct isBoost rather than the stale pre-sleep value.
         rc = apmExtGetCurrentPerformanceConfiguration(&mode);
-        ASSERT_RESULT_OK(rc, "apmExtGetCurrentPerformanceConfiguration (post-refresh)");
+        if (R_FAILED(rc)) {
+            fileUtils::LogLine("[mgr] Tick: post-refresh apmExt failed (rc=%08X), skipping tick", rc);
+            return;
+        }
         isBoost = apmExtIsBoostMode(mode);
 
         // Detect boost state transitions so we can force a SetClocks call the
@@ -938,6 +977,33 @@ namespace clockManager {
         // with the hardware clock change yet.
         bool boostChanged = (isBoost != gPrevIsBoost);
         gPrevIsBoost = isBoost;
+
+        // Boost-exit debounce management.
+        //
+        // Arm: set a 500 ms deadline the moment boost ends.
+        if (boostChanged && !isBoost) {
+            s_boostExitDeadlineNs = armTicksToNs(armGetSystemTick()) + kBoostExitHoldNs;
+        }
+        // Reset deadline if boost re-enters (debounce cancelled naturally).
+        if (isBoost) {
+            s_boostExitDeadlineNs = 0;
+        }
+
+        u64 nowNs = armTicksToNs(armGetSystemTick());
+
+        // debounceActive: deadline armed and not yet expired → skip CPU in SetClocks.
+        bool debounceActive = (!isBoost && s_boostExitDeadlineNs != 0 &&
+                               nowNs < s_boostExitDeadlineNs);
+
+        // debounceJustExpired: deadline was armed and just passed this tick.
+        // Clear the deadline so we only fire once, then force SetClocks so the
+        // non-boost CPU profile is applied immediately rather than waiting for
+        // the next incidental context change.
+        bool debounceJustExpired = (!isBoost && s_boostExitDeadlineNs != 0 &&
+                                    nowNs >= s_boostExitDeadlineNs);
+        if (debounceJustExpired) {
+            s_boostExitDeadlineNs = 0; // disarm
+        }
 
         // While boost+OverwriteBoostMode is active, force SetClocks every tick.
         // APM can re-assert the default boost clock (~1785 MHz) between our
@@ -957,9 +1023,11 @@ namespace clockManager {
             }
         } else {
             // Enabled: apply configured clocks when (re-)enabled, on any
-            // context/config change, on boost state transitions, or on every
-            // tick while an active boost override needs to be maintained.
-            if (enabledChanged || contextOrConfigChanged || boostChanged || overrideBoostActive) {
+            // context/config change, on boost state transitions, on every
+            // tick while an active boost override needs to be maintained,
+            // while the debounce window is open, or the instant it expires.
+            if (enabledChanged || contextOrConfigChanged || boostChanged ||
+                overrideBoostActive || debounceActive || debounceJustExpired) {
                 SetClocks(isBoost);
             }
         }
@@ -995,7 +1063,15 @@ namespace clockManager {
         // normally.  If IPC fires while Tick() is executing (not here), the flag
         // stays set and the next leventWait returns immediately, ensuring no
         // signal is ever lost.
-        const u64 timeoutNs = config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL;
+        const u64 baseTimeoutNs = config::GetConfigValue(HocClkConfigValue_PollingIntervalMs) * 1000000ULL;
+        // Use 50 ms ticks when debounce is active (so we catch expiry quickly) or
+        // when overrideBoostActive (so APM can only re-assert for ~50 ms at a time).
+        bool overrideBoostActiveNow = gPrevIsBoost && (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode);
+        bool debounceActiveNow      = (!gPrevIsBoost && s_boostExitDeadlineNs != 0 &&
+                                       armTicksToNs(armGetSystemTick()) < s_boostExitDeadlineNs);
+        const u64 timeoutNs = (overrideBoostActiveNow || debounceActiveNow)
+            ? 50'000'000ULL
+            : baseTimeoutNs;
         leventWait(&gTickWakeEvent, timeoutNs);
         leventClear(&gTickWakeEvent);
     }
