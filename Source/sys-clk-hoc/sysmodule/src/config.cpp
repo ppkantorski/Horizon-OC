@@ -332,20 +332,20 @@ namespace config {
 
     std::uint32_t GetAutoClockHz(std::uint64_t tid, HocClkModule module, HocClkProfile profile, bool returnRaw) {
         std::scoped_lock lock{gConfigMutex};
-        switch (profile) {
-            case HocClkProfile_Handheld:
-                return FindClockHzFromProfiles(tid, module, {HocClkProfile_Handheld}, returnRaw ? 1 : 1000000);
-            case HocClkProfile_HandheldCharging:
-            case HocClkProfile_HandheldChargingUSB:
-                return FindClockHzFromProfiles(tid, module, {HocClkProfile_HandheldChargingUSB, HocClkProfile_HandheldCharging, HocClkProfile_Handheld}, returnRaw ? 1 : 1000000);
-            case HocClkProfile_HandheldChargingOfficial:
-                return FindClockHzFromProfiles(tid, module, {HocClkProfile_HandheldChargingOfficial, HocClkProfile_HandheldCharging, HocClkProfile_Handheld}, returnRaw ? 1 : 1000000);
-            case HocClkProfile_Docked:
-                return FindClockHzFromProfiles(tid, module, {HocClkProfile_Docked}, returnRaw ? 1 : 1000000);
-            default:
-                ERROR_THROW("Unhandled HocClkProfile: %u", profile);
-        }
-        return 0;
+        // Each profile is fully isolated.  "Do not override" (no entry in
+        // gProfileMHzMap) means stock clocks for THAT profile — it must NOT
+        // silently fall back to another profile's settings.  The intended way to
+        // share settings across profiles is to configure them explicitly, or to
+        // use the global TID (HOCCLK_GLOBAL_PROFILE_TID) as a fallback in
+        // SetClocks() — which already does the per-app → global two-level lookup.
+        //
+        // The old switch had fallback chains:
+        //   HandheldChargingOfficial → HandheldCharging → Handheld
+        //   HandheldCharging/USB     → Handheld
+        // This caused Handheld clocks to "bleed" into Official Charger (and USB
+        // Charger) whenever those profiles had "Do not override" set — exactly
+        // the opposite of what the user configured.
+        return FindClockHzFromProfiles(tid, module, {profile}, returnRaw ? 1 : 1000000);
     }
 
     void GetProfiles(std::uint64_t tid, HocClkTitleProfileList* out_profiles) {
