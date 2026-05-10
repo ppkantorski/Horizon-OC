@@ -82,18 +82,22 @@ typedef enum {
     // KipConfigValue_mtcConf,
     KipConfigValue_hpMode,
 
+    // --- Table metadata ---
     KipConfigValue_custRev,
+    KipConfigValue_tableConf,
+
+    // --- EMC ---
     KipConfigValue_commonEmcMemVolt,
+    KipConfigValue_stepMode,
     KipConfigValue_eristaEmcMaxClock,
     KipConfigValue_eristaEmcMaxClock1,
     KipConfigValue_eristaEmcMaxClock2,
-
-    KipConfigValue_stepMode,
     KipConfigValue_marikoEmcMaxClock,
     KipConfigValue_marikoEmcVddqVolt,
     KipConfigValue_emcDvbShift,
     KipConfigValue_marikoSocVmax,
 
+    // --- EMC Timings ---
     KipConfigValue_t1_tRCD,
     KipConfigValue_t2_tRP,
     KipConfigValue_t3_tRAS,
@@ -102,77 +106,45 @@ typedef enum {
     KipConfigValue_t6_tRTW,
     KipConfigValue_t7_tWTR,
     KipConfigValue_t8_tREFI,
-
     KipConfigValue_timingEmcTbreak,
     KipConfigValue_low_t6_tRTW,
     KipConfigValue_low_t7_tWTR,
-
     KipConfigValue_t2_tRP_cap,
+    KipConfigValue_t6_tRTW_fine_tune,
+    KipConfigValue_t7_tWTR_fine_tune,
 
+    // --- EMC Latencies ---
     KipConfigValue_read_latency_1333,
     KipConfigValue_read_latency_1600,
     KipConfigValue_read_latency_1866,
     KipConfigValue_read_latency_2133,
-
     KipConfigValue_write_latency_1333,
     KipConfigValue_write_latency_1600,
     KipConfigValue_write_latency_1866,
     KipConfigValue_write_latency_2133,
-
     KipConfigValue_mem_burst_read_latency,
     KipConfigValue_mem_burst_write_latency,
 
+    // --- CPU (Erista) ---
     KipConfigValue_eristaCpuUV,
     KipConfigValue_eristaCpuVmin,
     KipConfigValue_eristaCpuMaxVolt,
     KipConfigValue_eristaCpuUnlock,
+    KipConfigValue_eristaCpuBoostClock,
 
+    // --- CPU (Mariko) ---
     KipConfigValue_marikoCpuUVLow,
     KipConfigValue_marikoCpuUVHigh,
-    KipConfigValue_tableConf,
     KipConfigValue_marikoCpuLowVmin,
     KipConfigValue_marikoCpuHighVmin,
     KipConfigValue_marikoCpuMaxVolt,
     KipConfigValue_marikoCpuMaxClock,
-    KipConfigValue_eristaCpuBoostClock,
     KipConfigValue_marikoCpuBoostClock,
 
+    // --- GPU (Erista) ---
     KipConfigValue_eristaGpuUV,
     KipConfigValue_eristaGpuVmin,
-
-    KipConfigValue_marikoGpuUV,
-    KipConfigValue_marikoGpuVmin,
-    KipConfigValue_marikoGpuVmax,
-
-    KipConfigValue_commonGpuVoltOffset,
-    KipConfigValue_gpuSpeedo,
-
-    KipConfigValue_g_volt_76800,
-    KipConfigValue_g_volt_153600,
-    KipConfigValue_g_volt_230400,
-    KipConfigValue_g_volt_307200,
-    KipConfigValue_g_volt_384000,
-    KipConfigValue_g_volt_460800,
-    KipConfigValue_g_volt_537600,
-    KipConfigValue_g_volt_614400,
-    KipConfigValue_g_volt_691200,
-    KipConfigValue_g_volt_768000,
-    KipConfigValue_g_volt_844800,
-    KipConfigValue_g_volt_921600,
-    KipConfigValue_g_volt_998400,
-    KipConfigValue_g_volt_1075200,
-    KipConfigValue_g_volt_1152000,
-    KipConfigValue_g_volt_1228800,
-    KipConfigValue_g_volt_1267200,
-    KipConfigValue_g_volt_1305600,
-    KipConfigValue_g_volt_1344000,
-    KipConfigValue_g_volt_1382400,
-    KipConfigValue_g_volt_1420800,
-    KipConfigValue_g_volt_1459200,
-    KipConfigValue_g_volt_1497600,
-    KipConfigValue_g_volt_1536000,
-
-    KipConfigValue_g_volt_e_76800,
+    KipConfigValue_g_volt_e_76800,      // contiguous block — arithmetic: g_volt_e_76800 + i (27 entries)
     KipConfigValue_g_volt_e_115200,
     KipConfigValue_g_volt_e_153600,
     KipConfigValue_g_volt_e_192000,
@@ -200,8 +172,36 @@ typedef enum {
     KipConfigValue_g_volt_e_1036800,
     KipConfigValue_g_volt_e_1075200,
 
-    KipConfigValue_t6_tRTW_fine_tune,
-    KipConfigValue_t7_tWTR_fine_tune,
+    // --- GPU (Mariko) ---
+    KipConfigValue_marikoGpuUV,
+    KipConfigValue_marikoGpuVmin,
+    KipConfigValue_marikoGpuVmax,
+    KipConfigValue_commonGpuVoltOffset,
+    KipConfigValue_gpuSpeedo,
+    KipConfigValue_g_volt_76800,        // contiguous block — arithmetic: g_volt_76800 + i (24 entries)
+    KipConfigValue_g_volt_153600,
+    KipConfigValue_g_volt_230400,
+    KipConfigValue_g_volt_307200,
+    KipConfigValue_g_volt_384000,
+    KipConfigValue_g_volt_460800,
+    KipConfigValue_g_volt_537600,
+    KipConfigValue_g_volt_614400,
+    KipConfigValue_g_volt_691200,
+    KipConfigValue_g_volt_768000,
+    KipConfigValue_g_volt_844800,
+    KipConfigValue_g_volt_921600,
+    KipConfigValue_g_volt_998400,
+    KipConfigValue_g_volt_1075200,
+    KipConfigValue_g_volt_1152000,
+    KipConfigValue_g_volt_1228800,
+    KipConfigValue_g_volt_1267200,
+    KipConfigValue_g_volt_1305600,
+    KipConfigValue_g_volt_1344000,
+    KipConfigValue_g_volt_1382400,
+    KipConfigValue_g_volt_1420800,
+    KipConfigValue_g_volt_1459200,
+    KipConfigValue_g_volt_1497600,
+    KipConfigValue_g_volt_1536000,
 
     KipCrc32,
 
