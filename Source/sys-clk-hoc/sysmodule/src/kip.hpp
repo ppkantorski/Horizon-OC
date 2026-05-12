@@ -43,7 +43,7 @@ namespace kip {
         u32 stepMode;
         u32 marikoEmcMaxClock;
         u32 marikoEmcVddqVolt;
-        u32 emcDvbShift;
+        s32 emcDvbShift;
         u32 marikoSocVmax;
 
         // advanced config
@@ -217,7 +217,7 @@ namespace kip {
     static inline bool cust_set_step_mode(const char* p, u32 v) { CUST_WRITE_FIELD(p, stepMode, v); }
     static inline bool cust_set_mariko_emc_max(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoEmcMaxClock, v); }
     static inline bool cust_set_mariko_emc_vddq(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoEmcVddqVolt, v); }
-    static inline bool cust_set_emc_dvb_shift(const char* p, u32 v) { CUST_WRITE_FIELD(p, emcDvbShift, v); }
+    static inline bool cust_set_emc_dvb_shift(const char* p, s32 v) { CUST_WRITE_FIELD(p, emcDvbShift, v); }
 
     static inline bool cust_set_tRCD(const char* p, u32 v) { CUST_WRITE_FIELD(p, t1_tRCD, v); }
     static inline bool cust_set_tRP(const char* p, u32 v) { CUST_WRITE_FIELD(p, t2_tRP, v); }
@@ -305,7 +305,7 @@ namespace kip {
     static inline u32 cust_get_step_mode(const CustomizeTable* t) { return CUST_GET_FIELD(t, stepMode); }
     static inline u32 cust_get_mariko_emc_max(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoEmcMaxClock); }
     static inline u32 cust_get_mariko_emc_vddq(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoEmcVddqVolt); }
-    static inline u32 cust_get_emc_dvb_shift(const CustomizeTable* t) { return CUST_GET_FIELD(t, emcDvbShift); }
+    static inline s32 cust_get_emc_dvb_shift(const CustomizeTable* t) { return CUST_GET_FIELD(t, emcDvbShift); }
 
     static inline u32 cust_get_tRCD(const CustomizeTable* t) { return CUST_GET_FIELD(t, t1_tRCD); }
     static inline u32 cust_get_tRP(const CustomizeTable* t) { return CUST_GET_FIELD(t, t2_tRP); }
