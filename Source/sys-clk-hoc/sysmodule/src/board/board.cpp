@@ -55,11 +55,14 @@ namespace board {
     u32 fd = 0, fd2 = 0;
 
     void FetchHardwareInfos() {
-        ReadFuses(fuseData);
+        u64 fuseVirtAddr = 0;
+        Result rc = QueryMemoryMapping(&fuseVirtAddr, 0x7000F000, 0x1000);
+        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (fuse)");
+        ReadFuses(fuseData, fuseVirtAddr);
         SetGpuBracket(fuseData.gpuSpeedo, speedoBracket);
 
         u64 sku = 0, dramID = 0;
-        Result rc = splInitialize();
+        rc = splInitialize();
         ASSERT_RESULT_OK(rc, "splInitialize");
 
         rc = splGetConfig(SplConfigItem_HardwareType, &sku);
