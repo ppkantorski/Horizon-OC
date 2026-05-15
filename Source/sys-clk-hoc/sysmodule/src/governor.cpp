@@ -430,8 +430,14 @@ namespace governor {
                     u32 targetHz   = ResolveTargetHz(HocClkModule_GPU);
                     u32 maxHz      = clockManager::GetMaxAllowedHz(HocClkModule_GPU, clockManager::gContext.profile);
 
-                    // "Do Not Override" everywhere: cap to APM stock GPU clock.
-                    u32 stockGpuHz = 384000000u;
+                    // "Do Not Override" everywhere: cap to APM stock GPU clock for
+                    // the current performance configuration (docked, handheld, charging,
+                    // etc.).  cpuApmMode is read live each governor tick, so this
+                    // automatically adjusts when the console is docked or undocked.
+                    // The 384 MHz initialiser is only a safety fallback for the
+                    // unlikely case where cpuApmMode isn't in the table; the loop
+                    // below overwrites it with the correct value in all normal cases.
+                    u32 stockGpuHz = 384000000u; // fallback only — overwritten by loop
                     for (size_t i = 0; hocclk_g_apm_configurations[i].id; ++i) {
                         if (hocclk_g_apm_configurations[i].id == cpuApmMode) {
                             stockGpuHz = hocclk_g_apm_configurations[i].gpu_hz;
