@@ -25,6 +25,7 @@
 #include <vector>
 #include "freq_choice_gui.h"
 #include "value_choice_gui.h"
+#include "info_gui.h"
 class MiscGui : public BaseMenuGui
 {
 public:
@@ -32,7 +33,7 @@ public:
     ~MiscGui();
     void listUI() override;
     void refresh() override;
-    
+
 protected:
     HocClkConfigValueList* configList;
     std::map<HocClkConfigValue, tsl::elm::ListItem*> configButtons;
@@ -43,7 +44,7 @@ protected:
     std::set<HocClkConfigValue> configButtonSKeys;
     std::map<HocClkConfigValue, std::string> configButtonSSubtext;
     std::set<HocClkConfigValue> emcClockConfigs;
-    
+
     void addConfigToggle(HocClkConfigValue configVal, const char* altName, bool kip = false);
     void addConfigTrackbar(HocClkConfigValue configVal, const char* altName, const ValueRange& range, bool kip = true);
     void addMappedConfigTrackbar(HocClkConfigValue configVal, const char* altName,
@@ -74,7 +75,7 @@ protected:
                             HocClkModule module,
                             const std::map<uint32_t, std::string>& labels = {});
     void updateConfigToggles();
-    
+
     tsl::elm::ToggleListItem* enabledToggle;
     u8 frameCounter = 60;
     bool shouldSaveKip = false;

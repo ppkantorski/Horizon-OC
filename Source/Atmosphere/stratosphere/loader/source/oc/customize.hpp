@@ -20,7 +20,8 @@
 
 #pragma once
 
-#define CUST_REV 2
+#define CUST_REV 3
+#define KIP_VERSION 231
 
 #include "oc_common.hpp"
 #include "pcv/pcv_common.hpp"
@@ -76,11 +77,11 @@ static_assert(sizeof(CustomizeCpuDvfsTable) == sizeof(pcv::cvb_entry_t) * pcv::D
 constexpr uint32_t ERISTA_MTC_MAGIC = 0x43544D45; // EMTC
 constexpr uint32_t MARIKO_MTC_MAGIC = 0x43544D4D; // MMTC
 
-typedef struct CustomizeTable {
+struct CustomizeTable {
     u8  cust[4] = {'C', 'U', 'S', 'T'};
-    u32 custRev = CUST_REV;
+    u32 custRev    = CUST_REV;
+    u32 kipVersion = KIP_VERSION;
 
-    u32 placeholder;
     u32 hpMode;
 
     u32 commonEmcMemVolt;
@@ -91,7 +92,7 @@ typedef struct CustomizeTable {
     StepMode stepMode;
     u32 marikoEmcMaxClock;
     u32 marikoEmcVddqVolt;
-    u32 emcDvbShift;
+    s32 emcDvbShift;
     u32 marikoSocVmax;
     // advanced config
     u32 t1_tRCD;
@@ -167,7 +168,7 @@ typedef struct CustomizeTable {
     CustomizeGpuDvfsTable marikoGpuDvfsTableSLT;
     CustomizeGpuDvfsTable marikoGpuDvfsTableHiOPT;
 
-} CustomizeTable;
+};
 
 extern volatile CustomizeTable C;
 

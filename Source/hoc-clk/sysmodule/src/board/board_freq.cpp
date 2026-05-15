@@ -26,15 +26,24 @@
 
 #include <switch.h>
 #include <hocclk.h>
-#include <nxExt.h>
-#include "display_refresh_rate.hpp"
+#include "../hos/apm_ext.h"
+#include <i2c.h>
+#include "../i2c/i2cDrv.h"
+#include <t210.h>
+#include <max17050.h>
+#include <tmp451.h>
+#include <ipc_server.h>
+#include <lockable_mutex.h>
+#include "../display/display_refresh_rate.hpp"
 #include "board.hpp"
 #include "board_name.hpp"
-#include "../errors.hpp"
-#include "pllmb.hpp"
-#include "../config.hpp"
+#include "../file/errors.hpp"
+#include "../soc/pllmb.hpp"
+#include "../file/config.hpp"
+#include "../soc/gm20b.hpp"
 namespace board {
-
+    #define MIDDLE_FREQ_TABLE_START_POINT 1228800000
+    static u32 currentInjectedHz = 0;
     PcvModule GetPcvModule(HocClkModule hocclkModule) {
         switch (hocclkModule) {
             case HocClkModule_CPU:
@@ -70,7 +79,6 @@ namespace board {
         Result rc = 0;
         bool usesGovenor = module > HocClkModule_MEM;
 
-
         if (module == HocClkModule_Display) {
             display::SetRate(hz);
             return;
@@ -80,26 +88,38 @@ namespace board {
             return;
         }
 
+        bool useGm20b = (module == HocClkModule_GPU) && (GetSocType() == HocClkSocType_Mariko) && (hz % 38400000 == 0) && (hz % 76800000 != 0) && hz < MIDDLE_FREQ_TABLE_START_POINT;
+
+        u32 pcvHz = useGm20b ? ((hz + 76800000 - 1) / 76800000) * 76800000 : hz;
+
+        if (module == HocClkModule_GPU)
+            currentInjectedHz = 0;
+
         if (HOSSVC_HAS_CLKRST) {
             ClkrstSession session = {};
             rc = clkrstOpenSession(&session, GetPcvModuleId(module), 3);
             ASSERT_RESULT_OK(rc, "clkrstOpenSession");
-            ClkrstSetHz(session, hz);
+            ClkrstSetHz(session, pcvHz);
 
             /* Voltage bug workaround. */
             if (module == HocClkModule_CPU) {
                 svcSleepThread(300'000);
-                ClkrstSetHz(session, hz);
+                ClkrstSetHz(session, pcvHz);
             }
 
             clkrstCloseSession(&session);
         } else {
-            PcvSetHz(GetPcvModule(module), hz);
+            PcvSetHz(GetPcvModule(module), pcvHz);
 
             if (module == HocClkModule_CPU) {
                 svcSleepThread(300'000);
-                PcvSetHz(GetPcvModule(module), hz);
+                PcvSetHz(GetPcvModule(module), pcvHz);
             }
+        }
+
+        if (useGm20b) {
+            gm20b::setClock(hz / 1000);
+            currentInjectedHz = hz;
         }
     }
 
@@ -114,6 +134,10 @@ namespace board {
 
         if (module == HocClkModule_Display) {
             return GetDisplayRate(hz);
+        }
+
+        if (module == HocClkModule_GPU && currentInjectedHz != 0) {
+            return currentInjectedHz;
         }
 
         if (HOSSVC_HAS_CLKRST) {

@@ -125,7 +125,7 @@ public:
 
             //Print strings
             ///CPU
-            if (R_SUCCEEDED(clkrstCheck) || R_SUCCEEDED(pcvCheck)) {
+            if (1) {
 
                 uint32_t height_offset = 155;
                 if (realCPU_Hz && settings.showRealFreqs) {
@@ -173,7 +173,7 @@ public:
             }
             
             ///GPU
-            if (R_SUCCEEDED(clkrstCheck) || R_SUCCEEDED(pcvCheck) || R_SUCCEEDED(nvCheck)) {
+            if (R_SUCCEEDED(nvCheck)) {
                 
                 uint32_t height_offset = 320-8;
                 if (realGPU_Hz && settings.showRealFreqs) {
@@ -181,7 +181,7 @@ public:
                 }
 
                 renderer->drawString("GPU Usage", false, COMMON_MARGIN, 285-8, 20, (settings.catColor1));
-                if (R_SUCCEEDED(clkrstCheck) || R_SUCCEEDED(pcvCheck)) {
+                if (1) {
                     if (settings.showTargetFreqs) { 
                         //static auto targetFreqWidth = renderer->getTextDimensions("Target Frequency: ", false, 15).first;
                         renderer->drawString("Target Frequency", false, COMMON_MARGIN, height_offset, 15, (settings.catColor2));
@@ -213,7 +213,7 @@ public:
             static std::vector<std::string> specialChars = {""};
             
             ///RAM
-            if (R_SUCCEEDED(clkrstCheck) || R_SUCCEEDED(pcvCheck) || R_SUCCEEDED(Hinted)) {
+            if (R_SUCCEEDED(Hinted)) {
                 
                 uint32_t height_offset = 410;
                 if (realRAM_Hz && settings.showRealFreqs) {
@@ -221,7 +221,7 @@ public:
                 }
 
                 renderer->drawString("RAM Usage", false, COMMON_MARGIN, 375, 20, (settings.catColor1));
-                if (R_SUCCEEDED(clkrstCheck) || R_SUCCEEDED(pcvCheck)) {
+                if (1) {
                     if (settings.showTargetFreqs) {
                         //static auto targetFreqWidth = renderer->getTextDimensions("Target Frequency: ", false, 15).first;
                         renderer->drawString("Target Frequency", false, COMMON_MARGIN, height_offset, 15, (settings.catColor2));

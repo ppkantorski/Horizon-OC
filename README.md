@@ -11,7 +11,7 @@
 ![VSCode](https://img.shields.io/badge/VSCode-0078D4?style=for-the-badge\&logo=visual%20studio%20code\&logoColor=white)
 ![Made with Notepad++](assets/np++.png?raw=true)
 ![C++](https://img.shields.io/badge/C%2B%2B-00599C?style=for-the-badge\&logo=c%2B%2B\&logoColor=white)
-![Downloads](https://img.shields.io/github/downloads/souldbminersmwc/Horizon-OC/total.svg?style=for-the-badge)
+![Downloads](https://img.shields.io/github/downloads/Horizon-OC/Horizon-OC/total.svg?style=for-the-badge)
 
 ---
 
@@ -79,14 +79,57 @@ Refer to COMPILATION.md
 ## Clock table
 
 ### MEM clocks (mhz)
+
 * 3200 → max on mariko, JEDEC.
+* 3166
+* 3133
+* 3100
+* 3066
+* 3033
+* 3000
+* 2966
 * 2933 → JEDEC.
+* 2900
+* 2866
+* 2833
+* 2800
+* 2766
+* 2733
+* 2700
 * 2666 → JEDEC.
+* 2633
+* 2600
+* 2566
+* 2533
+* 2500
+* 2466
+* 2433
 * 2400 → max on erista, JEDEC.
+* 2366
+* 2333
+* 2300
+* 2266
+* 2233
+* 2200
+* 2166
 * 2133 → Mariko JEDEC standard max (4266 Modules)
+* 2100
+* 2066
+* 2033
+* 2000
 * 1996 → JEDEC standard
+* 1966
+* 1933
+* 1900
 * 1866 → Mariko JEDEC standard max (3733 Modules)
-* 1600 → official docked, boost mode, erista safe max, JEDEC.
+* 1833
+* 1800
+* 1766
+* 1733
+* 1700
+* 1666
+* 1633
+* 1600 → official docked, boost mode, Erista JEDEC standard max (3200 Modules), JEDEC.
 * 1331 → official handheld, JEDEC.
 * 1065
 * 800
@@ -149,23 +192,24 @@ Refer to COMPILATION.md
 
 ## Credits
 * **Lightos's Cat** - Cat
-
 * **Souldbminer** - hoc-clk and loader development
 * **Lightos** - Loader patches development, hoc-clk development, guides
 * **TDRR** - HOC Logo Design
+* **tetetete-ctrl** - Website design
 * **SciresM** - Atmosphere CFW
 * **CTCaer** - L4T, Hekate, proper RAM timings
 * **KazushiMe** - Switch OC Suite
 * **Hanai3bi (Meha)** - Switch OC Suite, EOS, sys-clk-eos
 * **NaGaa95** - L4T-OC kernel, Status Monitor fork
-* **B3711 (halop)** - EOS
+* **B3711 (halop)** - EOS, contributions
 * **sys-clk team (m4xw, p-sam, natinusala)** - sys-clk
 * **Dominatorul** - Soctherm driver, guides, general help
 * **ppkantorski** - Ultrahand sys-clk & Status Monitor fork
 * **MasaGratoR and ZachyCatGames** - General help
 * **MasaGratoR** - Status Monitor & Display Refresh Rate driver
-* **Dominatorul, Samybigio, Arcdelta, Miki, Happy, tetetete-ctrl, Winnerboi77, Blaise, Alvise, TDRR, agjeococh, frost, letum00, and Xenshen** - Testing
+* **Dominatorul, Samybigio, Arcdelta, Miki, Happy, Winnerboi77, Blaise, Alvise, agjeococh, frost, letum00, and Xenshen** - Testing
 * **Samybigio2011, Miki** - Italian translations
 * **angelblaster** - Korean translations
 * **q1332348216-glitch** - Chinese translations
+* **th3-ne0undr5c0r** - French translations
 * **Nvidia** - [Tegra X1 Technical Reference Manual](https://developer.nvidia.com/embedded/dlc/tegra-x1-technical-reference-manual), soctherm driver, L4T

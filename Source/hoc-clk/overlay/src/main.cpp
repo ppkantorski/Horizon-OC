@@ -29,7 +29,6 @@
 #include <tesla.hpp>
 #include "ui/gui/fatal_gui.h"
 #include "ui/gui/main_gui.h"
-#include "rgltr_services.h"  // for extern Service g_rgltrSrv, etc.
 
 class AppOverlay : public tsl::Overlay
 {
@@ -42,7 +41,6 @@ class AppOverlay : public tsl::Overlay
         //}
 
         virtual void exitServices() override {
-            rgltrExit();
             hocclkIpcExit();
         }
 

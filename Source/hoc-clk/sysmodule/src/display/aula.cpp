@@ -20,6 +20,8 @@
 #include "aula.hpp"
 #include "common.hpp"
 
+// I *think* HOS changes this in some ways, so look into it more
+
 namespace AulaDisplay {
     #define MMIO_REG32(base, off) *(vu32 *)((base) + (off))
     #define DSI(off)             MMIO_REG32(board::dsiVirtAddr, (off) << 2u)
@@ -31,10 +33,13 @@ namespace AulaDisplay {
         DSI(DSI_TRIGGER) = DSI_TRIGGER_HOST;
 
         if (wait)
-            svcSleepThread(wait * 1000);
+            svcSleepThread(wait * 1000); // usleep-equivalant
     }
 
     void SetDisplayColorMode(AulaColorMode mode) {
+        if(mode == AulaDisplayColorMode_DoNotOverride)
+            return;
+        // send display command to change color mode.
         _display_dsi_send_cmd(MIPI_DSI_DCS_SHORT_WRITE_PARAM,
                         MIPI_DCS_PRIV_SM_SET_COLOR_MODE | (mode << 8), 0);
 

@@ -48,11 +48,11 @@ namespace ams::ldr::hoc::pcv::mariko {
         {                                               },
     };
 
-    constexpr u32 CpuClkOfficial  = 1963'500;
-    constexpr u32 CpuVoltOfficial = 1120;
-    constexpr u32 CpuVminOfficial = 620;
-
-    constexpr u32 CpuTune0Low = 0xFFCF;
+    constexpr u32 CpuClkOfficial      = 1963'500;
+    constexpr u32 CpuVoltOfficial     = 1120;
+    constexpr u32 CpuHighVminOfficial = 850;
+    constexpr u32 CpuVminOfficial     = 620;
+    constexpr u32 CpuTune0Low         = 0xFFCF;
 
     static const u32 cpuVoltagePatchValues[]  = { 850, 38, 1120, 1000, 100, 1000, 0 };
     static const s32 cpuVoltagePatchOffsets[] = {  -2, -1,    5,    6,   7,    8, 9 };
@@ -230,7 +230,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         MtcTableIndex index;
     };
 
-    constexpr MtcDramIndex mtcIndexTable[] = {
+    const inline MtcDramIndex mtcIndexTable[] = {
         { HOAG_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       T210b0SdevEmcDvfsTableH1y4gb01,  },
         { AULA_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       T210b0SdevEmcDvfsTableH1y4gb01,  },
         { IOWA_4GB_HYNIX_H9HCNNNBKMMLXR_NEE,       T210b0SdevEmcDvfsTableH1y4gb01,  },

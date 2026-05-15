@@ -22,6 +22,8 @@
 #include "cat.h"
 #include "ult_ext.h"
 
+// tsl::elm::ListItem* custRevItem = NULL;
+tsl::elm::ListItem* kipVersionItem = NULL;
 tsl::elm::ListItem* SpeedoItem = NULL;
 tsl::elm::ListItem* IddqItem = NULL;
 tsl::elm::ListItem* DramModule = NULL;
@@ -37,6 +39,8 @@ tsl::elm::ListItem* ramBWItemCpu = NULL;
 tsl::elm::ListItem* ramBWItemGpu = NULL;
 tsl::elm::ListItem* ramBWItemMax = NULL;
 tsl::elm::ListItem* bqtempitem = NULL;
+tsl::elm::ListItem* aotagTempItem = NULL;
+tsl::elm::ListItem* cTypeItem = NULL;
 
 ImageElement* CatImage = NULL;
 HideableCategoryHeader* CatHeader = NULL;
@@ -54,13 +58,18 @@ AboutGui::~AboutGui()
 
 void AboutGui::listUI()
 {
+    BaseMenuGui::refresh();
+
+    if (!this->context)
+        return;
+
     this->listElement->addItem(
-        new tsl::elm::CategoryHeader("Voltages and Temps")
+        new tsl::elm::CategoryHeader("Voltages")
     );
 
     ramVoltItem =
         new tsl::elm::ListItem("RAM Voltage:");
-        
+
     if(IsMariko()) {
         this->listElement->addItem(ramVoltItem);
     }
@@ -68,11 +77,18 @@ void AboutGui::listUI()
         new tsl::elm::ListItem("Display Voltage:");
     this->listElement->addItem(dispVoltItem);
 
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("Temperatures")
+    );
     eristaPLLXItem =
         new tsl::elm::ListItem("PLLX Temp:");
-    if(IsErista()) {
+    if(this->context->temps[HocClkThermalSensor_AO] > 0) { // Only show if the value is valid (not -126, which means not patched)
         this->listElement->addItem(eristaPLLXItem);
     }
+
+    aotagTempItem =
+        new tsl::elm::ListItem("AOTAG Temp:");
+    this->listElement->addItem(aotagTempItem);
 
     bqtempitem =
         new tsl::elm::ListItem("BQ24193 Temp:");
@@ -93,15 +109,20 @@ void AboutGui::listUI()
     ramBWItemCpu =
         new tsl::elm::ListItem("RAM BW (CPU):");
     this->listElement->addItem(ramBWItemCpu);
-    
+
     ramBWItemGpu =
         new tsl::elm::ListItem("RAM BW (GPU):");
     this->listElement->addItem(ramBWItemGpu);
-    
+
 
     this->listElement->addItem(
-        new tsl::elm::CategoryHeader("HW Info")
+        new tsl::elm::CategoryHeader("Hardware Info")
     );
+
+    cTypeItem =
+        new tsl::elm::ListItem("Console Type:");
+    this->listElement->addItem(cTypeItem);
+
     SpeedoItem =
         new tsl::elm::ListItem("Speedo:");
     this->listElement->addItem(SpeedoItem);
@@ -111,7 +132,7 @@ void AboutGui::listUI()
     this->listElement->addItem(IddqItem);
 
     DramModule =
-        new tsl::elm::ListItem("Module: ");
+        new tsl::elm::ListItem("DRAM Module: ");
     this->listElement->addItem(DramModule);
 
     waferCordsItem =
@@ -127,6 +148,12 @@ void AboutGui::listUI()
     this->listElement->addItem(
         new tsl::elm::CategoryHeader("Software Info")
     );
+
+    // custRevItem = new tsl::elm::ListItem("CUST revision:");
+    // this->listElement->addItem(custRevItem);
+
+    kipVersionItem = new tsl::elm::ListItem("KIP version:");
+    this->listElement->addItem(kipVersionItem);
 
     if(!IsHoag()) {
         sysdockStatusItem =
@@ -179,13 +206,25 @@ void AboutGui::listUI()
         new tsl::elm::ListItem("Blaise25")
     );
 
-    // ---- Testers ----
     this->listElement->addItem(
-        new tsl::elm::CategoryHeader("Testers")
+        new tsl::elm::ListItem("tetetete-ctrl")
     );
 
     this->listElement->addItem(
-        new tsl::elm::ListItem("Dom")
+        new tsl::elm::ListItem("B3711")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("TDRR")
+    );
+
+    this->listElement->addItem(
+        new tsl::elm::ListItem("MasaGratoR")
+    );
+
+    // ---- Testers ----
+    this->listElement->addItem(
+        new tsl::elm::CategoryHeader("Testers")
     );
 
     this->listElement->addItem(
@@ -193,7 +232,7 @@ void AboutGui::listUI()
     );
 
     this->listElement->addItem(
-        new tsl::elm::ListItem("Delta")
+        new tsl::elm::ListItem("arcdelta")
     );
 
     this->listElement->addItem(
@@ -202,10 +241,6 @@ void AboutGui::listUI()
 
     this->listElement->addItem(
         new tsl::elm::ListItem("Happy")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("tetetete-ctrl")
     );
 
     this->listElement->addItem(
@@ -222,10 +257,6 @@ void AboutGui::listUI()
 
     this->listElement->addItem(
         new tsl::elm::ListItem("Alvise")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("TDRR")
     );
 
     this->listElement->addItem(
@@ -246,7 +277,7 @@ void AboutGui::listUI()
     );
 
     this->listElement->addItem(
-        new tsl::elm::ListItem("ScriesM - Atmosphere CFW")
+        new tsl::elm::ListItem("SciresM - Atmosphere CFW")
     );
 
     this->listElement->addItem(
@@ -254,15 +285,11 @@ void AboutGui::listUI()
     );
 
     this->listElement->addItem(
-        new tsl::elm::ListItem("hanai3bi - Switch OC Suite & EOS")
+        new tsl::elm::ListItem("hanai3Bi - Switch OC Suite & EOS")
     );
 
     this->listElement->addItem(
         new tsl::elm::ListItem("NaGaa95 - L4T-OC-Kernel")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("B3711 - EOS")
     );
 
     this->listElement->addItem(
@@ -274,7 +301,7 @@ void AboutGui::listUI()
     );
 
     this->listElement->addItem(
-        new tsl::elm::ListItem("MasaGratoR - Status Monitor")
+        new tsl::elm::ListItem("CtCaer - Hekate, L4T and Proper Timings")
     );
 
     // Create cat elements but hide them initially
@@ -342,7 +369,7 @@ void AboutGui::update()
 void AboutGui::refresh()
 {
     BaseMenuGui::refresh();
-    
+
     if (!this->context)
         return;
     // Format strings once per refresh
@@ -352,26 +379,38 @@ void AboutGui::refresh()
     SpeedoItem->setValue(strings[0]);
     IddqItem->setValue(strings[1]);
     DramModule->setValue(formatRamModule());
+
+    // custRevItem->setValue(std::to_string(this->context->custRev));
+
+    kipVersionItem->setValue(std::to_string((this->context->kipVersion / 100) % 10) + "." + std::to_string((this->context->kipVersion / 10) % 10) + "." + std::to_string( this->context->kipVersion % 10) + " (Cust Rev " + std::to_string(this->context->custRev) + ")");
     if(!IsHoag())
         sysdockStatusItem->setValue(this->context->isSysDockInstalled ? "Installed" : "Not Installed");
 
     saltyNXStatusItem->setValue(this->context->isSaltyNXInstalled ? "Installed" : "Not Installed");
-    
+
     if(IsHoag())
         RETROStatusItem->setValue(this->context->isUsingRetroSuper ? "Installed" : "Not Installed");
 
-    sprintf(strings[2], "X: %u Y: %u", this->context->waferX, this->context->waferY);
+    sprintf(strings[2], "X: %d Y: %d", this->context->waferX, this->context->waferY);
     waferCordsItem->setValue(strings[2]);
 
-    if(IsErista()) {
-        u32 millis = context->temps[HocClkThermalSensor_PLLX];
-        sprintf(strings[3], "%u.%u °C", millis / 1000U, (millis % 1000U) / 100U);
-        eristaPLLXItem->setValue(strings[3]);
+    s32 millis = context->temps[HocClkThermalSensor_PLLX];
+    sprintf(strings[3], "%u.%u °C", millis / 1000U, (millis % 1000U) / 100U);
+    eristaPLLXItem->setValue(strings[3]);
+
+    millis = context->temps[HocClkThermalSensor_AO];
+    if(millis > 0) {
+        sprintf(strings[11], "%u.%u °C", millis / 1000U, (millis % 1000U) / 100U);
+    } else if (millis == -125) {
+        sprintf(strings[11], "Invalid");
+    } else if (millis == -126) {
+        sprintf(strings[11], "Not Patched");
     }
+    aotagTempItem->setValue(strings[11]);
 
     sprintf(strings[4], "%u.%u / %u mV", context->voltages[HocClkVoltage_EMCVDD2] / 1000U, (context->voltages[HocClkVoltage_EMCVDD2] % 1000U) / 100U, context->voltages[HocClkVoltage_EMCVDDQ] / 1000);
     ramVoltItem->setValue(strings[4]);
-    
+
     sprintf(strings[5], "%u.%u mV", context->voltages[HocClkVoltage_Display] / 1000U, (context->voltages[HocClkVoltage_Display] % 1000U) / 100U);
     dispVoltItem->setValue(strings[5]);
 
@@ -388,22 +427,24 @@ void AboutGui::refresh()
     ramBWItemMax->setValue(strings[9]);
 
     switch(context->temps[HocClkThermalSensor_BQ24193]) {
-        case 0: 
-            strcpy(strings[10], "Normal"); 
+        case BQ24193Temp_Normal:
+            strcpy(strings[10], "Normal");
             break;
-        case 1: 
-            strcpy(strings[10], "Warm"); 
+        case BQ24193Temp_Warm:
+            strcpy(strings[10], "Warm");
             break;
-        case 2: 
-            strcpy(strings[10], "Hot"); 
+        case BQ24193Temp_Hot:
+            strcpy(strings[10], "Hot");
             break;
-        case 3: 
-            strcpy(strings[10], "Overheat"); 
+        case BQ24193Temp_Overheat:
+            strcpy(strings[10], "Overheat");
             break;
-        default: 
+        default:
             strcpy(strings[10], "Unknown");
     }
 
     bqtempitem->setValue(strings[10]);
+
+    cTypeItem->setValue(hocClkFormatConsoleType(this->context->consoleType, true));
 
 }

@@ -51,16 +51,16 @@ namespace ams::ldr::hoc::pcv::erista {
     };
 
     constexpr u32 CpuVoltOfficial = 1227;
-
     constexpr u32 CpuVminOfficial = 825;
+    constexpr u32 CpuTune0Low     = 0xFFEAD0FF;
 
     constexpr u32 CpuVoltL4T = 1257'000;
 
     static const u32 cpuVoltDvfsPattern[] = { 1227, 1000, 100, 1000, 0 };
-    static_assert(sizeof(cpuVoltDvfsPattern) == 0x14, "invalid cpuVoltDvfsPattern size");
+    static_assert(sizeof(cpuVoltDvfsPattern) == 0x14, "Invalid cpuVoltDvfsPattern size");
 
     static const u32 cpuVoltageThermalPattern[] = { 950, 1132, 0, 950, 1227, 0, 825, 1227, 15000, 825, 1170, 60000, 825, 1132, 80000 };
-    static_assert(sizeof(cpuVoltageThermalPattern) == 0x3c, "invalid cpuVoltageThermalPattern size");
+    static_assert(sizeof(cpuVoltageThermalPattern) == 0x3c, "Invalid cpuVoltageThermalPattern size");
 
     constexpr u32 GpuClkPllLimit  = 2'600'000;
     constexpr u32 GpuClkPllMax    = 921'600'000;
@@ -72,7 +72,7 @@ namespace ams::ldr::hoc::pcv::erista {
     static_assert(sizeof(gpuVoltDvfsPattern) == (sizeof(u32) * 6), "Invalid gpuVoltDvfsPattern");
 
     static const u32 gpuVoltThermalPattern[] = { 950, 1132, 0, 810, 1132, 15000, 810, 1132, 30000, 810, 1132, 50000, 810, 1132, 70000, 810, 1132, 105000 };
-    static_assert(sizeof(gpuVoltThermalPattern) == 0x48, "invalid gpuVoltageThermalPattern size");
+    static_assert(sizeof(gpuVoltThermalPattern) == 0x48, "Invalid gpuVoltageThermalPattern size");
 
     /* GPU Max Clock asm Pattern:
         *
@@ -109,8 +109,8 @@ namespace ams::ldr::hoc::pcv::erista {
         {                                                        },
     };
 
-    constexpr u32 MemVoltHOS = 1125'000;
-    constexpr u32 EmcClkMinFreq = 40800; /* 40.8 MHz table only exists on erista. */
+    constexpr u32 MemVoltHOS      = 1125'000;
+    constexpr u32 EmcClkMinFreq   = 40800; /* 40.8 MHz table only exists on erista. */
     constexpr u32 EmcClkPllmLimit = 1866'000'000;
 
     constexpr u32 MTC_TABLE_REV        = 7;
@@ -123,13 +123,13 @@ namespace ams::ldr::hoc::pcv::erista {
     enum DramId {
         ICOSA_4GB_SAMSUNG_K4F6E304HB_MGCH        = 0,
         ICOSA_4GB_HYNIX_H9HCNNNBPUMLHR_NLE       = 1,
-        ICOSA_4GB_MICRON_MT53B512M32D2NP_062_WTC = 2, /* This doesn't have a table in pcv? Wtf? */
+        ICOSA_4GB_MICRON_MT53B512M32D2NP_062_WTC = 2,
         ICOSA_6GB_SAMSUNG_K4FHE3D4HM_MGCH        = 4,
-        ICOSA_8GB_SAMSUNG_K4FBE3D4HM_MGXX        = 7, /* No table, but expected */
+        ICOSA_8GB_SAMSUNG_K4FBE3D4HM_MGXX        = 7,
     };
 
     enum MtcTableIndex {
-        T210SdevEmcDvfsTableS4gb01 = 0, /* HB-MGCH */
+        T210SdevEmcDvfsTableS4gb01 = 0, /* HB-MGCH, WT:C */
         T210SdevEmcDvfsTableS6gb01 = 1, /* HM-MGCH */
         T210SdevEmcDvfsTableH4gb01 = 2, /* HR-NLE  */
         MtcTableIndex_Invalid      = 3,
@@ -140,10 +140,11 @@ namespace ams::ldr::hoc::pcv::erista {
         MtcTableIndex index;
     };
 
-    constexpr MtcDramIndex mtcIndexTable[] = {
-        { ICOSA_4GB_SAMSUNG_K4F6E304HB_MGCH,  T210SdevEmcDvfsTableS4gb01, },
-        { ICOSA_6GB_SAMSUNG_K4FHE3D4HM_MGCH,  T210SdevEmcDvfsTableS6gb01, },
-        { ICOSA_4GB_HYNIX_H9HCNNNBPUMLHR_NLE, T210SdevEmcDvfsTableH4gb01, },
+    const inline MtcDramIndex mtcIndexTable[] = {
+        { ICOSA_4GB_SAMSUNG_K4F6E304HB_MGCH,        T210SdevEmcDvfsTableS4gb01, },
+        { ICOSA_4GB_MICRON_MT53B512M32D2NP_062_WTC, T210SdevEmcDvfsTableS4gb01, },
+        { ICOSA_6GB_SAMSUNG_K4FHE3D4HM_MGCH,        T210SdevEmcDvfsTableS6gb01, },
+        { ICOSA_4GB_HYNIX_H9HCNNNBPUMLHR_NLE,       T210SdevEmcDvfsTableH4gb01, },
     };
 
     void Patch(uintptr_t mapped_nso, size_t nso_size);

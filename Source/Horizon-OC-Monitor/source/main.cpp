@@ -419,8 +419,6 @@ public:
         tsl::hlp::doWithSmSession([this]{
 
             apmInitialize();
-            if (hosversionAtLeast(8,0,0)) clkrstCheck = clkrstInitialize();
-            else pcvCheck = pcvInitialize();
 
             if (hosversionAtLeast(5,0,0)) tcCheck = tcInitialize();
 
@@ -473,8 +471,6 @@ public:
         }
         shmemClose(&_sharedmemory);
         //Exit services
-        clkrstExit();
-        pcvExit();
         tsExit();
         tcExit();
         pwmChannelSessionClose(&g_ICon);
@@ -502,8 +498,6 @@ public:
         //Initialize services
         tsl::hlp::doWithSmSession([this]{
             apmInitialize();
-            if (hosversionAtLeast(8,0,0)) clkrstCheck = clkrstInitialize();
-            else pcvCheck = pcvInitialize();
 
             if (R_SUCCEEDED(nvInitialize())) nvCheck = nvOpen(&fd, "/dev/nvhost-ctrl-gpu");
 
@@ -556,8 +550,6 @@ public:
             hocclkIpcExit();
         }
         //Exit services
-        clkrstExit();
-        pcvExit();
         tsExit();
         tcExit();
         pwmChannelSessionClose(&g_ICon);
@@ -589,8 +581,6 @@ public:
         // Same service‐init as before
         tsl::hlp::doWithSmSession([this]{
             apmInitialize();
-            if (hosversionAtLeast(8,0,0)) clkrstCheck = clkrstInitialize();
-            else pcvCheck = pcvInitialize();
 
             if (R_SUCCEEDED(nvInitialize())) nvCheck = nvOpen(&fd, "/dev/nvhost-ctrl-gpu");
 
@@ -644,8 +634,6 @@ public:
             hocclkIpcExit();
         }
         // Exit services
-        clkrstExit();
-        pcvExit();
         tsExit();
         tcExit();
         pwmChannelSessionClose(&g_ICon);
@@ -679,8 +667,6 @@ public:
     virtual void initServices() override {
         tsl::hlp::doWithSmSession([this]{
             apmInitialize();
-            if (hosversionAtLeast(8,0,0)) clkrstCheck = clkrstInitialize();
-            else pcvCheck = pcvInitialize();
 
             if (R_SUCCEEDED(nvInitialize())) nvCheck = nvOpen(&fd, "/dev/nvhost-ctrl-gpu");
 
@@ -732,8 +718,6 @@ public:
         if (R_SUCCEEDED(hocclkCheck)) {
             hocclkIpcExit();
         }
-        clkrstExit();
-        pcvExit();
         tsExit();
         tcExit();
         pwmChannelSessionClose(&g_ICon);
@@ -762,8 +746,6 @@ public:
     virtual void initServices() override {
         tsl::hlp::doWithSmSession([this]{
             apmInitialize();
-            if (hosversionAtLeast(8,0,0)) clkrstCheck = clkrstInitialize();
-            else pcvCheck = pcvInitialize();
 
             if (R_SUCCEEDED(nvInitialize())) nvCheck = nvOpen(&fd, "/dev/nvhost-ctrl-gpu");
 
@@ -815,8 +797,6 @@ public:
         if (R_SUCCEEDED(hocclkCheck)) {
             hocclkIpcExit();
         }
-        clkrstExit();
-        pcvExit();
         tsExit();
         tcExit();
         pwmChannelSessionClose(&g_ICon);
@@ -845,8 +825,6 @@ public:
     virtual void initServices() override {
         tsl::hlp::doWithSmSession([this]{
             apmInitialize();
-            if (hosversionAtLeast(8,0,0)) clkrstCheck = clkrstInitialize();
-            else pcvCheck = pcvInitialize();
 
             if (R_SUCCEEDED(nvInitialize())) nvCheck = nvOpen(&fd, "/dev/nvhost-ctrl-gpu");
 
@@ -898,8 +876,6 @@ public:
         if (R_SUCCEEDED(hocclkCheck)) {
             hocclkIpcExit();
         }
-        clkrstExit();
-        pcvExit();
         tsExit();
         tcExit();
         pwmChannelSessionClose(&g_ICon);

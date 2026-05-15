@@ -87,7 +87,7 @@ namespace ams::ldr::hoc {
         static bool initDone = false;
         log_ctx_t *log_ctx = (log_ctx_t*)working_buf;
 
-        SmcCopyFromIram(working_buf, IRAM_LOG_CTX_ADDR, sizeof(working_buf));
+        R_DISCARD(SmcCopyFromIram(working_buf, IRAM_LOG_CTX_ADDR, sizeof(working_buf)));
 
         if (!initDone) {
             initDone = true;
@@ -103,21 +103,25 @@ namespace ams::ldr::hoc {
         va_end(args);
 
         if (res < 0 || res >= (static_cast<s32>(max_log_sz - log_ctx->end))) {
-            SmcCopyToIram(IRAM_LOG_CTX_ADDR, working_buf, sizeof(working_buf));
+            R_DISCARD(SmcCopyToIram(IRAM_LOG_CTX_ADDR, working_buf, sizeof(working_buf)));
             return;
         }
 
         log_ctx->end += res;
-        SmcCopyToIram(IRAM_LOG_CTX_ADDR, working_buf, sizeof(working_buf));
+        R_DISCARD(SmcCopyToIram(IRAM_LOG_CTX_ADDR, working_buf, sizeof(working_buf)));
     }
     #endif
 
     #if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
     void ViewLog() {
+        if (spl::GetSocType() == spl::SocType_Mariko) {
+            return;
+        }
+
         constexpr size_t PageSize = 4096;
         for (size_t ofs = 0; ofs < fatal_handler_bin_size; ofs += PageSize) {
             memcpy(&working_buf, fatal_handler_bin + ofs, std::min(fatal_handler_bin_size - ofs, PageSize));
-            SmcCopyToIram(ATMOSPHERE_IRAM_PAYLOAD_BASE + ofs, &working_buf, std::min(fatal_handler_bin_size - ofs, PageSize));
+            R_DISCARD(SmcCopyToIram(ATMOSPHERE_IRAM_PAYLOAD_BASE + ofs, &working_buf, std::min(fatal_handler_bin_size - ofs, PageSize)));
         }
 
         SmcRebootToIramPayload();

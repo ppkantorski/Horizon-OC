@@ -87,7 +87,9 @@ std::map<uint32_t, std::string> gpu_freq_label_e_uv = {
 std::map<uint32_t, std::string> gpu_freq_label_m = {
     {76800000, "Boost Mode"},
     {307200000, "Handheld"},
+    {345600000, "Handheld"},
     {384000000, "Handheld"},
+    {422400000, "Handheld"},
     {460800000, "Handheld"},
     {614400000, "Handheld Safe Max"},
     {768000000, "Docked"},

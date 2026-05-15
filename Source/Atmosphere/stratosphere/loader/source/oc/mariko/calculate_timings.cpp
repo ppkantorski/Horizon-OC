@@ -26,8 +26,8 @@ namespace ams::ldr::hoc::pcv::mariko {
             return;
         }
 
-        /* Fallback. */
-        rext = 0x1A;
+        /* > 3200 */
+        rext = 0x1E;
     }
 
     void SwitchLatency(volatile u32 &latency, u32 index, u32 latencyStep) {
@@ -139,27 +139,27 @@ namespace ams::ldr::hoc::pcv::mariko {
             tRPpbIndex = MIN(C.t2_tRP_cap, C.t2_tRP);
         }
 
-        tRCD    = tRCD_values[C.t1_tRCD];
-        tRPpb   = tRP_values[tRPpbIndex];
-        tRAS    = tRAS_values[C.t3_tRAS];
-        tRRD = tRRD_values[C.t4_tRRD];
-        tRFCpb  = tRFC_values[C.t5_tRFC];
+        tRCD     = tRCD_values[C.t1_tRCD];
+        tRPpb    = tRP_values[tRPpbIndex];
+        tRAS     = tRAS_values[C.t3_tRAS];
+        tRRD     = tRRD_values[C.t4_tRRD];
+        tRFCpb   = tRFC_values[C.t5_tRFC];
         u32 tRTW = C.t6_tRTW;
         u32 tWTR = 10 - tWTR_values[C.t7_tWTR];
 
         if (freq < C.timingEmcTbreak) {
-            tRTW  = C.low_t6_tRTW;
+            tRTW = C.low_t6_tRTW;
             tWTR = 10 - tWTR_values[C.low_t7_tWTR];
         }
 
         s32 finetRTW = C.fineTune_t6_tRTW;
         s32 finetWTR = C.fineTune_t7_tWTR;
 
-        tRC      = tRAS + tRPpb;
-        tRFCab   = tRFCpb * 2;
-        tXSR  = static_cast<double>(tRFCab + 7.5);
-        tFAW     = static_cast<u32>(tRRD * 4.0);
-        tRPab = tRPpb + 3;
+        tRC    = tRAS + tRPpb;
+        tRFCab = tRFCpb * 2;
+        tXSR   = static_cast<double>(tRFCab + 7.5);
+        tFAW   = static_cast<u32>(tRRD * 4.0);
+        tRPab  = tRPpb + 3;
 
         tR2P  = CEIL((RL * 0.426) - 2.0);
         tR2W  = FLOOR(FLOOR((5.0 / tCK_avg) + ((FLOOR(48.0 / WL) - 0.478) * 3.0)) / 1.501) + RL - (tRTW * 3) + finetRTW;

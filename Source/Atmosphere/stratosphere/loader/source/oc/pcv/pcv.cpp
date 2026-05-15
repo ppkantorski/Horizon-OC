@@ -153,7 +153,7 @@ namespace ams::ldr::hoc::pcv {
             { C.commonEmcMemVolt,                    912'500, 1350'000, false, panic::Emc }, // Official burst vmax for the RAMs is 1500mV
             { GET_MAX_OF_ARR(erista::maxEmcClocks), 1600'000, 2600'000, false, panic::Emc },
             { C.marikoEmcMaxClock,                  1600'000, 3500'000, false, panic::Emc },
-            { C.marikoEmcVddqVolt,                   250'000,  700'000, false, panic::Emc },
+            { C.marikoEmcVddqVolt,                   400'000,  750'000, false, panic::Emc },
             { C.marikoSocVmax,                          1000,     1200, false, panic::Emc },
             { eristaGpuDvfsMaxFreq,                  768'000, 1152'000, false, panic::Gpu },
             { marikoGpuDvfsMaxFreq,                  768'000, 1536'000, false, panic::Gpu },

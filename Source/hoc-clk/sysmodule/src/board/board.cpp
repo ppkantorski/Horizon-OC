@@ -24,14 +24,19 @@
  * --------------------------------------------------------------------------
  */
 
-#include <nxExt.h>
+#include "../hos/apm_ext.h"
+#include <i2c.h>
+#include <t210.h>
+#include <max17050.h>
+#include <tmp451.h>
+#include <ipc_server.h>
+#include <lockable_mutex.h>
 #include <hocclk.h>
 #include <switch.h>
 #include <pwm.h>
 #include <registers.h>
 #include <battery.h>
-#include "display_refresh_rate.hpp"
-#include <rgltr.h>
+#include "../display/display_refresh_rate.hpp"
 #include <notification.h>
 
 #include "board.hpp"
@@ -39,51 +44,65 @@
 #include "board_load.hpp"
 #include "board_volt.hpp"
 #include "board_misc.hpp"
-#include "../soctherm.hpp"
-#include "../integrations.hpp"
-#include "../file_utils.hpp"
+#include "../tsensor/soctherm.hpp"
+#include "../tsensor/aotag.hpp"
+#include "../hos/integrations.hpp"
+#include "../file/file_utils.hpp"
 namespace board {
 
-    u64 clkVirtAddr, dsiVirtAddr, apbVirtAddr;
+    u64 clkVirtAddr, dsiVirtAddr, apbVirtAddr, fuseVirtAddr;
 
     HocClkSocType gSocType;
     u8 gDramID;
-    HocClkConsoleType gConsoleType = HocClkConsoleType_Iowa;
+    HocClkConsoleType gConsoleType = HocClkConsoleType_Icosa;
     FuseData fuseData;
     u8 speedoBracket;
     PwmChannelSession iCon;
 
     u32 fd = 0, fd2 = 0;
 
+    #define PMC_BASE 0x7000E400
+    #define APB_MISC_GP_HIDREV 0x804
+    #define GP_HIDREV_MAJOR_T210 0x1
+    #define GP_HIDREV_MAJOR_T210B01 0x2
+    #define APB_BASE 0x70000000
+    #define FUSE_RESERVED_ODMX(x) (0x1C8 + 4 * (x))
+    #define FUSE_OFFSET 0x800
     void FetchHardwareInfos() {
-        ReadFuses(fuseData);
+        ReadFuses(fuseData, fuseVirtAddr);
         SetGpuBracket(fuseData.gpuSpeedo, speedoBracket);
 
-        u64 sku = 0, dramID = 0;
-        Result rc = splInitialize();
-        ASSERT_RESULT_OK(rc, "splInitialize");
-
-        rc = splGetConfig(SplConfigItem_HardwareType, &sku);
-        ASSERT_RESULT_OK(rc, "splGetConfig");
-
-        rc = splGetConfig(SplConfigItem_DramId, &dramID);
-        ASSERT_RESULT_OK(rc, "splGetConfig");
-        gDramID = dramID;
-        splExit();
-
-        switch(sku) {
-            case 2 ... 5:
-                gSocType = HocClkSocType_Mariko;
-                break;
-            default:
-                gSocType = HocClkSocType_Erista;
+        u32 hidrev = *(u32*)(apbVirtAddr + APB_MISC_GP_HIDREV);
+        if (((hidrev >> 4) & 0xF) >= GP_HIDREV_MAJOR_T210B01) {
+            gSocType = HocClkSocType_Mariko;
+            CacheGpuVoltTable();
+        } else {
+            gSocType = HocClkSocType_Erista;
         }
+
+        u32 odm4 = *(u32*)(fuseVirtAddr + FUSE_OFFSET + FUSE_RESERVED_ODMX(4));
 
         if (gSocType == HocClkSocType_Mariko) {
-            CacheGpuVoltTable();
+            switch ((odm4 & 0xF0000) >> 16) {
+                case 2:
+                    gConsoleType = HocClkConsoleType_Hoag;
+                    break;
+                case 4:
+                    gConsoleType = HocClkConsoleType_Aula;
+                    break;
+                case 1:
+                default:
+                    gConsoleType = HocClkConsoleType_Iowa;
+            }
+        } else {
+            gConsoleType = HocClkConsoleType_Icosa;
         }
 
-        gConsoleType = static_cast<HocClkConsoleType>(sku);
+        gDramID = (odm4 & 0xF8) >> 3;
+        // Get extended dram id info.
+        if (gSocType == HocClkSocType_Mariko) {
+            gDramID |= (odm4 & 0x7000) >> 7;
+        }
     }
 
     /* TODO: Check for config */
@@ -115,6 +134,23 @@ namespace board {
         rc = tmp451Initialize();
         ASSERT_RESULT_OK(rc, "tmp451Initialize");
 
+        rc = pmdmntInitialize();
+        ASSERT_RESULT_OK(rc, "pmdmntInitialize");
+
+        rc = QueryMemoryMapping(&clkVirtAddr, 0x60006000, 0x1000);
+        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (clk)");
+
+        rc = QueryMemoryMapping(&dsiVirtAddr, 0x54300000, 0x40000);
+        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (dsi)");
+
+        rc = QueryMemoryMapping(&apbVirtAddr, 0x70000000, 0x1000);
+        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (apb)");
+
+        rc = QueryMemoryMapping(&fuseVirtAddr, 0x7000F000, 0x1000);
+        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (fuse)");
+
+        FetchHardwareInfos();
+
         Result nvCheck = 1;
         if (R_SUCCEEDED(nvInitialize())) {
             nvCheck = nvOpen(&fd, "/dev/nvhost-ctrl-gpu");
@@ -127,18 +163,21 @@ namespace board {
             }
         }
 
-        rc = rgltrInitialize();
-        ASSERT_RESULT_OK(rc, "rgltrInitialize");
-
-        rc = pmdmntInitialize();
-        ASSERT_RESULT_OK(rc, "pmdmntInitialize");
-
         StartLoad(nvCheck, fd);
 
         batteryInfoInitialize();
-        FetchHardwareInfos();
 
-        soctherm::Initialize();
+        tsensor::InitializeSoctherm(); // SOCTHERM must be init before AOTAG
+
+        // PMC exosphere check
+        SecmonArgs args = {};
+        args.X[0] = 0xF0000002;
+        args.X[1] = PMC_BASE;
+        svcCallSecureMonitor(&args);
+
+        if (args.X[1] != PMC_BASE) { // if param 1 is identical read failed
+            tsensor::InitializeAotag(GetSocType() == HocClkSocType_Mariko);
+        }
 
         Result pwmCheck = 1;
         if (hosversionAtLeast(6,0,0) && R_SUCCEEDED(pwmInitialize())) {
@@ -146,15 +185,6 @@ namespace board {
         }
 
         StartMiscThread(pwmCheck, &iCon);
-
-        rc = QueryMemoryMapping(&clkVirtAddr, 0x60006000, 0x1000);
-        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (clk)");
-
-        rc = QueryMemoryMapping(&dsiVirtAddr, 0x54300000, 0x40000);
-        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (dsi)");
-        
-        rc = QueryMemoryMapping(&apbVirtAddr, 0x70000000, 0x1000);
-        ASSERT_RESULT_OK(rc, "QueryMemoryMapping (apb)");
 
         display::DisplayRefreshConfig cfg = {.clkVirtAddr = clkVirtAddr, .dsiVirtAddr = dsiVirtAddr, .isLite = (GetConsoleType() == HocClkConsoleType_Hoag), .isRetroSUPER = integrations::GetRETROSuperStatus()};
         display::Initialize(&cfg);
@@ -186,7 +216,6 @@ namespace board {
 
         pwmChannelSessionClose(&iCon);
         pwmExit();
-        rgltrExit();
         batteryInfoExit();
         pmdmntExit();
         nvExit();

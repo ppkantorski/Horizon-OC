@@ -50,16 +50,16 @@ volatile CustomizeTable C = {
 .emcDvbShift = 0,
 .marikoSocVmax = 0, /* 0 = stock limits (1450 - 1597 is 1050mV, 1598-1708 is 1025mV, 1709+ is 1000mV). */
 
-// Primary
-.t1_tRCD = 0,
-.t2_tRP  = 0,
-.t3_tRAS = 0,
-// Secondary
-.t4_tRRD  = 0,
-.t5_tRFC  = 0,
-.t6_tRTW  = 0,
-.t7_tWTR  = 0,
-.t8_tREFI = 0,
+/* Primary. */
+.t1_tRCD      = 0,
+.t2_tRP       = 0,
+.t3_tRAS      = 0,
+/* Secondary. */
+.t4_tRRD      = 0,
+.t5_tRFC      = 0,
+.t6_tRTW      = 0,
+.t7_tWTR      = 0,
+.t8_tREFI     = 0,
 
 /* At 1333WL, for some reason (incorrect ram timing config in mtc table?), tRP causes crashes at high reductions - 2 seems to be the most common limit. */
 /* This is a lazy workaround until I find the issue... */

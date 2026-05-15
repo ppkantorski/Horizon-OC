@@ -79,37 +79,44 @@ namespace ams::ldr::hoc::pcv::mariko {
     Result CpuFreqVdd(u32 *ptr) {
         dvfs_rail *entry = reinterpret_cast<dvfs_rail *>(reinterpret_cast<u8 *>(ptr) - offsetof(dvfs_rail, freq));
 
-        R_UNLESS(entry->id == 1, ldr::ResultInvalidCpuFreqVddEntry());
-        R_UNLESS(entry->min_mv == 250'000, ldr::ResultInvalidCpuFreqVddEntry());
-        R_UNLESS(entry->step_mv == 5000, ldr::ResultInvalidCpuFreqVddEntry());
-        R_UNLESS(entry->max_mv == 1525'000, ldr::ResultInvalidCpuFreqVddEntry());
+        R_UNLESS(entry->id      == 1,        ldr::ResultInvalidCpuFreqVddEntry());
+        R_UNLESS(entry->min_mv  == 250'000,  ldr::ResultInvalidCpuFreqVddEntry());
+        R_UNLESS(entry->step_mv == 5000,     ldr::ResultInvalidCpuFreqVddEntry());
+        R_UNLESS(entry->max_mv  == 1525'000, ldr::ResultInvalidCpuFreqVddEntry());
 
         if (C.marikoCpuUVHigh) {
             PATCH_OFFSET(ptr, CapCpuClock());
         } else {
             PATCH_OFFSET(ptr, GetDvfsTableLastEntry(C.marikoCpuDvfsTable)->freq);
         }
+
         R_SUCCEED();
     }
 
     Result CpuVoltDVFS(u32 *ptr) {
-        if (MatchesPattern(ptr, cpuVoltagePatchOffsets, cpuVoltagePatchValues)) {
-            if (C.marikoCpuLowVmin) {
-                PATCH_OFFSET(ptr, C.marikoCpuLowVmin);
-            }
+        CvbMeta *cpuCvbMeta = reinterpret_cast<CvbMeta *>(reinterpret_cast<u8 *>(ptr) - offsetof(CvbMeta, vmin));
 
-            if (C.marikoCpuHighVmin) {
-                PATCH_OFFSET(ptr - 2, C.marikoCpuHighVmin);
-            }
+        R_UNLESS(cpuCvbMeta->highVmin     == CpuHighVminOfficial, ldr::ResultInvalidCpuMinVolt());
+        R_UNLESS(cpuCvbMeta->unkStepMaybe == 38,                  ldr::ResultInvalidCpuMinVolt());
+        R_UNLESS(cpuCvbMeta->vmax         == CpuVoltOfficial,     ldr::ResultInvalidCpuMinVolt());
+        R_UNLESS(cpuCvbMeta->unkScale2    == 1000,                ldr::ResultInvalidCpuMinVolt());
+        R_UNLESS(cpuCvbMeta->speedoScale  == 100,                 ldr::ResultInvalidCpuMinVolt());
+        R_UNLESS(cpuCvbMeta->voltageScale == 1000,                ldr::ResultInvalidCpuMinVolt());
+        R_UNLESS(cpuCvbMeta->unkZero5     == 0,                   ldr::ResultInvalidCpuMinVolt());
 
-            if (C.marikoCpuMaxVolt) {
-                PATCH_OFFSET(ptr + 5, C.marikoCpuMaxVolt);
-            }
-
-            R_SUCCEED();
+        if (C.marikoCpuLowVmin) {
+            PATCH_OFFSET(&(cpuCvbMeta->vmin), C.marikoCpuLowVmin);
         }
 
-        R_THROW(ldr::ResultInvalidCpuMinVolt());
+        if (C.marikoCpuHighVmin) {
+            PATCH_OFFSET(&(cpuCvbMeta->highVmin), C.marikoCpuHighVmin);
+        }
+
+        if (C.marikoCpuMaxVolt) {
+            PATCH_OFFSET(&(cpuCvbMeta->vmax), C.marikoCpuMaxVolt);
+        }
+
+        R_SUCCEED();
     }
 
     Result CpuVoltThermals(u32 *ptr) {
@@ -133,80 +140,80 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     Result CpuVoltDfll(u32 *ptr) {
-        cvb_cpu_dfll_data *entry = reinterpret_cast<cvb_cpu_dfll_data *>(ptr);
+        CvbCpuDfllData *entry = reinterpret_cast<CvbCpuDfllData *>(ptr);
 
-        R_UNLESS(entry->tune0_low == 0xFFCF, ldr::ResultInvalidCpuVoltDfllEntry());
-        R_UNLESS(entry->tune0_high == 0x0, ldr::ResultInvalidCpuVoltDfllEntry());
-        R_UNLESS(entry->tune1_low == 0x12207FF, ldr::ResultInvalidCpuVoltDfllEntry());
+        R_UNLESS(entry->tune0_low  == 0xFFCF,    ldr::ResultInvalidCpuVoltDfllEntry());
+        R_UNLESS(entry->tune0_high == 0x0,       ldr::ResultInvalidCpuVoltDfllEntry());
+        R_UNLESS(entry->tune1_low  == 0x12207FF, ldr::ResultInvalidCpuVoltDfllEntry());
         R_UNLESS(entry->tune1_high == 0x3FFF7FF, ldr::ResultInvalidCpuVoltDfllEntry());
 
         switch (C.marikoCpuUVLow) {
             case 1:
-                PATCH_OFFSET(&(entry->tune0_low), 0xffa0);
+                PATCH_OFFSET(&(entry->tune0_low),  0xffa0);
                 PATCH_OFFSET(&(entry->tune0_high), 0xffff);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21107ff);
-                PATCH_OFFSET(&(entry->tune1_high), 0);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21107ff);
+                PATCH_OFFSET(&(entry->tune1_high), 0x0);
                 break;
             case 2:
                 PATCH_OFFSET(&(entry->tune0_high), 0xffdf);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21107ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21107ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27207ff);
                 break;
             case 3:
-                PATCH_OFFSET(&(entry->tune0_low), 0xffdf);
+                PATCH_OFFSET(&(entry->tune0_low),  0xffdf);
                 PATCH_OFFSET(&(entry->tune0_high), 0xffdf);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21107ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21107ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27307ff);
                 break;
             case 4:
-                PATCH_OFFSET(&(entry->tune0_low), 0xffff);
+                PATCH_OFFSET(&(entry->tune0_low),  0xffff);
                 PATCH_OFFSET(&(entry->tune0_high), 0xffdf);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21107ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21107ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27407ff);
                 break;
             case 5:
                 PATCH_OFFSET(&(entry->tune0_high), 0xffdf);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21607ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21607ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27707ff);
                 break;
             case 6:
                 PATCH_OFFSET(&(entry->tune0_high), 0xffdf);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21607ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21607ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27807ff);
                 break;
             case 7:
                 PATCH_OFFSET(&(entry->tune0_high), 0xdfff);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21607ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21607ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27b07ff);
                 break;
             case 8:
-                PATCH_OFFSET(&(entry->tune0_low), 0xdfff);
+                PATCH_OFFSET(&(entry->tune0_low),  0xdfff);
                 PATCH_OFFSET(&(entry->tune0_high), 0xdfff);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21707ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21707ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27b07ff);
                 break;
             case 9:
-                PATCH_OFFSET(&(entry->tune0_low), 0xdfff);
+                PATCH_OFFSET(&(entry->tune0_low),  0xdfff);
                 PATCH_OFFSET(&(entry->tune0_high), 0xdfff);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21707ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21707ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27c07ff);
                 break;
             case 10:
-                PATCH_OFFSET(&(entry->tune0_low), 0xdfff);
+                PATCH_OFFSET(&(entry->tune0_low),  0xdfff);
                 PATCH_OFFSET(&(entry->tune0_high), 0xdfff);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21707ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21707ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27d07ff);
                 break;
             case 11:
-                PATCH_OFFSET(&(entry->tune0_low), 0xdfff);
+                PATCH_OFFSET(&(entry->tune0_low),  0xdfff);
                 PATCH_OFFSET(&(entry->tune0_high), 0xdfff);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21707ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21707ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27e07ff);
                 break;
             case 12:
-                PATCH_OFFSET(&(entry->tune0_low), 0xdfff);
+                PATCH_OFFSET(&(entry->tune0_low),  0xdfff);
                 PATCH_OFFSET(&(entry->tune0_high), 0xdfff);
-                PATCH_OFFSET(&(entry->tune1_low), 0x21707ff);
+                PATCH_OFFSET(&(entry->tune1_low),  0x21707ff);
                 PATCH_OFFSET(&(entry->tune1_high), 0x27f07ff);
                 break;
             default:
@@ -215,7 +222,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         switch (C.marikoCpuUVHigh) {
             case 1:
-                PATCH_OFFSET(&(entry->tune1_high), 0);
+                PATCH_OFFSET(&(entry->tune1_high), 0x0);
                 PATCH_OFFSET(&(entry->tune0_high), 0xffff);
                 break;
             case 2:
@@ -300,7 +307,7 @@ namespace ams::ldr::hoc::pcv::mariko {
             asm_set_rd(asm_set_imm16(GpuAsmPattern[1], max_clock >> 16), rd)
         };
 
-        PATCH_OFFSET(ptr32, asm_patch[0]);
+        PATCH_OFFSET(ptr32,     asm_patch[0]);
         PATCH_OFFSET(ptr32 + 1, asm_patch[1]);
 
         R_SUCCEED();
@@ -365,7 +372,7 @@ namespace ams::ldr::hoc::pcv::mariko {
         }
 
         u32 trefbw = refresh_raw + 0x40;
-        trefbw = MIN(trefbw, static_cast<u32>(0x3FFF));
+        trefbw     = MIN(trefbw, static_cast<u32>(0x3FFF));
 
         const u32 dyn_self_ref_control = (static_cast<u32>(7605.0 / tCK_avg) + 260) | (table->burst_regs.emc_dyn_self_ref_control & 0xffff0000);
 
@@ -373,7 +380,7 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         WRITE_PARAM_ALL_REG(table, emc_rd_rcd, GET_CYCLE_CEIL(tRCD));
         WRITE_PARAM_ALL_REG(table, emc_wr_rcd, GET_CYCLE_CEIL(tRCD));
-        WRITE_PARAM_ALL_REG(table, emc_rc, MIN(GET_CYCLE_CEIL(tRC), static_cast<u32>(0xB8)));
+        WRITE_PARAM_ALL_REG(table, emc_rc, MIN(GET_CYCLE_CEIL(tRC), static_cast<u32>(0xB9)));
         WRITE_PARAM_ALL_REG(table, emc_ras, MIN(GET_CYCLE_CEIL(tRAS), static_cast<u32>(0x7F)));
         WRITE_PARAM_ALL_REG(table, emc_rrd, GET_CYCLE_CEIL(tRRD));
         WRITE_PARAM_ALL_REG(table, emc_rfcpb, GET_CYCLE_CEIL(tRFCpb));
@@ -432,22 +439,21 @@ namespace ams::ldr::hoc::pcv::mariko {
         WRITE_PARAM_ALL_REG(table, emc_rdv_early_mask, rdv);
         WRITE_PARAM_ALL_REG(table, emc_rdv_mask, rdv + 2);
         WRITE_PARAM_ALL_REG(table, emc_tr_rdv, rdv);
-        /* TODO: Check this out again at some point. */
         WRITE_PARAM_ALL_REG(table, emc_cmd_brlshft_2, 0x24);
         WRITE_PARAM_ALL_REG(table, emc_cmd_brlshft_3, 0x24);
 
         /* This needs some clean up. */
         constexpr double MC_ARB_DIV = 4.0;
-        constexpr u32 MC_ARB_SFA = 2;
+        constexpr u32 MC_ARB_SFA    = 2;
 
-        table->burst_mc_regs.mc_emem_arb_cfg          = table->rate_khz             / (33.3 * 1000) / MC_ARB_DIV;
-        table->burst_mc_regs.mc_emem_arb_timing_rcd   = CEIL(GET_CYCLE_CEIL(tRCD)   / MC_ARB_DIV) - 2;
-        table->burst_mc_regs.mc_emem_arb_timing_rp    = CEIL(GET_CYCLE_CEIL(tRPpb)  / MC_ARB_DIV) - 1;
-        table->burst_mc_regs.mc_emem_arb_timing_rc    = CEIL(GET_CYCLE_CEIL(tRC)    / MC_ARB_DIV) - 1;
-        table->burst_mc_regs.mc_emem_arb_timing_ras   = CEIL(GET_CYCLE_CEIL(tRAS)   / MC_ARB_DIV) - 2;
-        table->burst_mc_regs.mc_emem_arb_timing_faw   = CEIL(GET_CYCLE_CEIL(tFAW)   / MC_ARB_DIV) - 1;
-        table->burst_mc_regs.mc_emem_arb_timing_rrd   = CEIL(GET_CYCLE_CEIL(tRRD)   / MC_ARB_DIV) - 1;
-        table->burst_mc_regs.mc_emem_arb_timing_rfcpb = CEIL(GET_CYCLE_CEIL(tRFCpb) / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_cfg            = table->rate_khz             / (33.3 * 1000) / MC_ARB_DIV;
+        table->burst_mc_regs.mc_emem_arb_timing_rcd     = CEIL(GET_CYCLE_CEIL(tRCD)   / MC_ARB_DIV) - 2;
+        table->burst_mc_regs.mc_emem_arb_timing_rp      = CEIL(GET_CYCLE_CEIL(tRPpb)  / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_timing_rc      = CEIL(GET_CYCLE_CEIL(tRC)    / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_timing_ras     = CEIL(GET_CYCLE_CEIL(tRAS)   / MC_ARB_DIV) - 2;
+        table->burst_mc_regs.mc_emem_arb_timing_faw     = CEIL(GET_CYCLE_CEIL(tFAW)   / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_timing_rrd     = CEIL(GET_CYCLE_CEIL(tRRD)   / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_timing_rfcpb   = CEIL(GET_CYCLE_CEIL(tRFCpb) / MC_ARB_DIV) - 1;
         table->burst_mc_regs.mc_emem_arb_timing_rap2pre = CEIL(tR2P / MC_ARB_DIV);
         table->burst_mc_regs.mc_emem_arb_timing_wap2pre = CEIL(tW2P / MC_ARB_DIV) + MC_ARB_SFA;
 
@@ -520,12 +526,12 @@ namespace ams::ldr::hoc::pcv::mariko {
         table->la_scale_regs.mc_latency_allowance_hc_1      =              (table->la_scale_regs.mc_latency_allowance_hc_1      & Mask2)    |  allowance1;
         table->la_scale_regs.mc_latency_allowance_vi2_0     =              (table->la_scale_regs.mc_latency_allowance_vi2_0     & Mask2)    |  allowance1;
 
-        table->dram_timings.t_rp = tRFCpb;
+        table->dram_timings.t_rp  = tRFCpb;
         table->dram_timings.t_rfc = tRFCab;
 
         table->dram_timings.rl = RL;
-        table->emc_mrw2 = (table->emc_mrw2 & ~0xFFu) | static_cast<u32>(mrw2);
-        table->emc_cfg_2 = 0x11083D;
+        table->emc_mrw2        = (table->emc_mrw2 & ~0xFFu) | static_cast<u32>(mrw2);
+        table->emc_cfg_2       = 0x11083D;
     }
 
     void MemMtcPllmbDivisor(MarikoMtcTable *table) {
@@ -538,11 +544,11 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         bool remainder_check = (table->rate_khz - PllOscInKHz * (table->rate_khz / PllOscInKHz)) > (table->rate_khz - PllOscHalfKHz * divm_candidate_half) && static_cast<int>(((target_freq_d / PllOscHalfKHz - divm_candidate_half - 0.5) * 8192.0)) != 0;
 
-        u32 divm_final = remainder_check + 1;
+        u32 divm_final    = remainder_check + 1;
         table->pllmb_divm = divm_final;
 
         double div_step_d = static_cast<double>(PllOscInKHz) / divm_final;
-        s32 divn_integer = static_cast<u8>(table->rate_khz / div_step_d);
+        s32 divn_integer  = static_cast<u8>(table->rate_khz  / div_step_d);
         table->pllmb_divn = divn_integer;
 
         u32 divn_fraction = static_cast<s32>((target_freq_d / div_step_d - divn_integer - 0.5) * 8192.0);
@@ -553,34 +559,34 @@ namespace ams::ldr::hoc::pcv::mariko {
             s32 divn_fraction_ssc = static_cast<s32>((actual_freq_khz * 0.997 / div_step_d - divn_integer - 0.5) * 8192.0);
 
             double delta_scaled = (0.3 / div_step_d + 0.3 / div_step_d) * (divn_fraction - divn_fraction_ssc);
-            s32 delta_int = static_cast<s32>(delta_scaled);
-            double delta_frac = delta_scaled - delta_int;
+            s32 delta_int       = static_cast<s32>(delta_scaled);
+            double delta_frac   = delta_scaled - delta_int;
 
             u32 setup_value = 0;
             if (delta_frac <= 0.5) {
                 double round_val = (delta_int + ROUND(delta_frac + delta_frac)) ? 0.5 : 0.0;
-                setup_value = ROUND(delta_frac + delta_frac) ? static_cast<u32>(round_val + round_val) | 0x1000 : static_cast<u32>(round_val);
+                setup_value      = ROUND(delta_frac + delta_frac) ? static_cast<u32>(round_val + round_val) | 0x1000 : static_cast<u32>(round_val);
             } else {
                 s32 frac_doubled = ROUND(delta_frac - 0.5 + delta_frac - 0.5);
                 double round_val = 1.0;
-                setup_value = frac_doubled ? static_cast<u32>(round_val) : static_cast<u32>(round_val + round_val) | 0x1000;
+                setup_value      = frac_doubled ? static_cast<u32>(round_val) : static_cast<u32>(round_val + round_val) | 0x1000;
             }
 
             u32 ctrl1 = static_cast<u16>(divn_fraction_ssc) | (static_cast<u16>(divn_fraction) << 16);
-            u32 ctrl2 = static_cast<u16>(divn_fraction) | (static_cast<u16>(setup_value) << 16);
+            u32 ctrl2 = static_cast<u16>(divn_fraction)     | (static_cast<u16>(setup_value) << 16);
 
-            table->pllm_ss_ctrl1 = ctrl1;
-            table->pllm_ss_ctrl2 = ctrl2;
+            table->pllm_ss_ctrl1  = ctrl1;
+            table->pllm_ss_ctrl2  = ctrl2;
             table->pllmb_ss_ctrl1 = ctrl1;
             table->pllmb_ss_ctrl2 = ctrl2;
         } else {
-            table->pllm_ss_cfg &= 0xBFFFFFFF;
+            table->pllm_ss_cfg  &= 0xBFFFFFFF;
             table->pllmb_ss_cfg &= 0xBFFFFFFF;
 
-            u64 pair = (static_cast<u64>(divn_fraction) << 32) | static_cast<u64>(table->rate_khz);
-            u32 pll_misc = (table->pllm_ss_ctrl2 & 0xFFFF0000) | static_cast<u32>((pair - actual_freq_khz) >> 32);
+            u64 pair     = (static_cast<u64>(divn_fraction) << 32) | static_cast<u64>(table->rate_khz);
+            u32 pll_misc = (table->pllm_ss_ctrl2 & 0xFFFF0000)     | static_cast<u32>((pair - actual_freq_khz) >> 32);
 
-            table->pllm_ss_ctrl2 = pll_misc;
+            table->pllm_ss_ctrl2  = pll_misc;
             table->pllmb_ss_ctrl2 = pll_misc;
         }
     }
@@ -796,9 +802,9 @@ namespace ams::ldr::hoc::pcv::mariko {
             R_SKIP();
         }
 
-        u32 max0    = 1050;
-        u32 max1    = 1025;
-        u32 max2    = 1000;
+        s32 max0    = 1050;
+        s32 max1    = 1025;
+        s32 max2    = 1000;
         s32 voltAdd = 25 * C.emcDvbShift;
 
         if (C.marikoSocVmax && C.marikoSocVmax > 1000) {
@@ -807,11 +813,17 @@ namespace ams::ldr::hoc::pcv::mariko {
             max2 = C.marikoSocVmax;
         }
 
-        auto DvbVolt = [&](u32 zero, u32 one, u32 two) {
-            return std::array<u32, 3>{
-                std::min(zero + voltAdd, max0),
-                std::min(one  + voltAdd, max1),
-                std::min(two  + voltAdd, max2)
+        constexpr s32 MinVolt = 637;
+
+        auto ClampVolt = [&](s32 value, s32 max) {
+            return std::clamp(value + voltAdd, MinVolt, max);
+        };
+
+        auto DvbVolt = [&](s32 zero, s32 one, s32 two) {
+            return std::array<s32, 3>{
+                ClampVolt(zero, max0),
+                ClampVolt(one, max1),
+                ClampVolt(two, max2)
             };
         };
 
@@ -819,32 +831,33 @@ namespace ams::ldr::hoc::pcv::mariko {
             static_cast<u32>((v)[0]), \
             static_cast<u32>((v)[1]), \
             static_cast<u32>((v)[2])
-        DvbEntry emcDvbTableNew[] = {
-            {     204000, {             637, 637, 637,  } },
-            {    1331200, {             650, 637, 637,  } },
-            {    1600000, {             675, 650, 637,  } },
-            {    1866000, { DVB(DvbVolt(700, 675, 650)) } },
-            {    2133000, { DVB(DvbVolt(725, 700, 675)) } },
-            {    2400000, { DVB(DvbVolt(750, 725, 700)) } },
-            {    2666000, { DVB(DvbVolt(775, 750, 725)) } },
-            {    2933000, { DVB(DvbVolt(800, 775, 750)) } },
-            {    3200000, { DVB(DvbVolt(800, 800, 775)) } },
-            { 0xFFFFFFFF, {                             } },
+        DvbEntry emcDvbOcTableBrackets[] = {
+            {     204000, {              637,  637,  637,  }, },
+            {    1331200, {              650,  637,  637,  }, },
+            {    1600000, {              675,  650,  637,  }, },
+            {    1866000, { DVB(DvbVolt( 700,  675,  650)) }, },
+            {    2133000, { DVB(DvbVolt( 725,  700,  675)) }, },
+            {    2400000, { DVB(DvbVolt( 750,  725,  700)) }, },
+            {    2666000, { DVB(DvbVolt( 850,  825,  800)) }, },
+            {    2933000, { DVB(DvbVolt( 950,  925,  900)) }, },
+            {    3200000, { DVB(DvbVolt(1050, 1025, 1000)) }, },
+            {        ~0u, {                                }, },
         };
         #undef DVB
+        DvbEntry emcDvbTableOc[newEmcList.size()];
 
-        u32 j = MtcTableCountDefault;
-        for (u32 i = MtcTableCountDefault; i < newEmcList.size(); ++i) {
-            if (newEmcList[i] >= emcDvbTableNew[j].freq && newEmcList[i] < emcDvbTableNew[j + 1].freq) {
-                emcDvbTableNew[j].freq = newEmcList[i];
-                ++j;
-            } else {
-                break;
+        u32 bracketIndex = 0;
+        for (u32 i = 0; i < newEmcList.size(); ++i) {
+            while (newEmcList[i] >= emcDvbOcTableBrackets[bracketIndex + 1].freq) {
+                ++bracketIndex;
             }
+
+            emcDvbTableOc[i].freq = newEmcList[i];
+            std::memcpy(emcDvbTableOc[i].volt, emcDvbOcTableBrackets[bracketIndex].volt, sizeof(emcDvbTableOc[i].volt));
         }
 
         std::memset(mem_dvb_table_head, 0, sizeof(EmcDvbTableDefault));
-        std::memcpy(mem_dvb_table_head, &emcDvbTableNew, sizeof(emcDvbTableNew));
+        std::memcpy(mem_dvb_table_head, &emcDvbTableOc, sizeof(emcDvbTableOc));
 
         /* Max dvfs entry is 32, but HOS doesn't seem to boot if exact freq doesn't exist in dvb table,
            reason why it's like this
@@ -945,8 +958,9 @@ namespace ams::ldr::hoc::pcv::mariko {
         u8  movRd         = asm_get_rd(mov);
         u32 movCountPatch = asm_set_rd(asm_set_imm16(MtcMovAsm, newEmcList.size()), movRd);
 
-        PATCH_OFFSET(ptr - BrOffset, NopIns);
+        PATCH_OFFSET(ptr - BrOffset,  NopIns);
         PATCH_OFFSET(ptr - MovOffset, movCountPatch);
+
         R_SUCCEED();
     }
 

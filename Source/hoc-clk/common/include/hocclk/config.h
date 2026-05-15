@@ -73,6 +73,7 @@ typedef enum {
     HocClkConfigValue_IsFirstLoad,
 
     HocClkConfigValue_AulaDisplayColorPreset,
+    HocClkConfigValue_MarikoMiddleFreqs,
 
     KipConfigValue_custRev,
     // KipConfigValue_mtcConf,
@@ -289,7 +290,8 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "RAM Frequency Display Unit" : "RAM_display_unit";
         case HocClkConfigValue_AulaDisplayColorPreset:
             return pretty ? "Aula Display Color Preset" : "aula_color_preset";
-
+        case HocClkConfigValue_MarikoMiddleFreqs:
+            return pretty ? "Mariko Middle Clocks" : "mariko_middle_freqs";
         // KIP config values
         case KipConfigValue_custRev:
             return pretty ? "Custom Revision" : "kip_cust_rev";
@@ -502,6 +504,7 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
         case HocClkConfigValue_LiveCpuUv:
         case HocClkConfigValue_GPUSchedulingMethod:
         case HocClkConfigValue_MemoryFrequencyMeasurementMode:
+        case HocClkConfigValue_MarikoMiddleFreqs:
             return 0ULL;
         case HocClkConfigValue_RamDisplayUnit:
             return (uint64_t)RamDisplayUnit_MHz;
@@ -529,7 +532,7 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
         case HocClkConfigValue_DisplayVoltage:
             return 1200ULL; // Auto
         case HocClkConfigValue_AulaDisplayColorPreset:
-            return AulaDisplayColorMode_Basic;
+            return AulaDisplayColorMode_DoNotOverride;
         default:
             return 0ULL;
     }
@@ -561,6 +564,7 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_EnableExperimentalSettings:
         case HocClkConfigValue_LiveCpuUv:
         case HocClkConfigValue_GPUSchedulingMethod:
+        case HocClkConfigValue_MarikoMiddleFreqs:
             return (input & 0x1) == input;
 
         case KipConfigValue_custRev:

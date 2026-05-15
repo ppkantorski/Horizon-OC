@@ -95,6 +95,18 @@ public:
     }
 };
 
+class FocusableDrawer : public tsl::elm::CustomDrawer {
+public:
+    template<typename... Args>
+    FocusableDrawer(Args&&... args) : tsl::elm::CustomDrawer(std::forward<Args>(args)...) {
+        m_isItem = true;
+    }
+    Element* requestFocus(Element*, tsl::FocusDirection) override {
+        return this;
+    }
+    void drawHighlight(tsl::gfx::Renderer*) override {}
+};
+
 class HideableCustomDrawer : public tsl::elm::Element {
 private:
     bool visible;

@@ -18,11 +18,11 @@
 
 #include "misc_gui.h"
 #include "fatal_gui.h"
+#include "config_info_strings.h"
 #include "../format.h"
 #include <cstdio>
 #include <cstring>
 #include <vector>
-#include <notification.h>
 #include "labels.h"
 
 // This workaround *may* not be nessasary, but it seems to help with reducing stutter
@@ -89,7 +89,24 @@ MiscGui::~MiscGui()
 
 void MiscGui::addConfigToggle(HocClkConfigValue configVal, const char* altName, bool kip) {
     const char* configName = altName ? altName : hocclkFormatConfigValue(configVal, true);
-    tsl::elm::ToggleListItem* toggle = new tsl::elm::ToggleListItem(configName, this->configList->values[configVal]);
+    auto infoStrings = ConfigInfoStrings(configVal, IsMariko(), IsHoag());
+
+    struct YAwareToggle : tsl::elm::ToggleListItem {
+        std::vector<std::string> m_info;
+        std::string m_title;
+        YAwareToggle(const char* text, bool state, std::string title, std::vector<std::string> info)
+            : tsl::elm::ToggleListItem(text, state), m_info(std::move(info)), m_title(std::move(title)) {}
+        bool onClick(u64 keys) override {
+            if (!m_info.empty() && (keys & HidNpadButton_Y) && !(keys & ~HidNpadButton_Y)) {
+                tsl::changeTo<InfoGui>(m_title, m_info);
+                return true;
+            }
+            return tsl::elm::ToggleListItem::onClick(keys);
+        }
+    };
+
+    auto* toggle = new YAwareToggle(configName, this->configList->values[configVal],
+                                    configName, std::move(infoStrings));
     if (!kip)
         toggle->setTextColor(tsl::Color(120, 235, 255, 255));
     toggle->setStateChangedListener([this, configVal, kip](bool state) {
@@ -107,9 +124,13 @@ void MiscGui::addConfigToggle(HocClkConfigValue configVal, const char* altName, 
 }
 
 void MiscGui::addConfigTrackbar(HocClkConfigValue configVal, const char* altName, const ValueRange& range, bool kip) {
+    auto infoStrings = ConfigInfoStrings(configVal, IsMariko(), IsHoag());
     struct IndexedBar : tsl::elm::NamedStepTrackBar {
-        IndexedBar(const char* label, const ValueRange& r)
-            : tsl::elm::NamedStepTrackBar("", {""}, true, label) {
+        std::vector<std::string> m_info;
+        std::string m_title;
+        IndexedBar(const char* label, const ValueRange& r, std::string title, std::vector<std::string> info)
+            : tsl::elm::NamedStepTrackBar("", {""}, true, label),
+              m_info(std::move(info)), m_title(std::move(title)) {
             m_stepDescriptions.clear();
             u32 numSteps = (r.max - r.min) / r.step + 1;
             for (u32 i = 0; i < numSteps; i++) {
@@ -121,9 +142,17 @@ void MiscGui::addConfigTrackbar(HocClkConfigValue configVal, const char* altName
             m_numSteps = (u8)m_stepDescriptions.size();
             m_selection = m_stepDescriptions[0];
         }
+        bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState& touchPos,
+                         HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
+            if (!m_info.empty() && (keysDown & HidNpadButton_Y) && !(keysDown & ~HidNpadButton_Y)) {
+                tsl::changeTo<InfoGui>(m_title, m_info);
+                return true;
+            }
+            return tsl::elm::NamedStepTrackBar::handleInput(keysDown, keysHeld, touchPos, leftJoyStick, rightJoyStick);
+        }
     };
     const char* name = altName ? altName : hocclkFormatConfigValue(configVal, true);
-    auto* bar = new IndexedBar(name, range);
+    auto* bar = new IndexedBar(name, range, name, std::move(infoStrings));
     u32 cur = (u32)this->configList->values[configVal];
     u16 curStep = 0;
     if (cur >= range.min && cur <= range.max && range.step > 0 && (cur - range.min) % range.step == 0)
@@ -142,7 +171,25 @@ void MiscGui::addMappedConfigTrackbar(HocClkConfigValue configVal, const char* a
                                        std::vector<u32> vals,
                                        std::initializer_list<std::string> names, bool kip) {
     const char* name = altName ? altName : hocclkFormatConfigValue(configVal, true);
-    auto* bar = new tsl::elm::NamedStepTrackBar("", names, true, name);
+    auto infoStrings = ConfigInfoStrings(configVal, IsMariko(), IsHoag());
+
+    struct YAwareTrackBar : tsl::elm::NamedStepTrackBar {
+        std::vector<std::string> m_info;
+        std::string m_title;
+        YAwareTrackBar(const char* label, std::initializer_list<std::string> steps, std::string title, std::vector<std::string> info)
+            : tsl::elm::NamedStepTrackBar("", steps, true, label),
+              m_info(std::move(info)), m_title(std::move(title)) {}
+        bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState& touchPos,
+                         HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
+            if (!m_info.empty() && (keysDown & HidNpadButton_Y) && !(keysDown & ~HidNpadButton_Y)) {
+                tsl::changeTo<InfoGui>(m_title, m_info);
+                return true;
+            }
+            return tsl::elm::NamedStepTrackBar::handleInput(keysDown, keysHeld, touchPos, leftJoyStick, rightJoyStick);
+        }
+    };
+
+    auto* bar = new YAwareTrackBar(name, names, name, std::move(infoStrings));
     u32 cur = (u32)this->configList->values[configVal];
     u16 curIdx = 0;
     for (u16 i = 0; i < (u16)vals.size(); i++) {
@@ -171,6 +218,7 @@ void MiscGui::addConfigButton(HocClkConfigValue configVal,
     bool kip)
 {
     const char* configName = altName ? altName : hocclkFormatConfigValue(configVal, true);
+    auto infoStrings = ConfigInfoStrings(configVal, IsMariko(), IsHoag());
 
     tsl::elm::ListItem* listItem = new tsl::elm::ListItem(configName);
     if (!kip)
@@ -204,8 +252,14 @@ void MiscGui::addConfigButton(HocClkConfigValue configVal,
     ValueThresholds thresholdsCopy = (thresholds ? *thresholds : ValueThresholds{});
 
     listItem->setClickListener(
-        [this, configVal, range, categoryName, thresholdsCopy, labels, showDefaultValue, kip](u64 keys)
+        [this, configVal, range, categoryName, thresholdsCopy, labels, showDefaultValue, kip,
+         infoStrings = std::move(infoStrings), configName = std::string(configName)](u64 keys)
         {
+            if (!infoStrings.empty() && (keys & HidNpadButton_Y) && !(keys & ~HidNpadButton_Y)) {
+                tsl::changeTo<InfoGui>(configName, infoStrings);
+                return true;
+            }
+
             if ((keys & HidNpadButton_A) == 0)
                 return false;
 
@@ -288,6 +342,8 @@ void MiscGui::addConfigButtonS(HocClkConfigValue configVal,
     const char* subText,
     bool kip)
 {
+    const char* configName = altName ? altName : hocclkFormatConfigValue(configVal, true);
+    auto infoStrings = ConfigInfoStrings(configVal, IsMariko(), IsHoag());
     tsl::elm::ListItem* listItem = new tsl::elm::ListItem("");
     if (!kip)
         listItem->setTextColor(tsl::Color(120, 235, 255, 255));
@@ -322,8 +378,14 @@ void MiscGui::addConfigButtonS(HocClkConfigValue configVal,
     ValueThresholds thresholdsCopy = (thresholds ? *thresholds : ValueThresholds{});
 
     listItem->setClickListener(
-        [this, configVal, range, categoryName, thresholdsCopy, labels, showDefaultValue, kip](u64 keys)
+        [this, configVal, range, categoryName, thresholdsCopy, labels, showDefaultValue, kip,
+         infoStrings = std::move(infoStrings), configName = std::string(configName)](u64 keys)
         {
+            if (!infoStrings.empty() && (keys & HidNpadButton_Y) && !(keys & ~HidNpadButton_Y)) {
+                tsl::changeTo<InfoGui>(configName, infoStrings);
+                return true;
+            }
+
             if ((keys & HidNpadButton_A) == 0)
                 return false;
 
@@ -411,6 +473,7 @@ void MiscGui::addFreqButton(HocClkConfigValue configVal,
                             const std::map<uint32_t, std::string>& labels)
 {
     const char* configName = altName ? altName : hocclkFormatConfigValue(configVal, true);
+    auto infoStrings = ConfigInfoStrings(configVal, IsMariko(), IsHoag());
 
     tsl::elm::ListItem* listItem = new tsl::elm::ListItem(configName);
 
@@ -420,8 +483,14 @@ void MiscGui::addFreqButton(HocClkConfigValue configVal,
     listItem->setValue(valueText);
 
     listItem->setClickListener(
-        [this, configVal, module, labels](u64 keys)
+        [this, configVal, module, labels,
+         infoStrings = std::move(infoStrings), configName = std::string(configName)](u64 keys)
         {
+            if (!infoStrings.empty() && (keys & HidNpadButton_Y) && !(keys & ~HidNpadButton_Y)) {
+                tsl::changeTo<InfoGui>(configName, infoStrings);
+                return true;
+            }
+
             if ((keys & HidNpadButton_A) == 0)
                 return false;
 
@@ -484,8 +553,11 @@ void MiscGui::listUI()
     tsl::elm::CustomDrawer* rebootSetWarning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
         renderer->drawString("\uE150 Settings marked in blue", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
         renderer->drawString("don't require a reboot to apply!", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
+        renderer->drawString("You can also press \ue0e3 to show", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
+        renderer->drawString("information about each setting.", false, x + 20, y + 90, 18, tsl::style::color::ColorText);
+
     });
-    rebootSetWarning->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 70);
+    rebootSetWarning->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 110);
     this->listElement->addItem(rebootSetWarning);
 
     tsl::elm::ListItem* sysmoduleSettingsSubMenu = new tsl::elm::ListItem("General Settings");
@@ -589,6 +661,7 @@ protected:
         Result rc = hocclkIpcGetConfigValues(this->configList);
         if (R_FAILED(rc)) [[unlikely]] { FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc); return; }
         this->listElement->addItem(new tsl::elm::CategoryHeader("General Settings"));
+
         ValueThresholds thresholdsDisabled(0, 0);
         std::vector<NamedValue> ramVoltDispModes = {
             NamedValue("VDD2", RamDisplayMode_VDD2),
@@ -649,7 +722,9 @@ protected:
         if (R_FAILED(rc)) [[unlikely]] { FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc); return; }
         this->listElement->addItem(new tsl::elm::CategoryHeader("Experimental Settings"));
         ValueThresholds thresholdsDisabled(0, 0);
-
+        if(IsMariko()) {
+            addConfigToggle(HocClkConfigValue_MarikoMiddleFreqs, nullptr, true);
+        }
         addConfigToggle(HocClkConfigValue_LiveCpuUv, nullptr);
         std::vector<NamedValue> gpuSchedMethodValues = {
             NamedValue("INI", GpuSchedulingOverrideMethod_Ini),
@@ -743,6 +818,32 @@ protected:
             );
 
         }
+        if(IsAula()) {
+            std::vector<NamedValue> displayClrPreset = {
+                NamedValue("Do Not Override", AulaDisplayColorMode_DoNotOverride),
+                NamedValue("Basic", AulaDisplayColorMode_Basic),
+                NamedValue("Saturated", AulaDisplayColorMode_Saturated),
+                NamedValue("Washed", AulaDisplayColorMode_Washed),
+                NamedValue("Natural", AulaDisplayColorMode_Natural),
+                NamedValue("Vivid", AulaDisplayColorMode_Vivid),
+                NamedValue("Washed", AulaDisplayColorMode_Night0, "Night"),
+                NamedValue("Basic", AulaDisplayColorMode_Night1, "Night"),
+                NamedValue("Natural", AulaDisplayColorMode_Night2, "Night"),
+                NamedValue("Vivid", AulaDisplayColorMode_Night3, "Night"),
+            };
+
+            addConfigButton(
+                HocClkConfigValue_AulaDisplayColorPreset,
+                "Display Color Preset",
+                ValueRange(0, 1, 1, "", 0),
+                "Display Color Preset",
+                &thresholdsDisabled,
+                {},
+                displayClrPreset,
+                false,
+                false
+            );
+        }
     }
 };
 
@@ -831,32 +932,6 @@ protected:
                 {},
                 false
             );
-        } else {
-            std::vector<NamedValue> displayClrPreset = {
-                NamedValue("Basic", AulaDisplayColorMode_Basic),
-                NamedValue("Saturated", AulaDisplayColorMode_Saturated),
-                NamedValue("Washed", AulaDisplayColorMode_Washed),
-                NamedValue("Natural", AulaDisplayColorMode_Natural),
-                NamedValue("Vivid", AulaDisplayColorMode_Vivid),
-                NamedValue("Washed", AulaDisplayColorMode_Night0, "Night"),
-                NamedValue("Basic", AulaDisplayColorMode_Night1, "Night"),
-                NamedValue("Natural", AulaDisplayColorMode_Night2, "Night"),
-                NamedValue("Vivid", AulaDisplayColorMode_Night3, "Night"),
-            };
-
-            addConfigButton(
-                HocClkConfigValue_AulaDisplayColorPreset,
-                "Display Color Preset",
-                ValueRange(0, 1, 1, "", 0),
-                "Display Color Preset",
-                &thresholdsDisabled,
-                {},
-                displayClrPreset,
-                false,
-                false
-            );
-
-            
         }
     }
 };
@@ -931,7 +1006,10 @@ protected:
 
         this->listElement->addItem(new tsl::elm::CategoryHeader("RAM Settings"));
         
-        addConfigTrackbar(KipConfigValue_emcDvbShift,  "SoC DVB Shift",  ValueRange(0, 16, 1)); // yes, DVB 16 is nessesary
+        addMappedConfigTrackbar(KipConfigValue_emcDvbShift, "DVB Shift",
+            {0xFFFFFFFCu, 0xFFFFFFFDu, 0xFFFFFFFEu, 0xFFFFFFFFu, 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u},
+            {"-4", "-3", "-2", "-1", " 0", "1", "2", "3", "4", "5", "6", "7", "8"});
+
         if(IsMariko()) {
             u32 socSpeedo = this->context->speedos[HocClkSpeedo_SOC];
             std::string autoText = "1000 mV";
@@ -1345,7 +1423,12 @@ protected:
             tsl::elm::ListItem* item = new tsl::elm::ListItem(label);
             item->setValue(makeValueText(currentVal));
 
-            item->setClickListener([this, tierIdx, thisKey, keysArr](u64 keys) -> bool {
+            item->setClickListener([this, tierIdx, thisKey, keysArr, label](u64 keys) -> bool {
+                auto infoStrings = ConfigInfoStrings(thisKey, IsMariko(), IsHoag());
+                if (!infoStrings.empty() && (keys & HidNpadButton_Y) && !(keys & ~HidNpadButton_Y)) {
+                    tsl::changeTo<InfoGui>(std::string(label), infoStrings);
+                    return true;
+                }
                 if ((keys & HidNpadButton_A) == 0)
                     return false;
 

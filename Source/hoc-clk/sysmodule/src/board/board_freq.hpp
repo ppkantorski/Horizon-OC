@@ -27,8 +27,14 @@
 #pragma once
 #include <switch.h>
 #include <hocclk.h>
-#include <nxExt.h>
-#include "../errors.hpp"
+#include "../hos/apm_ext.h"
+#include <i2c.h>
+#include <t210.h>
+#include <max17050.h>
+#include <tmp451.h>
+#include <ipc_server.h>
+#include <lockable_mutex.h>
+#include "../file/errors.hpp"
 
 namespace board {
 

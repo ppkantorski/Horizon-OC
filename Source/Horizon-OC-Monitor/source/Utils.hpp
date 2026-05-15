@@ -69,9 +69,7 @@ MmuRequest nvencRequest;
 MmuRequest nvjpgRequest;
 
 //Checks
-Result clkrstCheck = 1;
 Result nvCheck = 1;
-Result pcvCheck = 1;
 Result i2cCheck = 1;
 Result pwmCheck = 1;
 Result tcCheck = 1;
@@ -554,28 +552,6 @@ void Misc(void*) {
     do {
         mutexLock(&mutex_Misc);
 
-        // CPU, GPU and RAM Frequency
-        if (R_SUCCEEDED(clkrstCheck)) {
-            ClkrstSession clkSession;
-            if (R_SUCCEEDED(clkrstOpenSession(&clkSession, PcvModuleId_CpuBus, 3))) {
-                clkrstGetClockRate(&clkSession, &CPU_Hz);
-                clkrstCloseSession(&clkSession);
-            }
-            if (R_SUCCEEDED(clkrstOpenSession(&clkSession, PcvModuleId_GPU, 3))) {
-                clkrstGetClockRate(&clkSession, &GPU_Hz);
-                clkrstCloseSession(&clkSession);
-            }
-            if (R_SUCCEEDED(clkrstOpenSession(&clkSession, PcvModuleId_EMC, 3))) {
-                clkrstGetClockRate(&clkSession, &RAM_Hz);
-                clkrstCloseSession(&clkSession);
-            }
-        }
-        else if (R_SUCCEEDED(pcvCheck)) {
-            pcvGetClockRate(PcvModule_CpuBus, &CPU_Hz);
-            pcvGetClockRate(PcvModule_GPU, &GPU_Hz);
-            pcvGetClockRate(PcvModule_EMC, &RAM_Hz);
-        }
-
         // Get sys-clk data
         if (R_SUCCEEDED(hocclkCheck)) {
             HocClkContext hocclkCTX;
@@ -599,6 +575,9 @@ void Misc(void*) {
                 realSOC_mV = hocclkCTX.voltages[HocClkVoltage_SOC];
                 realVDD2_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDD2];
                 realVDDQ_mV = hocclkCTX.voltages[HocClkVoltage_EMCVDDQ];
+                CPU_Hz = hocclkCTX.freqs[HocClkModule_CPU];
+                GPU_Hz = hocclkCTX.freqs[HocClkModule_GPU];
+                RAM_Hz = hocclkCTX.freqs[HocClkModule_MEM];
             }
         }
 
