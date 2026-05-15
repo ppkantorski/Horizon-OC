@@ -21,12 +21,13 @@ const u8 MAX17050_CURRENT_REG = 0x0A;
 
 // Buck Converter
 typedef enum I2c_BuckConverter_Reg {
-    I2c_Max77620_SD1VOLT_REG = 0x17, // Used for Erista DDR VDDQ+VDD2 / Mariko VDD2
-    I2c_Max77620_LDO0VOLT_REG = 0x23, // Used for Erista DDR VDDQ+VDD2 / Mariko VDD2
-    I2c_Max77621_VOLT_REG    = 0x00,
-    I2c_Max77812_CPUVOLT_REG = 0x26,
-    I2c_Max77812_GPUVOLT_REG = 0x23,
-    I2c_Max77812_MEMVOLT_REG = 0x25, // Master 3 (GPU 1 + 2, DRAM 3, CPU 4), used for Mariko VDDQ
+    I2c_Max77620_SD0VOLT_REG  = 0x16,
+    I2c_Max77620_SD1VOLT_REG  = 0x17, // Used for Erista DDR VDDQ+VDD2 / Mariko VDD2
+    I2c_Max77620_LDO0VOLT_REG = 0x23, // Used for Display panel (LDO0)
+    I2c_Max77621_VOLT_REG     = 0x00,
+    I2c_Max77812_CPUVOLT_REG  = 0x26,
+    I2c_Max77812_GPUVOLT_REG  = 0x23,
+    I2c_Max77812_MEMVOLT_REG  = 0x25, // Master 3 (GPU 1 + 2, DRAM 3, CPU 4), used for Mariko VDDQ
 } I2c_BuckConverter_Reg;
 
 typedef struct I2c_BuckConverter_Domain {
@@ -39,16 +40,17 @@ typedef struct I2c_BuckConverter_Domain {
     u8 por_val;
 } I2c_BuckConverter_Domain;
 
-const I2c_BuckConverter_Domain I2c_Erista_CPU       = { I2cDevice_Max77621Cpu,  I2c_Max77621_VOLT_REG,    0x7F,  6250, 606250, 1400000, };
-const I2c_BuckConverter_Domain I2c_Erista_GPU       = { I2cDevice_Max77621Gpu,  I2c_Max77621_VOLT_REG,    0x7F,  6250, 606250, 1400000, };
-const I2c_BuckConverter_Domain I2c_Erista_DRAM      = { I2cDevice_Max77620Pmic, I2c_Max77620_SD1VOLT_REG, 0x3F, 12500, 600000, 1250000, };
-const I2c_BuckConverter_Domain I2c_Display          = { I2cDevice_Max77620Pmic, I2c_Max77620_LDO0VOLT_REG, 0x7F,  25000, 800000,  1325000, };
-const I2c_BuckConverter_Domain I2c_Mariko_CPU       = { I2cDevice_Max77812_2,   I2c_Max77812_CPUVOLT_REG, 0xFF,  5000, 250000, 1525000, 0x78 };
-const I2c_BuckConverter_Domain I2c_Mariko_GPU       = { I2cDevice_Max77812_2,   I2c_Max77812_GPUVOLT_REG, 0xFF,  5000, 250000, 1525000, 0x78 };
-const I2c_BuckConverter_Domain I2c_Mariko_DRAM_VDDQ = { I2cDevice_Max77812_2,   I2c_Max77812_MEMVOLT_REG, 0xFF,  5000, 250000,  700000, 0x78 };
-const I2c_BuckConverter_Domain I2c_Mariko_DRAM_VDD2 = { I2cDevice_Max77620Pmic, I2c_Max77620_SD1VOLT_REG, 0x7F, 12500, 600000, 1250000, };
+const I2c_BuckConverter_Domain I2c_SOC              = { I2cDevice_Max77620Pmic, I2c_Max77620_SD0VOLT_REG,  0x7F, 12500, 600000, 1400000, };
+const I2c_BuckConverter_Domain I2c_VDD2             = { I2cDevice_Max77620Pmic, I2c_Max77620_SD1VOLT_REG,  0x7F, 12500, 600000, 1350000, };
+const I2c_BuckConverter_Domain I2c_Display          = { I2cDevice_Max77620Pmic, I2c_Max77620_LDO0VOLT_REG, 0x3F, 25000, 800000, 1325000, };
+const I2c_BuckConverter_Domain I2c_Erista_CPU       = { I2cDevice_Max77621Cpu,  I2c_Max77621_VOLT_REG,     0x7F,  6250, 606250, 1400000, };
+const I2c_BuckConverter_Domain I2c_Erista_GPU       = { I2cDevice_Max77621Gpu,  I2c_Max77621_VOLT_REG,     0x7F,  6250, 606250, 1400000, };
+const I2c_BuckConverter_Domain I2c_Mariko_CPU       = { I2cDevice_Max77812_2,   I2c_Max77812_CPUVOLT_REG,  0xFF,  5000, 250000, 1525000, 0x78 };
+const I2c_BuckConverter_Domain I2c_Mariko_GPU       = { I2cDevice_Max77812_2,   I2c_Max77812_GPUVOLT_REG,  0xFF,  5000, 250000, 1525000, 0x78 };
+const I2c_BuckConverter_Domain I2c_Mariko_DRAM_VDDQ = { I2cDevice_Max77812_2,   I2c_Max77812_MEMVOLT_REG,  0xFF,  5000, 250000,  700000, 0x78 };
 
 u32 I2c_BuckConverter_GetMvOut(const I2c_BuckConverter_Domain* domain);
+u32 I2c_BuckConverter_GetUvOut(const I2c_BuckConverter_Domain* domain);
 Result I2c_BuckConverter_SetMvOut(const I2c_BuckConverter_Domain* domain, u32 mvolt);
 
 // Bq24193 Battery management

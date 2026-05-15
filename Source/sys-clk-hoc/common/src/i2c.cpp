@@ -103,6 +103,10 @@ u32 I2c_BuckConverter_MultiplierToMvOut(const I2c_BuckConverter_Domain* domain, 
     return (domain->uv_min + domain->uv_step * multiplier) / 1000;
 }
 
+u32 I2c_BuckConverter_MultiplierToUvOut(const I2c_BuckConverter_Domain* domain, u8 multiplier) {
+    return domain->uv_min + domain->uv_step * multiplier;
+}
+
 u8 I2c_BuckConverter_MvOutToMultiplier(const I2c_BuckConverter_Domain* domain, u32 mvolt) {
     u32 uvolt = mvolt * 1000;
     if (uvolt < domain->uv_min)
@@ -127,6 +131,22 @@ u32 I2c_BuckConverter_GetMvOut(const I2c_BuckConverter_Domain* domain) {
             break;
     }
     return I2c_BuckConverter_MultiplierToMvOut(domain, val & domain->volt_mask);
+}
+
+u32 I2c_BuckConverter_GetUvOut(const I2c_BuckConverter_Domain* domain) {
+    u8 val;
+    // Retry 5 times if received POR value
+    for (int i = 0; i < 5; i++) {
+        if (R_FAILED(I2cRead_OutU8(domain->device, domain->reg, &val)))
+            return 0u;
+
+        // Wait 1us
+        svcSleepThread(1E3);
+
+        if (!domain->por_val || val != domain->por_val)
+            break;
+    }
+    return I2c_BuckConverter_MultiplierToUvOut(domain, val & domain->volt_mask);
 }
 
 Result I2c_BuckConverter_SetMvOut(const I2c_BuckConverter_Domain* domain, u32 mvolt) {
