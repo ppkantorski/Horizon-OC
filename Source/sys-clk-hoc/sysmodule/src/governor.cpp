@@ -36,7 +36,7 @@ namespace governor {
     // Single merged governor thread (CPU + GPU + VRR)
     Thread governorTHREAD;
 
-    void HandleGovernor(uint32_t targetHz)
+    void HandleGovernor(uint32_t /*targetHz*/)
     {
         // If governing is globally disabled, deactivate all governors and bail.
         if (!config::GetConfigValue(HocClkConfigValue_AllowGoverning)) {
@@ -51,22 +51,43 @@ namespace governor {
             return;
         }
 
-        u32 tempTargetHz = clockManager::gContext.overrideFreqs[HocClkModule_Governor];
-        if (!tempTargetHz) {
-            tempTargetHz = config::GetAutoClockHz(clockManager::gContext.applicationId, HocClkModule_Governor, clockManager::gContext.profile, true);
-            if (!tempTargetHz)
-                tempTargetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Governor, clockManager::gContext.profile, true);
-        }
+        // Read each priority level as a raw packed value — no chain fallthrough here.
+        // The packed u32 encodes three independent component states (CPU/GPU/VRR), each
+        // 8 bits wide.  A component value of 0 (DoNotOverride) at one level means
+        // "use whatever the next lower-priority level says for THIS component."
+        //
+        // The previous code did a single chain-fallthrough on the whole packed word:
+        // if any component in the temp override was non-zero (e.g. CPU=Disabled,
+        // GPU=DoNotOverride → packed=0x0001), the whole word was used and the GPU
+        // component stayed 0.  resolve(0, 0) → DoNotOverride → GPU governor disabled,
+        // silently ignoring an app-profile GPU=Enabled setting.
+        //
+        // Fix: read all three levels independently, then resolve each component
+        // separately so a DoNotOverride in one component of temp can fall through
+        // to the app/global setting for that component while other components honour
+        // the temp override.
+        u32 tempPacked   = clockManager::gContext.overrideFreqs[HocClkModule_Governor];
+        u32 appPacked    = config::GetAutoClockHz(clockManager::gContext.applicationId,
+                               HocClkModule_Governor, clockManager::gContext.profile, true);
+        u32 globalPacked = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID,
+                               HocClkModule_Governor, clockManager::gContext.profile, true);
 
-        auto resolve = [](u8 app, u8 temp) -> u8 {
-            if (temp == ComponentGovernor_Disabled) return ComponentGovernor_Disabled;
-            if (temp != ComponentGovernor_DoNotOverride) return temp;
-            return app;
+        auto resolveComponent = [](u8 tempVal, u8 appVal, u8 globalVal) -> u8 {
+            if (tempVal   != ComponentGovernor_DoNotOverride) return tempVal;
+            if (appVal    != ComponentGovernor_DoNotOverride) return appVal;
+            if (globalVal != ComponentGovernor_DoNotOverride) return globalVal;
+            return ComponentGovernor_DoNotOverride;
         };
 
-        u8 effectiveCpu = resolve(GovernorStateCpu(targetHz), GovernorStateCpu(tempTargetHz));
-        u8 effectiveGpu = resolve(GovernorStateGpu(targetHz), GovernorStateGpu(tempTargetHz));
-        u8 effectiveVrr = resolve(GovernorStateVrr(targetHz), GovernorStateVrr(tempTargetHz));
+        u8 effectiveCpu = resolveComponent(GovernorStateCpu(tempPacked),
+                                           GovernorStateCpu(appPacked),
+                                           GovernorStateCpu(globalPacked));
+        u8 effectiveGpu = resolveComponent(GovernorStateGpu(tempPacked),
+                                           GovernorStateGpu(appPacked),
+                                           GovernorStateGpu(globalPacked));
+        u8 effectiveVrr = resolveComponent(GovernorStateVrr(tempPacked),
+                                           GovernorStateVrr(appPacked),
+                                           GovernorStateVrr(globalPacked));
 
         bool newCpuGovernorState = (effectiveCpu == ComponentGovernor_Enabled);
         bool newGpuGovernorState = (effectiveGpu == ComponentGovernor_Enabled);
@@ -392,11 +413,33 @@ namespace governor {
                 if (gpuTable.count > 0) {
                     std::scoped_lock lock{clockManager::gContextMutex};
 
+                    // ow_boost OFF during boost/debounce: suppress GPU governing.
+                    u64 gpuNowNs = armTicksToNs(armGetSystemTick());
+                    bool gpuInDebounce = (clockManager::s_boostExitDeadlineNs != 0 &&
+                                          gpuNowNs < clockManager::s_boostExitDeadlineNs);
+                    bool gpuBoostProtected =
+                        !(bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode) &&
+                        (cpuInBoost || gpuInDebounce);
+                    if (gpuBoostProtected) {
+                        gpuDownHoldRemaining = 0;
+                        gpuLastHz            = 0;
+                    } else {
+
                     u32 gpuLoad    = board::GetPartLoad(HocClkPartLoad_GPU);
                     u32 tableMaxHz = gpuTable.list[gpuTable.count - 1];
-                    u32 desiredHz  = SchedutilTargetHz(gpuLoad, tableMaxHz);
                     u32 targetHz   = ResolveTargetHz(HocClkModule_GPU);
                     u32 maxHz      = clockManager::GetMaxAllowedHz(HocClkModule_GPU, clockManager::gContext.profile);
+
+                    // "Do Not Override" everywhere: cap to APM stock GPU clock.
+                    u32 stockGpuHz = 384000000u;
+                    for (size_t i = 0; hocclk_g_apm_configurations[i].id; ++i) {
+                        if (hocclk_g_apm_configurations[i].id == cpuApmMode) {
+                            stockGpuHz = hocclk_g_apm_configurations[i].gpu_hz;
+                            break;
+                        }
+                    }
+                    u32 scaleMax  = targetHz ? targetHz : stockGpuHz;
+                    u32 desiredHz = SchedutilTargetHz(gpuLoad, scaleMax);
 
                     if (targetHz && desiredHz > targetHz) desiredHz = targetHz;
                     if (maxHz    && desiredHz > maxHz)    desiredHz = maxHz;
@@ -422,6 +465,7 @@ namespace governor {
                         clockManager::gContext.freqs[HocClkModule_GPU] = newHz;
                         gpuLastHz = newHz;
                     }
+                    } // end !gpuBoostProtected
                 }
             } else {
                 gpuDownHoldRemaining = 0;

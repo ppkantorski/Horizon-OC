@@ -382,7 +382,14 @@ namespace clockManager {
             break;
         case HocClkModule_MEM:
             board::ResetToStockMem();
-            DVFSReset();
+            // When ow_boost is OFF and boost (or its debounce) is active, skip
+            // DVFSReset: it would write the profile/override GPU clock through the
+            // MEM module path, overriding the 76 MHz APM throttle.
+            // When ow_boost is ON the configured clock wins, so DVFSReset runs normally.
+            if (!( !(bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode) &&
+                   (isBoost || s_boostExitDeadlineNs != 0) )) {
+                DVFSReset();
+            }
             break;
         case HocClkModule_Display:
             if (config::GetConfigValue(HocClkConfigValue_OverwriteRefreshRate)) {
@@ -483,6 +490,15 @@ namespace clockManager {
             // allowing the normal non-boost path to run exactly once.
             bool skipCpuForDebounce = (module == HocClkModule_CPU && !isBoost && s_boostExitDeadlineNs != 0);
             if ((skipCpuDueToBoost || governorOwnerCpu || skipCpuForDebounce) && module == HocClkModule_CPU)
+                continue;
+            // Boost GPU Override (ow_boost) OFF: during boost, skip the GPU module so
+            // APM's 76 MHz throttle is not overridden by profile/override clocks or
+            // DVFSReset.  Also covers the post-boost debounce window.
+            // ow_boost ON: configured clock wins — fall through normally.
+            bool owBoost = (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode);
+            bool skipGpuDueToBoost  = !owBoost && isBoost;
+            bool skipGpuForDebounce = !owBoost && !isBoost && s_boostExitDeadlineNs != 0;
+            if ((skipGpuDueToBoost || skipGpuForDebounce) && module == HocClkModule_GPU)
                 continue;
             // Re-apply DVFS table when the GPU vmin offset slider changes.
             // MUST run before the noGPU governor-skip below — the governor manages
