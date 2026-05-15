@@ -22,7 +22,7 @@
 #include <memmem.h>
 #include <registers.h>
 #include <cstring>
-#include <rgltr.h>
+#include <i2c.h>
 #include <battery.h>
 #include "board.hpp"
 #include "board_freq.hpp"
@@ -215,59 +215,39 @@ namespace board {
     } PowerDomainId;
     */
     u32 GetVoltage(HocClkVoltage voltage) {
-        RgltrSession session;
-        Result rc = 0;
         u32 out = 0;
         BatteryChargeInfo info;
 
         switch (voltage) {
             case HocClkVoltage_SOC:
-                rc = rgltrOpenSession(&session, PcvPowerDomainId_Max77620_Sd0);
-                ASSERT_RESULT_OK(rc, "rgltrOpenSession")
-                rgltrGetVoltage(&session, &out);
-                rgltrCloseSession(&session);
+                out = I2c_BuckConverter_GetUvOut(&I2c_SOC);
                 break;
             case HocClkVoltage_EMCVDD2:
-                rc = rgltrOpenSession(&session, PcvPowerDomainId_Max77620_Sd1);
-                ASSERT_RESULT_OK(rc, "rgltrOpenSession")
-                rgltrGetVoltage(&session, &out);
-                rgltrCloseSession(&session);
+                out = I2c_BuckConverter_GetUvOut(&I2c_VDD2);
                 break;
             case HocClkVoltage_CPU:
                 if (GetSocType() == HocClkSocType_Mariko) {
-                    rc = rgltrOpenSession(&session, PcvPowerDomainId_Max77621_Cpu);
+                    out = I2c_BuckConverter_GetUvOut(&I2c_Mariko_CPU);
                 } else {
-                    rc = rgltrOpenSession(&session, PcvPowerDomainId_Max77812_Cpu);
+                    out = I2c_BuckConverter_GetUvOut(&I2c_Erista_CPU);
                 }
-                ASSERT_RESULT_OK(rc, "rgltrOpenSession")
-                rgltrGetVoltage(&session, &out);
-                rgltrCloseSession(&session);
                 break;
             case HocClkVoltage_GPU:
                 if (GetSocType() == HocClkSocType_Mariko) {
-                    rc = rgltrOpenSession(&session, PcvPowerDomainId_Max77621_Gpu);
+                    out = I2c_BuckConverter_GetUvOut(&I2c_Mariko_GPU);
                 } else {
-                    rc = rgltrOpenSession(&session, PcvPowerDomainId_Max77812_Gpu);
+                    out = I2c_BuckConverter_GetUvOut(&I2c_Erista_GPU);
                 }
-                ASSERT_RESULT_OK(rc, "rgltrOpenSession")
-                rgltrGetVoltage(&session, &out);
-                rgltrCloseSession(&session);
                 break;
             case HocClkVoltage_EMCVDDQ:
                 if (GetSocType() == HocClkSocType_Mariko) {
-                    rc = rgltrOpenSession(&session, PcvPowerDomainId_Max77812_Dram);
-                    ASSERT_RESULT_OK(rc, "rgltrOpenSession")
-                    rgltrGetVoltage(&session, &out);
-                    rgltrCloseSession(&session);
+                    out = I2c_BuckConverter_GetUvOut(&I2c_Mariko_DRAM_VDDQ);
                 } else {
-                    out = GetVoltage(HocClkVoltage_EMCVDD2);
+                    out = I2c_BuckConverter_GetUvOut(&I2c_VDD2); // VDD2 and VDDQ are always connected to the same rail on Erista
                 }
                 break;
             case HocClkVoltage_Display:
-                rc = rgltrOpenSession(&session, PcvPowerDomainId_Max77620_Ldo0);
-                ASSERT_RESULT_OK(rc, "rgltrOpenSession")
-                rgltrGetVoltage(&session, &out);
-                rgltrCloseSession(&session);
+                out = I2c_BuckConverter_GetUvOut(&I2c_Display);
                 break;
             case HocClkVoltage_Battery:
                 batteryInfoGetChargeInfo(&info);
