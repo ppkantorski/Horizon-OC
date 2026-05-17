@@ -29,7 +29,19 @@ namespace integrations {
         bool gSharedMemoryUsed = false;
         Handle gRemoteSharedMemory = 1;
         u64 gPrevTid = 0;
-        u8 resolutionLookup = 0;
+
+        // ReverseNX-RT shared block layout (MAGIC "NXRT" = 0x5452584E).
+        // Matches the Shared struct in ReverseNX-RT's overlay source exactly.
+        struct ReverseNXRTBlock {
+            uint32_t MAGIC;    // 0x5452584E
+            bool isDocked;     // true = forced docked, false = forced handheld
+            bool def;          // true = no override active (use hardware default)
+            bool pluginActive;
+            // remaining fields (res, wasDDRused) not needed
+        } NX_PACKED;
+
+        ReverseNXRTBlock* gRnxRT = nullptr;
+
         bool CheckSaltyNXPort() {
             Handle saltysd;
 
@@ -64,6 +76,17 @@ namespace integrations {
             gNxFps = nullptr;
         }
 
+        void SearchRnxRTBlock(uintptr_t base) {
+            for (ptrdiff_t off = 0; off < 0x1000; off += 4) {
+                auto* b = reinterpret_cast<ReverseNXRTBlock*>(base + off);
+                if (b->MAGIC == 0x5452584E) {
+                    gRnxRT = b;
+                    return;
+                }
+            }
+            gRnxRT = nullptr;
+        }
+
         void LoadSharedMemory() {
             if (SaltySD_Connect())
                 return;
@@ -88,7 +111,7 @@ namespace integrations {
 
     bool GetRETROSuperStatus() {
         struct stat st = {0};
-        return stat("sdmc:/config/horizon-oc/retro.flag", &st) == 0; // TODO: unhardcode this
+        return stat("sdmc:/config/" CONFIG_DIR "/retro.flag", &st) == 0; // TODO: unhardcode this
     }
 
     void LoadSaltyNX() {
@@ -129,7 +152,6 @@ namespace integrations {
         if (gPrevTid != tid) {
             gNxFps = nullptr;
             gPrevTid = tid;
-            resolutionLookup = 0;
         }
 
         if (!gNxFps) {
@@ -138,18 +160,40 @@ namespace integrations {
         }
 
         if (gNxFps) {
-            if (!resolutionLookup) {
-                gNxFps->renderCalls[0].calls = 0xFFFF;
-                resolutionLookup = 1;
-                return 0;
-            } else if (resolutionLookup == 1) {
-                if (gNxFps->renderCalls[0].calls != 0xFFFF) resolutionLookup = 2;
-                else return 0;
-            }
-            
+            gNxFps->renderCalls[0].calls = 0xFFFF;
+            svcSleepThread(10*1000);
             return gNxFps->renderCalls[0].height == 0 ? gNxFps->viewportCalls[0].height : gNxFps->renderCalls[0].height;
         }
         return 0;
+    }
+
+    u8 GetDisplaySync() {
+        if (!gSharedMemoryUsed)
+            return 0;
+
+        u64 tid = processManagement::GetCurrentApplicationId();
+        if (tid == 0)
+            return 0;
+
+        if (gPrevTid != tid) {
+            gNxFps = nullptr;
+            gRnxRT = nullptr;
+            gPrevTid = tid;
+        }
+
+        uintptr_t base = (uintptr_t)shmemGetAddr(&gSharedMemory);
+
+        // Check ReverseNX-RT block first (MAGIC "NXRT" = 0x5452584E).
+        // isDocked tells us the forced mode; def=true means no override is active.
+        if (!gRnxRT)
+            SearchRnxRTBlock(base);
+        if (gRnxRT && gRnxRT->pluginActive && !gRnxRT->def)
+            return gRnxRT->isDocked ? 0x02 : 0x01;
+
+        // Fall back to NxFps displaySync (bit 0 = handheld, bit 1 = docked).
+        if (!gNxFps)
+            SearchSharedMemoryBlock(base);
+        return gNxFps ? gNxFps->displaySync.general : 0;
     }
 
 }
