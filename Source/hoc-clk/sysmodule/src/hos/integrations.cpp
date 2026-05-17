@@ -29,7 +29,7 @@ namespace integrations {
         bool gSharedMemoryUsed = false;
         Handle gRemoteSharedMemory = 1;
         u64 gPrevTid = 0;
-
+        u8 resolutionLookup = 0;
         bool CheckSaltyNXPort() {
             Handle saltysd;
 
@@ -129,6 +129,7 @@ namespace integrations {
         if (gPrevTid != tid) {
             gNxFps = nullptr;
             gPrevTid = tid;
+            resolutionLookup = 0;
         }
 
         if (!gNxFps) {
@@ -137,8 +138,15 @@ namespace integrations {
         }
 
         if (gNxFps) {
-            gNxFps->renderCalls[0].calls = 0xFFFF;
-            svcSleepThread(10*1000);
+            if (!resolutionLookup) {
+                gNxFps->renderCalls[0].calls = 0xFFFF;
+                resolutionLookup = 1;
+                return 0;
+            } else if (resolutionLookup == 1) {
+                if (gNxFps->renderCalls[0].calls != 0xFFFF) resolutionLookup = 2;
+                else return 0;
+            }
+            
             return gNxFps->renderCalls[0].height == 0 ? gNxFps->viewportCalls[0].height : gNxFps->renderCalls[0].height;
         }
         return 0;
