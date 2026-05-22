@@ -30,6 +30,7 @@
 #include "display_refresh_rate.hpp"
 #include "board.hpp"
 #include "board_name.hpp"
+#include "board_volt.hpp"
 #include "../errors.hpp"
 #include "pllmb.hpp"
 #include "../config.hpp"
@@ -66,6 +67,14 @@ namespace board {
         ASSERT_RESULT_OK(pcvSetClockRate(moduleID, hz), "pcvSetClockRate");
     }
 
+    void HandleCpuUv()
+    {
+        if (board::GetSocType() == HocClkSocType_Erista)
+            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000); // Erista tbreak is always 1581MHz
+        else
+            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_marikoCpuUVLow), config::GetConfigValue(KipConfigValue_marikoCpuUVHigh), board::CalculateTbreak(config::GetConfigValue(KipConfigValue_tableConf)));
+    }
+
     void SetHz(HocClkModule module, u32 hz) {
         Result rc = 0;
         bool usesGovenor = module > HocClkModule_MEM;
@@ -100,6 +109,9 @@ namespace board {
                 svcSleepThread(300'000);
                 PcvSetHz(GetPcvModule(module), hz);
             }
+        }
+        if (config::GetConfigValue(HocClkConfigValue_LiveCpuUv) && module == HocClkModule_CPU) {
+            HandleCpuUv();
         }
     }
 

@@ -34,6 +34,8 @@ namespace board {
 
     void SetHz(HocClkModule module, u32 hz);
 
+    void HandleCpuUv();
+
     u32 GetHz(HocClkModule module);
     u32 GetRealHz(HocClkModule module);
     void GetFreqList(HocClkModule module, u32 *outList, u32 maxCount, u32 *outCount);

@@ -242,6 +242,10 @@ namespace clockManager {
                 I2c_Bq24193_SetFastChargeCurrentLimit(config::GetConfigValue(HocClkConfigValue_BatteryChargeCurrent));
             }
             I2c_BuckConverter_SetMvOut(&I2c_Display, config::GetConfigValue(HocClkConfigValue_DisplayVoltage));
+
+            if(config::GetConfigValue(HocClkConfigValue_LiveCpuUv)) {
+                board::HandleCpuUv();
+            }
         }
     }
 
@@ -325,14 +329,6 @@ namespace clockManager {
             board::SetHz(HocClkModule_GPU, ~0u);
             board::SetHz(HocClkModule_GPU, gpuHz);
         }
-    }
-
-    void HandleCpuUv()
-    {
-        if (board::GetSocType() == HocClkSocType_Erista)
-            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000);
-        else
-            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_marikoCpuUVLow), config::GetConfigValue(KipConfigValue_marikoCpuUVHigh), board::CalculateTbreak(config::GetConfigValue(KipConfigValue_tableConf)));
     }
 
     void DVFSReset()
@@ -559,10 +555,6 @@ namespace clockManager {
                         fileUtils::LogLine("[mgr] SetHz(MEM, %u) returned", nearestHz);
                     }
                     gContext.freqs[module] = nearestHz;
-
-                    if (module == HocClkModule_CPU && config::GetConfigValue(HocClkConfigValue_LiveCpuUv)) {
-                        HandleCpuUv();
-                    }
 
                     if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko
                         && targetHz < oldHz

@@ -30,6 +30,7 @@
 #include <pwm.h>
 #include <registers.h>
 #include <battery.h>
+#include <rgltr.h>
 #include "display_refresh_rate.hpp"
 
 #include "board.hpp"
@@ -131,6 +132,9 @@ namespace board {
         rc = pmdmntInitialize();
         ASSERT_RESULT_OK(rc, "pmdmntInitialize");
 
+        rc = rgltrInitialize();
+        ASSERT_RESULT_OK(rc, "rgltrInitialize");
+
         StartLoad(nvCheck, fd);
 
         batteryInfoInitialize();
@@ -169,6 +173,8 @@ namespace board {
 
         apmExtExit();
         psmExit();
+
+        rgltrExit();
 
         if (HOSSVC_HAS_TC) {
             tcExit();
