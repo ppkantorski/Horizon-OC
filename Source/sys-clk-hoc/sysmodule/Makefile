@@ -21,7 +21,7 @@ EXEFS_SRC	:=	exefs_src
 LIBNAMES	:=	minIni nxExt
 
 # Append "-hoc" so the sys-clk overlay detects HOC mode correctly via version string
-TARGET_VERSION	:= $(shell git describe --dirty --always --tags)-hoc
+TARGET_VERSION	:= $(shell git describe --always --tags)-hoc
 
 DEFINES	:=	-DDISABLE_IPC -DTARGET="\"$(TARGET)\"" -DTARGET_VERSION="\"$(TARGET_VERSION)\"" -DCONFIG_DIR="\"$(CONFIG_DIR)\""
 
