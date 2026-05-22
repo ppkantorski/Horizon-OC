@@ -24,7 +24,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
     {
         case HocClkConfigValue_PollingIntervalMs:
             return {
-                "The interval (in miliseconds) where clocks are applied, tempratures and voltages are polled and logs are written (if enabled).",
+                "The interval (in milliseconds) where clocks are applied, temperatures and voltages are polled and logs are written (if enabled).",
                 "Higher values may cause more delay between changing a setting and it taking effect, and lower values may increase sysmodule memory usage",
                 "Default: 300ms"
             };
@@ -109,7 +109,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
 
         case HocClkConfigValue_OverwriteRefreshRate:
             return {
-                "Conrols the avaiability of display refresh rate features.",
+                "Controls the availability of display refresh rate features.",
                 "When enabled, allows changing the display refresh rate and using display refresh rate related features."
             };
 
@@ -193,32 +193,6 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 " - Speedo 1487-1598: Bracket 0",
                 " - Speedo 1598-1709: Bracket 1",
                 " - Speedo 1709-1820: Bracket 2",
-                "SOC Volt Table:",
-                " - 1331/1600MHz tables are not modified",
-                " - 1633-1866MHz:",
-                "   - Bracket 0: 700mV",
-                "   - Bracket 1: 675mV",
-                "   - Bracket 2: 650mV",
-                " - 1900-2133MHz:",
-                "   - Bracket 0: 725mV",
-                "   - Bracket 1: 700mV",
-                "   - Bracket 2: 675mV",
-                " - 2166-2400MHz:",
-                "   - Bracket 0: 750mV",
-                "   - Bracket 1: 725mV",
-                "   - Bracket 2: 700mV",
-                " - 2433-2666MHz:",
-                "   - Bracket 0: 850mV",
-                "   - Bracket 1: 825mV",
-                "   - Bracket 2: 800mV",
-                " - 2700-2933MHz:",
-                "   - Bracket 0: 950mV",
-                "   - Bracket 1: 925mV",
-                "   - Bracket 2: 900mV",
-                " - 2966-3200MHz:",
-                "   - Bracket 0: 1050mV",
-                "   - Bracket 1: 1025mV",
-                "   - Bracket 2: 1000mV",
                 "Default: 0"
             };
 
@@ -261,7 +235,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "   - 1600, 1866, 1996, 2133, 2400, 2666, 2933 and 3200 MHz are used",
                 "The RAM max clock will always be available regardless of the step mode, but the intermediate frequencies will be limited by the selected step mode.",
                 "This setting does not affect performance and the option you choose mostly is based on your personal taste",
-                "33 MHz step mode is not possible due to certian limitations of Horizon OS",
+                "33 MHz step mode is not possible due to certain limitations of Horizon OS",
                 "Default: 66 MHz",
             };
 
@@ -356,13 +330,13 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
 
         case KipConfigValue_t6_tRTW_fine_tune:
             return {
-                "Finetunes the raw calculation of t6",
+                "Fine-tunes the raw calculation of t6",
                 "Default: 0"
             };
 
         case KipConfigValue_t7_tWTR_fine_tune:
             return {
-                "Finetunes the raw calculation of t6",
+                "Fine-tunes the raw calculation of t7",
                 "Default: 0"
             };
 
@@ -379,11 +353,11 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Example:",
                 "If 1333 is set to 2000 MHz, 1600 set to 2500 MHz, 1866 set to 2766 MHz and 2133 set to 2933 MHz:",
                 "Frequencies below 2000 MHz use 1333, 2033-2500 MHz use 1600, 2533-2766 MHz use 1866 and 2800-2933 MHz use 2133. ",
-                "Either of these can be ommited and it will work (say you set 1333 to -, then <2000 MHz will use 1600 latency)",
-                "If all of these parameters are ommited the latency will automatically be calculated as follows:",
+                "Either of these can be omitted and it will work (say you set 1333 to -, then <2000 MHz will use 1600 latency)",
+                "If all of these parameters are omitted the latency will automatically be calculated as follows:",
                 "1633-1866 MHz - 1866 WRL",
                 "1900+ MHz - 2133 WRL",
-                "These properties apply for both write and read latencies, and you can mix-and-match the brackets if nessesary",
+                "These properties apply for both write and read latencies, and you can mix-and-match the brackets if necessary",
                 "Default: -"
             };
 
@@ -499,7 +473,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Options:",
                 " - HiOPT: L4T Custom HiOPT table",
                 " - HiOPT - 15mV: L4T Custom HiOPT table with a 15mV offset",
-                " - High UV: The highest undervolt table, reccomended",
+                " - High UV: The highest undervolt table, recommended",
                 "Default: HiOPT"
             };
 
@@ -538,14 +512,14 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Options:",
                 " - HiOPT: L4T Custom HiOPT table",
                 " - HiOPT - 15mV: L4T Custom HiOPT table with a 15mV offset",
-                " - High UV: The highest undervolt table, reccomended",
+                " - High UV: The highest undervolt table, recommended",
                 "Default: HiOPT"
             };
 
         case KipConfigValue_eristaGpuVmin:
             return {
                 "Minimum GPU voltage",
-                "Default: 810 mV (812mV as erista is stepped my 6.5mV instead of 5mV)"
+                "Default: 810 mV (812mV as erista is stepped by 6.5mV instead of 5mV)"
             };
 
         case KipConfigValue_commonGpuVoltOffset:

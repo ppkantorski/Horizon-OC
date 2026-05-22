@@ -22,20 +22,20 @@
 
 namespace ams::ldr::hoc::pcv {
 
-    Result MemFreqPllmLimit(u32* ptr) {
-        clk_pll_param* entry = reinterpret_cast<clk_pll_param *>(ptr);
+    Result MemFreqPllmLimit(u32 *ptr) {
+        clk_pll_param *entry = reinterpret_cast<clk_pll_param *>(ptr);
         R_UNLESS(entry->freq == entry->vco_max, ldr::ResultInvalidMemPllmEntry());
 
         // Double the max clk simply
-        u32 max_clk = entry->freq * 2;
-        entry->freq = max_clk;
+        u32 max_clk    = entry->freq * 2;
+        entry->freq    = max_clk;
         entry->vco_max = max_clk;
         R_SUCCEED();
     }
 
-    Result MemVoltHandler(u32* ptr) {
+    Result MemVoltHandler(u32 *ptr) {
         // ptr value might be default_uv or max_uv
-        regulator* entries[2] = {
+        regulator *entries[2] = {
             reinterpret_cast<regulator *>(reinterpret_cast<u8 *>(ptr) - offsetof(regulator, type_1.default_uv)),
             reinterpret_cast<regulator *>(reinterpret_cast<u8 *>(ptr) - offsetof(regulator, type_1.max_uv)),
         };
@@ -44,16 +44,16 @@ namespace ams::ldr::hoc::pcv {
         constexpr u32 uv_min  = 600'000;
 
         auto validator = [](regulator* entry) {
-            R_UNLESS(entry->id == 1,                    ldr::ResultInvalidRegulatorEntry());
-            R_UNLESS(entry->type == 1,                  ldr::ResultInvalidRegulatorEntry());
+            R_UNLESS(entry->id              == 1,       ldr::ResultInvalidRegulatorEntry());
+            R_UNLESS(entry->type            == 1,       ldr::ResultInvalidRegulatorEntry());
             R_UNLESS(entry->type_1.volt_reg == 0x17,    ldr::ResultInvalidRegulatorEntry());
-            R_UNLESS(entry->type_1.step_uv == uv_step,  ldr::ResultInvalidRegulatorEntry());
-            R_UNLESS(entry->type_1.min_uv == uv_min,    ldr::ResultInvalidRegulatorEntry());
+            R_UNLESS(entry->type_1.step_uv  == uv_step, ldr::ResultInvalidRegulatorEntry());
+            R_UNLESS(entry->type_1.min_uv   == uv_min,  ldr::ResultInvalidRegulatorEntry());
             R_SUCCEED();
         };
 
-        regulator* entry = nullptr;
-        for (auto& i : entries) {
+        regulator *entry = nullptr;
+        for (auto &i : entries) {
             if (R_SUCCEEDED(validator(i))) {
                 entry = i;
             }
@@ -76,24 +76,25 @@ namespace ams::ldr::hoc::pcv {
     }
 
     void SafetyCheck() {
-        // if (C.custRev != CUST_REV)
-        //     CRASH("Triggered");
-
         struct sValidator {
             volatile u32 value;
             u32 min;
             u32 max;
-            bool value_required = false;
             u32 panic;
+            bool value_required = false;
 
             Result check() {
-                if (!value_required && !value)
+                if (!value_required && !value) {
                     R_SUCCEED();
+                }
 
-                if (min && value < min)
+                if (min && value < min) {
                     R_THROW(ldr::ResultSafetyCheckFailure());
-                if (max && value > max)
+                }
+
+                if (max && value > max) {
                     R_THROW(ldr::ResultSafetyCheckFailure());
+                }
 
                 R_SUCCEED();
             }
@@ -102,28 +103,24 @@ namespace ams::ldr::hoc::pcv {
         u32 eristaCpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaCpuDvfsTable)->freq);
         u32 marikoCpuDvfsMaxFreq;
             if (C.marikoCpuUVHigh) {
-                marikoCpuDvfsMaxFreq = static_cast<u32>(
-                    GetDvfsTableLastEntry(C.marikoCpuDvfsTableSLT)->freq
-                );
+                marikoCpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.marikoCpuDvfsTableSLT)->freq);
             } else {
-                marikoCpuDvfsMaxFreq = static_cast<u32>(
-                    GetDvfsTableLastEntry(C.marikoCpuDvfsTable)->freq
-                );
+                marikoCpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.marikoCpuDvfsTable)->freq);
             }
         u32 eristaGpuDvfsMaxFreq;
         switch (C.eristaGpuUV) {
-        case 0:
-            eristaGpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaGpuDvfsTable)->freq);
-            break;
-        case 1:
-            eristaGpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaGpuDvfsTableSLT)->freq);
-            break;
-        case 2:
-            eristaGpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaGpuDvfsTableHiOPT)->freq);
-            break;
-        default:
-            eristaGpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaGpuDvfsTable)->freq);
-            break;
+            case 0:
+                eristaGpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaGpuDvfsTable)->freq);
+                break;
+            case 1:
+                eristaGpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaGpuDvfsTableSLT)->freq);
+                break;
+            case 2:
+                eristaGpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaGpuDvfsTableHiOPT)->freq);
+                break;
+            default:
+                eristaGpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaGpuDvfsTable)->freq);
+                break;
         }
 
         u32 marikoGpuDvfsMaxFreq;
@@ -142,22 +139,21 @@ namespace ams::ldr::hoc::pcv {
                 break;
         }
 
-        using namespace ams::ldr::hoc::pcv;
         sValidator validators[] = {
-            { C.eristaCpuBoostClock,                1020'000, 2397'000,  true, panic::Cpu },
-            { C.marikoCpuBoostClock,                1020'000, 2703'000,  true, panic::Cpu },
-            { C.eristaCpuMaxVolt,                       1000,     1260, false, panic::Cpu },
-            { C.marikoCpuMaxVolt,                       1000,     1200, false, panic::Cpu },
-            { eristaCpuDvfsMaxFreq,                 1785'000, 2397'000, false, panic::Cpu },
-            { marikoCpuDvfsMaxFreq,                 1785'000, 2703'000, false, panic::Cpu },
-            { C.commonEmcMemVolt,                    912'500, 1350'000, false, panic::Emc }, // Official burst vmax for the RAMs is 1500mV
-            { GET_MAX_OF_ARR(erista::maxEmcClocks), 1600'000, 2600'000, false, panic::Emc },
-            { C.marikoEmcMaxClock,                  1600'000, 3500'000, false, panic::Emc },
-            { C.marikoEmcVddqVolt,                   400'000,  750'000, false, panic::Emc },
-            { C.marikoSocVmax,                          1000,     1200, false, panic::Emc },
-            { eristaGpuDvfsMaxFreq,                  768'000, 1152'000, false, panic::Gpu },
-            { marikoGpuDvfsMaxFreq,                  768'000, 1536'000, false, panic::Gpu },
-            { C.marikoGpuVmax,                           800,      960, false, panic::Gpu },
+            { C.eristaCpuBoostClock,                1020'000, 2397'000, panic::Cpu, true },
+            { C.marikoCpuBoostClock,                1020'000, 2703'000, panic::Cpu, true },
+            { C.eristaCpuMaxVolt,                       1000,     1260, panic::Cpu,      },
+            { C.marikoCpuMaxVolt,                       1000,     1200, panic::Cpu,      },
+            { eristaCpuDvfsMaxFreq,                 1785'000, 2397'000, panic::Cpu,      },
+            { marikoCpuDvfsMaxFreq,                 1785'000, 2703'000, panic::Cpu,      },
+            { C.commonEmcMemVolt,                    912'500, 1350'000, panic::Emc,      }, /* Official vmax for the RAMs is 1400-1500mV */
+            { GET_MAX_OF_ARR(erista::maxEmcClocks), 1600'000, 2600'000, panic::Emc,      },
+            { C.marikoEmcMaxClock,                  1600'000, 3500'000, panic::Emc,      },
+            { C.marikoEmcVddqVolt,                   400'000,  750'000, panic::Emc,      },
+            { C.marikoSocVmax,                          1000,     1200, panic::Emc,      },
+            { eristaGpuDvfsMaxFreq,                  768'000, 1152'000, panic::Gpu,      },
+            { marikoGpuDvfsMaxFreq,                  768'000, 1536'000, panic::Gpu,      },
+            { C.marikoGpuVmax,                           800,      960, panic::Gpu,      },
         };
 
         for (auto &v : validators) {

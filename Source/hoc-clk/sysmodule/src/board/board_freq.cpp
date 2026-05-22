@@ -41,6 +41,7 @@
 #include "../soc/pllmb.hpp"
 #include "../file/config.hpp"
 #include "../soc/gm20b.hpp"
+#include "../file/config.hpp"
 namespace board {
     #define MIDDLE_FREQ_TABLE_START_POINT 1228800000
     static u32 currentInjectedHz = 0;
@@ -73,6 +74,14 @@ namespace board {
 
     void PcvSetHz(PcvModule moduleID, u32 hz) {
         ASSERT_RESULT_OK(pcvSetClockRate(moduleID, hz), "pcvSetClockRate");
+    }
+
+    void HandleCpuUv()
+    {
+        if (board::GetSocType() == HocClkSocType_Erista)
+            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000); // Erista tbreak is always 1581MHz
+        else
+            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_marikoCpuUVLow), config::GetConfigValue(KipConfigValue_marikoCpuUVHigh), board::CalculateTbreak(config::GetConfigValue(KipConfigValue_tableConf)));
     }
 
     void SetHz(HocClkModule module, u32 hz) {
@@ -116,7 +125,9 @@ namespace board {
                 PcvSetHz(GetPcvModule(module), pcvHz);
             }
         }
-
+        if(config::GetConfigValue(HocClkConfigValue_LiveCpuUv) && module == HocClkModule_CPU) {
+            HandleCpuUv();
+        }
         if (useGm20b) {
             gm20b::setClock(hz / 1000);
             currentInjectedHz = hz;

@@ -136,17 +136,13 @@ namespace ams::ldr::hoc::pcv::erista {
     Result GpuFreqMaxAsm(u32 *ptr32) {
         // Check if both two instructions match the pattern
         u32 ins1 = *ptr32, ins2 = *(ptr32 + 1);
-        if (!(asm_compare_no_rd(ins1, GpuAsmPattern[0]) && asm_compare_no_rd(ins2, GpuAsmPattern[1])))
+        if (!(asm_compare_no_rd(ins1, GpuAsmPattern[0]) && asm_compare_no_rd(ins2, GpuAsmPattern[1]))) {
             R_THROW(ldr::ResultInvalidGpuFreqMaxPattern());
+        }
 
         // Both instructions should operate on the same register
         u8 rd = asm_get_rd(ins1);
-        if (rd != asm_get_rd(ins2))
-            R_THROW(ldr::ResultInvalidGpuFreqMaxPattern());
-
-        /* Verify the limit. */
-        /* TODO: Make this a little bit cleaner at some point. */
-        if (AsmGetImm16(ins1) != (GpuClkOsLimit & 0xFFFF) || AsmGetImm16(ins2) != (GpuClkOsLimit >> 16)) {
+        if (rd != asm_get_rd(ins2)) {
             R_THROW(ldr::ResultInvalidGpuFreqMaxPattern());
         }
 
@@ -165,6 +161,7 @@ namespace ams::ldr::hoc::pcv::erista {
             max_clock = GetDvfsTableLastEntry(C.eristaGpuDvfsTable)->freq;
             break;
         }
+
         u32 asm_patch[2] = {
             asm_set_rd(asm_set_imm16(GpuAsmPattern[0], max_clock), rd),
             asm_set_rd(asm_set_imm16(GpuAsmPattern[1], max_clock >> 16), rd)
@@ -279,22 +276,20 @@ namespace ams::ldr::hoc::pcv::erista {
         // WRITE_PARAM_ALL_REG(table, emc_rdv_early_mask, rdv);
         // WRITE_PARAM_ALL_REG(table, emc_rdv_mask, rdv + 2);
         // WRITE_PARAM_ALL_REG(table, emc_tr_rdv, rdv);
-        // ams::ldr::hoc::pcv::mariko::CalculateMrw2();
         // table->emc_mrw2 = (table->emc_mrw2 & ~0xFFu) | static_cast<u32>(mrw2);
         // table->dram_timings.rl = RL;
 
-        /* This needs some clean up. */
         constexpr double MC_ARB_DIV = 4.0;
         constexpr u32 MC_ARB_SFA    = 2;
 
-        table->burst_mc_regs.mc_emem_arb_cfg          = table->rate_khz             / (33.3 * 1000) / MC_ARB_DIV;
-        table->burst_mc_regs.mc_emem_arb_timing_rcd   = CEIL(GET_CYCLE_CEIL(tRCD)   / MC_ARB_DIV) - 2;
-        table->burst_mc_regs.mc_emem_arb_timing_rp    = CEIL(GET_CYCLE_CEIL(tRPpb)  / MC_ARB_DIV) - 1;
-        table->burst_mc_regs.mc_emem_arb_timing_rc    = CEIL(GET_CYCLE_CEIL(tRC)    / MC_ARB_DIV) - 1;
-        table->burst_mc_regs.mc_emem_arb_timing_ras   = CEIL(GET_CYCLE_CEIL(tRAS)   / MC_ARB_DIV) - 2;
-        table->burst_mc_regs.mc_emem_arb_timing_faw   = CEIL(GET_CYCLE_CEIL(tFAW)   / MC_ARB_DIV) - 1;
-        table->burst_mc_regs.mc_emem_arb_timing_rrd   = CEIL(GET_CYCLE_CEIL(tRRD)   / MC_ARB_DIV) - 1;
-        table->burst_mc_regs.mc_emem_arb_timing_rfcpb = CEIL(GET_CYCLE_CEIL(tRFCpb) / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_cfg            = table->rate_khz             / (33.3 * 1000) / MC_ARB_DIV;
+        table->burst_mc_regs.mc_emem_arb_timing_rcd     = CEIL(GET_CYCLE_CEIL(tRCD)   / MC_ARB_DIV) - 2;
+        table->burst_mc_regs.mc_emem_arb_timing_rp      = CEIL(GET_CYCLE_CEIL(tRPpb)  / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_timing_rc      = CEIL(GET_CYCLE_CEIL(tRC)    / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_timing_ras     = CEIL(GET_CYCLE_CEIL(tRAS)   / MC_ARB_DIV) - 2;
+        table->burst_mc_regs.mc_emem_arb_timing_faw     = CEIL(GET_CYCLE_CEIL(tFAW)   / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_timing_rrd     = CEIL(GET_CYCLE_CEIL(tRRD)   / MC_ARB_DIV) - 1;
+        table->burst_mc_regs.mc_emem_arb_timing_rfcpb   = CEIL(GET_CYCLE_CEIL(tRFCpb) / MC_ARB_DIV) - 1;
         table->burst_mc_regs.mc_emem_arb_timing_rap2pre = CEIL(tR2P / MC_ARB_DIV);
         table->burst_mc_regs.mc_emem_arb_timing_wap2pre = CEIL(tW2P / MC_ARB_DIV) + MC_ARB_SFA;
 

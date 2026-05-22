@@ -35,8 +35,8 @@ volatile CustomizeTable C = {
 /* Disables RAM powerdown */
 .hpMode = DISABLED,
 
-.commonEmcMemVolt  = 1175000, /* LPDDR4(X) JEDEC Specification */
-.eristaEmcMaxClock = 1600000, /* Maximum HB-MGCH ram rating */
+.commonEmcMemVolt   = 1175000, /* LPDDR4(X) JEDEC Specification */
+.eristaEmcMaxClock  = 1600000, /* Maximum HB-MGCH ram rating */
 .eristaEmcMaxClock1 = 1600000,
 .eristaEmcMaxClock2 = 1600000,
 
@@ -47,7 +47,7 @@ volatile CustomizeTable C = {
 .marikoEmcMaxClock = 2133000, /* 1866MHz @ 1866tWRL is guaranteed to work on all Mariko units */
 .marikoEmcVddqVolt = 600000,
 
-.emcDvbShift = 0,
+.emcDvbShift   = 0,
 .marikoSocVmax = 0, /* 0 = stock limits (1450 - 1597 is 1050mV, 1598-1708 is 1025mV, 1709+ is 1000mV). */
 
 /* Primary. */
@@ -86,35 +86,37 @@ volatile CustomizeTable C = {
 
 /* You can mix and match different latencies if needed */
 /*
- *  Read:
- *   2133RL = 40
- *   1866RL = 36
- *   1600RL = 32
- *   1331RL = 28
- *  Write:
- *   2133WL = 18
- *   1866WL = 16
- *   1600WL = 14
- *   1331WL = 12
+ * Read:
+ *  2133RL = 40
+ *  1866RL = 36
+ *  1600RL = 32
+ *  1331RL = 28
+ * Write:
+ *  2133WL = 18
+ *  1866WL = 16
+ *  1600WL = 14
+ *  1331WL = 12
  */
 
-.mem_burst_read_latency = RL_1600,
+/* Erista only. */
+.mem_burst_read_latency  = RL_1600,
 .mem_burst_write_latency = WL_1600,
 
-.eristaCpuUV = 0,
-.eristaCpuVmin = 800,
+.eristaCpuUV      = 0,
+.eristaCpuVmin    = 800,
 .eristaCpuMaxVolt = 1200,
 /* Unlocks up to 2397 Mhz CPU, usage is not recommended. */
-.eristaCpuUnlock = DISABLED,
+.eristaCpuUnlock  = DISABLED,
 
-.marikoCpuUVLow = 0, // No undervolt
+.marikoCpuUVLow  = 0, // No undervolt
 .marikoCpuUVHigh = 0, // No undervolt
 
-.tableConf = TBREAK_1683,
-.marikoCpuLowVmin = 620,
+.tableConf         = TBREAK_1683,
+.marikoCpuLowVmin  = 620,
 .marikoCpuHighVmin = 750,
+
 /* 1120mV is NVIDIA rating */
-.marikoCpuMaxVolt = 1120,
+.marikoCpuMaxVolt  = 1120,
 
 /* Supported values: 1963500, 2091000, 2193000, 2295000, 2397000, 2499000, 2601000, 2703000. */
 /* 1963500 is official rating of T214/Mariko, fully safe. */
@@ -125,17 +127,15 @@ volatile CustomizeTable C = {
 /* 2703000 is potentially dangerous and not advised. */
 .marikoCpuMaxClock = 1963500,
 
-.eristaCpuBoostClock = 1785000, // Default boost clock
-.marikoCpuBoostClock = 1963500, // Default boost clock
+.eristaCpuBoostClock = 1785000, /* Default boost clock */
+.marikoCpuBoostClock = 1963500, /* Default boost clock */
 
-.eristaGpuUV = 0,
+.eristaGpuUV   = 0,
 .eristaGpuVmin = 810,
 
 .marikoGpuUV = 0,
-
 /* Vmin past 795mV won't work due boot voltage being 800mV. */
 .marikoGpuVmin = 610,
-
 .marikoGpuVmax = 800,
 
 .commonGpuVoltOffset = 0,
@@ -147,7 +147,6 @@ volatile CustomizeTable C = {
 /* AUTO: Voltage is optimally chosen; with commonGpuVoltOffset applied. */
 /* AUTO only works up to 1305 GPU on Mariko and 998 GPU on Erista (it is reccomended to manually set your 998MHz voltage though) */
 /* You can overwrite auto with any voltage (in mv) of your choice - offset will not be applied. */
-
 .eristaGpuVoltArray = {
                         AUTO /*   76                       */,
                         AUTO /*  115                       */,

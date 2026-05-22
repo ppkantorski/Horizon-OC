@@ -48,6 +48,7 @@
 #include "../tsensor/aotag.hpp"
 #include "../hos/integrations.hpp"
 #include "../file/file_utils.hpp"
+#include "../hos/rgltr.h"
 namespace board {
 
     u64 clkVirtAddr, dsiVirtAddr, apbVirtAddr, fuseVirtAddr;
@@ -137,6 +138,9 @@ namespace board {
         rc = pmdmntInitialize();
         ASSERT_RESULT_OK(rc, "pmdmntInitialize");
 
+        rc = rgltrInitialize();
+        ASSERT_RESULT_OK(rc, "rgltrInitialize");
+
         rc = QueryMemoryMapping(&clkVirtAddr, 0x60006000, 0x1000);
         ASSERT_RESULT_OK(rc, "QueryMemoryMapping (clk)");
 
@@ -201,7 +205,7 @@ namespace board {
 
         apmExtExit();
         psmExit();
-
+        rgltrExit();
         if (HOSSVC_HAS_TC) {
             tcExit();
         }

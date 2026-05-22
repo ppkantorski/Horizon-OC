@@ -267,6 +267,9 @@ namespace clockManager {
 
             if(board::GetConsoleType() == HocClkConsoleType_Aula)
                 AulaDisplay::SetDisplayColorMode((AulaColorMode)config::GetConfigValue(HocClkConfigValue_AulaDisplayColorPreset));
+            if(config::GetConfigValue(HocClkConfigValue_LiveCpuUv)) {
+                board::HandleCpuUv();
+            }
         }
     }
 
@@ -299,13 +302,6 @@ namespace clockManager {
         }
     }
 
-    void HandleCpuUv()
-    {
-        if (board::GetSocType() == HocClkSocType_Erista)
-            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000); // Erista tbreak is always 1581MHz
-        else
-            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_marikoCpuUVLow), config::GetConfigValue(KipConfigValue_marikoCpuUVHigh), board::CalculateTbreak(config::GetConfigValue(KipConfigValue_tableConf)));
-    }
 
     void DVFSReset()
     {
@@ -450,10 +446,6 @@ namespace clockManager {
 
                     if (module < HocClkModuleStable_EnumMax) {
                         gContext.stable.freqs[module] = nearestHz;
-                    }
-
-                    if (module == HocClkModule_CPU && config::GetConfigValue(HocClkConfigValue_LiveCpuUv)) {
-                        HandleCpuUv();
                     }
 
                     if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko && targetHz < oldHz && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {

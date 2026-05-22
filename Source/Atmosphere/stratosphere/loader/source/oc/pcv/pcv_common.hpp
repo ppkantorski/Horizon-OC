@@ -145,11 +145,11 @@ namespace ams::ldr::hoc::pcv {
     constexpr size_t DvfsTableEntryLimit = DvfsTableEntryCount - 1;
 
     template<typename T>
-    size_t GetDvfsTableEntryCount(T* table_head) {
+    size_t GetDvfsTableEntryCount(T *table_head) {
         using NT = std::remove_const_t<std::remove_volatile_t<T>>;
 
         auto is_empty = [](NT* entry) {
-            uint8_t* m = reinterpret_cast<uint8_t *>(entry);
+            u8 *m = reinterpret_cast<u8 *>(entry);
             for (size_t i = 0; i < sizeof(NT); i++) {
                 if (*(m + i)) {
                     return false;
@@ -158,7 +158,7 @@ namespace ams::ldr::hoc::pcv {
             return true;
         };
 
-        NT* table = const_cast<NT *>(table_head);
+        NT *table = const_cast<NT *>(table_head);
         size_t count = 0;
         while (count < DvfsTableEntryLimit) {
             if (is_empty(table++)) {
@@ -170,10 +170,10 @@ namespace ams::ldr::hoc::pcv {
     }
 
     template<typename T>
-    T* GetDvfsTableLastEntry(T* table_head) {
+    T *GetDvfsTableLastEntry(T *table_head) {
         using NT = std::remove_const_t<std::remove_volatile_t<T>>;
 
-        NT* table = const_cast<NT *>(table_head);
+        NT *table = const_cast<NT *>(table_head);
         size_t count = GetDvfsTableEntryCount(table_head);
         if (!count) {
             return nullptr;

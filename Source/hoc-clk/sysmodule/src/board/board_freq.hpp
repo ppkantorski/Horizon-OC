@@ -44,7 +44,8 @@ namespace board {
     u32 GetRealHz(HocClkModule module);
     void GetFreqList(HocClkModule module, u32 *outList, u32 maxCount, u32 *outCount);
     u32 GetHighestDockedDisplayRate();
-
+    void HandleCpuUv();
+    
     void ResetToStock();
     void ResetToStockDisplay();
 

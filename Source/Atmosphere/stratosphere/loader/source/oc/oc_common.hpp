@@ -66,27 +66,32 @@ namespace ams::ldr::hoc {
         size_t      maximum_patched_count = 0;
         patternFn   pattern_search_fn = nullptr;
         Pointer     value_search;
-
         size_t      patched_count = 0;
 
-        Result Apply(Pointer* ptr) {
+        Result Apply(Pointer *ptr) {
             Result res = patcher_fn(ptr);
-            if (R_SUCCEEDED(res))
+            if (R_SUCCEEDED(res)) {
                 patched_count++;
+            }
 
             return res;
         }
 
-        Result SearchAndApply(Pointer* ptr) {
+        Result SearchAndApply(Pointer *ptr) {
             bool searchOk = false;
             if (pattern_search_fn) {
-                if (pattern_search_fn(ptr)) searchOk = true;
+                if (pattern_search_fn(ptr)) {
+                    searchOk = true;
+                }
             } else {
-                if (value_search == *(ptr)) searchOk = true;
+                if (value_search == *(ptr)) {
+                    searchOk = true;
+                }
             }
 
-            if (searchOk)
+            if (searchOk) {
                 return Apply(ptr);
+            }
 
             R_THROW(ldr::ResultUnsuccessfulPatcher());
         }
@@ -94,8 +99,9 @@ namespace ams::ldr::hoc {
         Result CheckResult() {
             R_UNLESS(patched_count > 0, ldr::ResultUnsuccessfulPatcher());
 
-            if (maximum_patched_count)
+            if (maximum_patched_count) {
                 R_UNLESS(patched_count <= maximum_patched_count, ldr::ResultUnsuccessfulPatcher());
+            }
 
             R_SUCCEED();
         }

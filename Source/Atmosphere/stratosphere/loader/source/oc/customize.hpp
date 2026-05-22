@@ -30,8 +30,8 @@ namespace ams::ldr::hoc {
 
 enum TableConfig: u32 {
     DEFAULT_TABLE = 1,
-    TBREAK_1581 = 2,
-    TBREAK_1683 = 3,
+    TBREAK_1581   = 2,
+    TBREAK_1683   = 3,
     EXTREME_TABLE = 4,
 };
 
@@ -41,19 +41,6 @@ enum StepMode: u32 {
     StepMode_Jedec  = 2,
     StepMode_133MHz = 3,
 };
-
-/*
- *  Read:
- *   2133RL = 40
- *   1866RL = 36
- *   1600RL = 32
- *   1331RL = 28
- *  Write:
- *   2133WL = 18
- *   1866WL = 16
- *   1600WL = 14
- *   1331WL = 12
- */
 
 enum ReadLatency: u32 {
     RL_2133 = 40,
@@ -74,11 +61,8 @@ using CustomizeGpuDvfsTable = pcv::cvb_entry_t[pcv::DvfsTableEntryLimit];
 static_assert(sizeof(CustomizeCpuDvfsTable) == sizeof(CustomizeGpuDvfsTable));
 static_assert(sizeof(CustomizeCpuDvfsTable) == sizeof(pcv::cvb_entry_t) * pcv::DvfsTableEntryLimit);
 
-constexpr uint32_t ERISTA_MTC_MAGIC = 0x43544D45; // EMTC
-constexpr uint32_t MARIKO_MTC_MAGIC = 0x43544D4D; // MMTC
-
 struct CustomizeTable {
-    u8  cust[4] = {'C', 'U', 'S', 'T'};
+    u8  cust[4]    = {'C', 'U', 'S', 'T'};
     u32 custRev    = CUST_REV;
     u32 kipVersion = KIP_VERSION;
 

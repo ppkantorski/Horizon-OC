@@ -822,8 +822,8 @@ namespace ams::ldr::hoc::pcv::mariko {
         auto DvbVolt = [&](s32 zero, s32 one, s32 two) {
             return std::array<s32, 3>{
                 ClampVolt(zero, max0),
-                ClampVolt(one, max1),
-                ClampVolt(two, max2)
+                ClampVolt(one,  max1),
+                ClampVolt(two,  max2)
             };
         };
 
@@ -832,16 +832,36 @@ namespace ams::ldr::hoc::pcv::mariko {
             static_cast<u32>((v)[1]), \
             static_cast<u32>((v)[2])
         DvbEntry emcDvbOcTableBrackets[] = {
-            {     204000, {              637,  637,  637,  }, },
-            {    1331200, {              650,  637,  637,  }, },
-            {    1600000, {              675,  650,  637,  }, },
-            {    1866000, { DVB(DvbVolt( 700,  675,  650)) }, },
-            {    2133000, { DVB(DvbVolt( 725,  700,  675)) }, },
-            {    2400000, { DVB(DvbVolt( 750,  725,  700)) }, },
-            {    2666000, { DVB(DvbVolt( 850,  825,  800)) }, },
-            {    2933000, { DVB(DvbVolt( 950,  925,  900)) }, },
-            {    3200000, { DVB(DvbVolt(1050, 1025, 1000)) }, },
-            {        ~0u, {                                }, },
+            {  204000, {              637,  637,  637,  }, },
+            { 1331200, {              650,  637,  637,  }, },
+            { 1600000, {              675,  650,  637,  }, }, 
+            { 1866000, { DVB(DvbVolt( 700,  675,  650)) }, }, 
+            { 2133000, { DVB(DvbVolt( 725,  700,  675)) }, }, 
+            { 2246000, { DVB(DvbVolt( 750,  725,  700)) }, }, 
+            { 2400000, { DVB(DvbVolt( 775,  750,  725)) }, }, 
+            { 2466000, { DVB(DvbVolt( 800,  775,  750)) }, }, 
+            { 2533000, { DVB(DvbVolt( 810,  785,  760)) }, }, 
+            { 2566000, { DVB(DvbVolt( 820,  795,  770)) }, }, 
+            { 2600000, { DVB(DvbVolt( 830,  805,  780)) }, }, 
+            { 2633000, { DVB(DvbVolt( 840,  815,  790)) }, }, 
+            { 2666000, { DVB(DvbVolt( 850,  825,  800)) }, }, 
+            { 2700000, { DVB(DvbVolt( 860,  835,  810)) }, }, 
+            { 2733000, { DVB(DvbVolt( 870,  845,  820)) }, },
+            { 2766000, { DVB(DvbVolt( 880,  855,  830)) }, },
+            { 2800000, { DVB(DvbVolt( 895,  865,  840)) }, },
+            { 2833000, { DVB(DvbVolt( 900,  875,  850)) }, },
+            { 2866000, { DVB(DvbVolt( 910,  885,  860)) }, },
+            { 2900000, { DVB(DvbVolt( 920,  895,  870)) }, },
+            { 2933000, { DVB(DvbVolt( 950,  905,  880)) }, },
+            { 2966000, { DVB(DvbVolt( 960,  915,  890)) }, },
+            { 3000000, { DVB(DvbVolt( 970,  925,  900)) }, },
+            { 3033000, { DVB(DvbVolt( 980,  940,  910)) }, },
+            { 3066000, { DVB(DvbVolt(1000,  955,  920)) }, },
+            { 3100000, { DVB(DvbVolt(1010,  990,  930)) }, },
+            { 3133000, { DVB(DvbVolt(1025, 1005,  940)) }, },
+            { 3166000, { DVB(DvbVolt(1035, 1015,  950)) }, },
+            { 3200000, { DVB(DvbVolt(1050, 1025,  960)) }, },
+            {     ~0u, {                                }, },
         };
         #undef DVB
         DvbEntry emcDvbTableOc[newEmcList.size()];
