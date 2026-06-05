@@ -12,13 +12,13 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #pragma once
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 namespace crc32 {
     uint32_t crc32(const uint8_t *data, size_t length);
     uint32_t checksum_file(const char *filename);
-}
+}  // namespace crc32

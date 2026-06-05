@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,30 +24,36 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
 
-#include <tesla.hpp>
-#include <fstream>
-#include <vector>
-#include <string>
 #include <algorithm>
+#include <fstream>
+#include <string>
+#include <tesla.hpp>
+#include <vector>
 
-#include "../style.h"
 #include "../../ipc.h"
+#include "../elements/base_frame.h"
+#include "../style.h"
 
-class BaseGui : public tsl::Gui
-{
+
+class BaseGui : public tsl::Gui {
     public:
-        BaseGui() {}
-        ~BaseGui() {}
-        virtual void preDraw(tsl::gfx::Renderer* renderer);
-        void update() override;
-        tsl::elm::Element* createUI() override;
-        virtual tsl::elm::Element* baseUI() = 0;
-        virtual void refresh() {}
+    BaseGui() {
+    }
+    ~BaseGui() {
+    }
+    virtual void preDraw(tsl::gfx::Renderer *renderer);
+    void update() override;
+    tsl::elm::Element *createUI() override;
+    virtual tsl::elm::Element *baseUI() = 0;
+    virtual void refresh() {
+    }
+    virtual u16 headerHeight() const {
+        return HOC_HEADER_HEIGHT;
+    }
+
     private:
 };
-
 
 extern std::string getVersionString();

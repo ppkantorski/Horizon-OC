@@ -24,9 +24,9 @@
  * --------------------------------------------------------------------------
  */
 
-#include <switch.h>
-#include <pwm.h>
 #include <cmath>
+#include <pwm.h>
+#include <switch.h>
 
 namespace board {
 
@@ -68,4 +68,4 @@ namespace board {
         threadClose(&miscThread);
     }
 
-}
+}  // namespace board

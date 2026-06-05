@@ -23,7 +23,9 @@
  */
 
 #include <switch.h>
+
 #include "tsensor_common.hpp"
+
 
 namespace tsensor {
 
@@ -42,7 +44,7 @@ namespace tsensor {
 
     static s32 sign_extend32(u32 value, int index) {
         u8 shift = 31 - index;
-        return (s32) (value << shift) >> shift;
+        return (s32)(value << shift) >> shift;
     }
 
     void CalcSharedCal(const TSensorFuse *tfuse, TSensorSharedCalib *shared, u64 fuseVa) {
@@ -70,11 +72,11 @@ namespace tsensor {
     }
 
     void CalcTSensorCalib(const TSensorConfig *cfg, TSensorSharedCalib *shared, const FuseCorrCoeff *corr, u32 *calibration, u32 offset, u64 fuseVa) {
-        #define FUSE_TSENSOR_CALIB_FT_TS_BASE_SHIFT	  13
-        #define FUSE_TSENSOR_CALIB_FT_TS_BASE_MASK (0x1fff << 13)
-        #define CALIB_COEFFICIENT                     1000000LL
-        #define SENSOR_CONFIG2_THERMA_SHIFT 16
-        #define SENSOR_CONFIG2_THERMB_SHIFT 0
+#define FUSE_TSENSOR_CALIB_FT_TS_BASE_SHIFT 13
+#define FUSE_TSENSOR_CALIB_FT_TS_BASE_MASK (0x1fff << 13)
+#define CALIB_COEFFICIENT 1000000LL
+#define SENSOR_CONFIG2_THERMA_SHIFT 16
+#define SENSOR_CONFIG2_THERMB_SHIFT 0
 
         u32 val, calib;
         s32 actual_tsensor_ft, actual_tsensor_cp;
@@ -112,4 +114,4 @@ namespace tsensor {
         *calibration = calib;
     }
 
-}
+}  // namespace tsensor

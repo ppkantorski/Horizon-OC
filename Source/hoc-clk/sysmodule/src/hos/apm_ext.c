@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,60 +24,50 @@
  * --------------------------------------------------------------------------
  */
 
+#include <stdatomic.h>
 
 #include "apm_ext.h"
-
-#include <stdatomic.h>
 
 static Service g_apmSrv;
 static Service g_apmSysSrv;
 static atomic_size_t g_refCnt;
 
-Result apmExtInitialize(void)
-{
+Result apmExtInitialize(void) {
     g_refCnt++;
 
-    if (serviceIsActive(&g_apmSrv))
-    {
+    if (serviceIsActive(&g_apmSrv)) {
         return 0;
     }
 
     Result rc = 0;
 
     rc = smGetService(&g_apmSrv, "apm");
-    if(R_SUCCEEDED(rc))
-    {
+    if (R_SUCCEEDED(rc)) {
         rc = smGetService(&g_apmSysSrv, "apm:sys");
     }
 
-    if (R_FAILED(rc))
-    {
+    if (R_FAILED(rc)) {
         apmExtExit();
     }
 
     return rc;
 }
 
-void apmExtExit(void)
-{
-    if (--g_refCnt == 0)
-    {
+void apmExtExit(void) {
+    if (--g_refCnt == 0) {
         serviceClose(&g_apmSrv);
         serviceClose(&g_apmSysSrv);
     }
 }
 
-Result apmExtGetPerformanceMode(u32* out_mode)
-{
+Result apmExtGetPerformanceMode(u32 *out_mode) {
     return serviceDispatchOut(&g_apmSrv, 1, *out_mode);
 }
 
-Result apmExtSysRequestPerformanceMode(u32 mode)
-{
+Result apmExtSysRequestPerformanceMode(u32 mode) {
     return serviceDispatchIn(&g_apmSysSrv, 0, mode);
 }
 
-Result apmExtGetCurrentPerformanceConfiguration(u32* out_conf)
-{
+Result apmExtGetCurrentPerformanceConfiguration(u32 *out_conf) {
     return serviceDispatchOut(&g_apmSysSrv, 7, *out_conf);
 }

@@ -33,10 +33,6 @@ namespace ams::ldr::hoc {
     /* Burst latency, not to be confused with base latency (tWRL). */
     const u32 BL = 16;
 
-    /* Base latency for read and write (tWRL). */
-    const u32 RL = C.mem_burst_read_latency;
-    const u32 WL = C.mem_burst_write_latency;
-
     /* Precharge to Precharge Delay. (tCK) */
     const u32 tPPD = 4;
 
@@ -87,19 +83,30 @@ namespace ams::ldr::hoc {
         const u32 tFAW     = static_cast<u32>(tRRD * 4.0);
         const double tRPab = tRPpb + 3;
 
-        const u32 tR2P   = CEIL((RL * 0.426) - 2.0);
+        inline u32 RL;
+        inline u32 WL;
+
+        inline u32 tR2P;
         inline u32 tR2W;
         inline u32 rext;
 
-        const u32 tW2P = (CEIL(WL * 1.7303) * 2) - 5;
+        inline u32 tW2P;
         inline u32 tWTPDEN;
         inline u32 tW2R;
+
+        inline u32 wdv;
+        inline u32 wsv;
+        inline u32 wev;
+
+        inline u32 obdly;
 
         inline u32 pdex2rw;
 
         inline u32 tCLKSTOP;
 
         inline double pdex2mrr;
+
+        inline u8 mrw2;
     }
 
     namespace pcv::mariko {

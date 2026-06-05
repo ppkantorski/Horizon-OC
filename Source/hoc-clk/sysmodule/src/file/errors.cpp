@@ -24,13 +24,14 @@
  * --------------------------------------------------------------------------
  */
 
-#include "errors.hpp"
-#include "file_utils.hpp"
 #include <cstdarg>
 #include <cstring>
 
+#include "errors.hpp"
+#include "file_utils.hpp"
+
 namespace errors {
-    void ThrowException(const char* format, ...) {
+    void ThrowException(const char *format, ...) {
         va_list args;
         va_start(args, format);
         fileUtils::LogLine(format, args);
@@ -38,4 +39,4 @@ namespace errors {
         diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_ShouldNotHappen));
         // throw std::runtime_error(msg);
     }
-}
+}  // namespace errors

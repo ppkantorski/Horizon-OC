@@ -15,17 +15,18 @@
  *
  */
 
-#include <switch.h>
-#include <hocclk.h>
-#include "../board/board.hpp"
-#include "clock_manager.hpp"
 #include <cstring>
-#include "../file/file_utils.hpp"
+#include <hocclk.h>
+#include <switch.h>
+
 #include "../board/board.hpp"
-#include "../file/errors.hpp"
 #include "../file/config.hpp"
+#include "../file/errors.hpp"
+#include "../file/file_utils.hpp"
 #include "../hos/integrations.hpp"
 #include "../util/lockable_mutex.h"
+#include "clock_manager.hpp"
+
 
 namespace governor {
     extern bool isCpuGovernorInBoostMode;
@@ -38,4 +39,4 @@ namespace governor {
     void startThreads();
     void exitThreads();
     void HandleGovernor(uint32_t targetHz);
-}
+}  // namespace governor

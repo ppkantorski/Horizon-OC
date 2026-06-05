@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #include <crc32.h>
@@ -20,7 +20,7 @@
 namespace crc32 {
     uint32_t crc32(const uint8_t *data, size_t length) {
         uint32_t crc = 0xFFFFFFFF;
-        
+
         for (size_t i = 0; i < length; i++) {
             crc ^= data[i];
             for (int j = 0; j < 8; j++) {
@@ -36,11 +36,11 @@ namespace crc32 {
             perror("[crc32] Error opening file");
             return 0;
         }
-        
+
         uint8_t buffer[1024];
         uint32_t crc = 0xFFFFFFFF;
         size_t bytes_read;
-        
+
         while ((bytes_read = fread(buffer, 1, sizeof(buffer), file)) > 0) {
             for (size_t i = 0; i < bytes_read; i++) {
                 crc ^= buffer[i];
@@ -49,8 +49,8 @@ namespace crc32 {
                 }
             }
         }
-        
+
         fclose(file);
         return ~crc;
     }
-}
+}  // namespace crc32

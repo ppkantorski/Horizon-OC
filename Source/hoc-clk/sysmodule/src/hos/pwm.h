@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #pragma once
@@ -29,11 +29,11 @@ typedef struct {
 
 Result pwmInitialize(void);
 void pwmExit(void);
-Service* pwmGetServiceSession(void);
+Service *pwmGetServiceSession(void);
 Result pwmOpenSession2(PwmChannelSession *out, u32 device_code);
-Result pwmChannelSessionGetDutyCycle(PwmChannelSession *c, double* out);
+Result pwmChannelSessionGetDutyCycle(PwmChannelSession *c, double *out);
 void pwmChannelSessionClose(PwmChannelSession *c);
 
 #ifdef __cplusplus
-} // extern "C"
+}  // extern "C"
 #endif

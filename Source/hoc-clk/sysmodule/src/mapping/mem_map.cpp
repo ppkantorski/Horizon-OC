@@ -16,10 +16,12 @@
  */
 
 #include <switch.h>
+
 #include "../file/file_utils.hpp"
 
-Result QueryMemoryMapping(u64* virtaddr, u64 physaddr, u64 size) {
-    if(hosversionAtLeast(10,0,0)) {
+
+Result QueryMemoryMapping(u64 *virtaddr, u64 physaddr, u64 size) {
+    if (hosversionAtLeast(10, 0, 0)) {
         u64 out_size;
         return svcQueryMemoryMapping(virtaddr, &out_size, physaddr, size);
     } else {

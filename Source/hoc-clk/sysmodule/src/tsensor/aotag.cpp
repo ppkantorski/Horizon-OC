@@ -21,67 +21,67 @@
  */
 
 #include <notification.h>
-#include "../mapping/mem_map.hpp"
+
 #include "../file/file_utils.hpp"
-#include "tsensor_common.hpp"
+#include "../mapping/mem_map.hpp"
 #include "aotag.hpp"
+#include "tsensor_common.hpp"
+
 
 namespace tsensor {
-    #define PMC_BASE 0x7000E400
-    #define TEGRA_FUSE_CP_REV_0_3          (3)
-    #define FUSE_CP_REV                    0x190
+#define PMC_BASE 0x7000E400
+#define TEGRA_FUSE_CP_REV_0_3 (3)
+#define FUSE_CP_REV 0x190
 
     namespace {
-        u64 fuseVa   = 0;
+        u64 fuseVa = 0;
         bool wasInit = false;
-    }
+    }  // namespace
 
-    #define REG_SET(r, mask, value)	\
-        ((r & ~(mask##_MASK)) | ((value<<(mask##_POS_START)) & mask##_MASK))
+#define REG_SET(r, mask, value) ((r & ~(mask##_MASK)) | ((value << (mask##_POS_START)) & mask##_MASK))
 
-    #define REG_GET(r, mask) \
-        ((r & mask##_MASK) >> mask##_POS_START)
+#define REG_GET(r, mask) ((r & mask##_MASK) >> mask##_POS_START)
 
-    #define FUSE_TSENSOR_CALIB_CP_TS_BASE_MASK  0x1fff
+#define FUSE_TSENSOR_CALIB_CP_TS_BASE_MASK 0x1fff
 
     static const TSensorFuse tegra_aotag_fuse = {
-        .fuse_base_cp_mask      = 0x3ff << 11,
-        .fuse_base_cp_shift     = 11,
-        .fuse_base_ft_mask      = (u32)0x7ff << 21,
-        .fuse_base_ft_shift     = 21,
-        .fuse_shift_ft_mask     = 0x1f << 6,
-        .fuse_shift_ft_shift    = 6,
+        .fuse_base_cp_mask = 0x3ff << 11,
+        .fuse_base_cp_shift = 11,
+        .fuse_base_ft_mask = (u32)0x7ff << 21,
+        .fuse_base_ft_shift = 21,
+        .fuse_shift_ft_mask = 0x1f << 6,
+        .fuse_shift_ft_shift = 6,
         .fuse_spare_realignment = 0,
     };
 
     static TSensorConfig tegra_aotag_config = {
-        .tall        = 76,
-        .tiddq_en    = 1,
-        .ten_count   = 16,
-        .pdiv        = 8,
-        .pdiv_ate    = 8,
-        .tsample     = 9,
+        .tall = 76,
+        .tiddq_en = 1,
+        .ten_count = 16,
+        .pdiv = 8,
+        .pdiv_ate = 8,
+        .tsample = 9,
         .tsample_ate = 39,
     };
 
     static TSensorConfig tegra210b01_aotag_config = {
-        .tall        = 76,
-        .tiddq_en    = 1,
-        .ten_count   = 16,
-        .pdiv        = 12,
-        .pdiv_ate    = 6,
-        .tsample     = 19,
+        .tall = 76,
+        .tiddq_en = 1,
+        .ten_count = 16,
+        .pdiv = 12,
+        .pdiv_ate = 6,
+        .tsample = 19,
         .tsample_ate = 39,
     };
 
     static const FuseCorrCoeff tegra_aotag_coeff = {
         .alpha = 1063200,
-        .beta  = -6749000,
+        .beta = -6749000,
     };
 
     static const FuseCorrCoeff tegra210b01_aotag_coeff = {
         .alpha = 991100,
-        .beta  = 1096200,
+        .beta = 1096200,
     };
 
     struct aotag_sensor_info_t {
@@ -99,32 +99,32 @@ namespace tsensor {
 
     static aotag_platform_data tegra210_plat_data = {
         .config = &tegra_aotag_config,
-        .coeff  = &tegra_aotag_coeff,
+        .coeff = &tegra_aotag_coeff,
     };
 
     static aotag_platform_data tegra210b01_plat_data = {
         .config = &tegra210b01_aotag_config,
-        .coeff  = &tegra210b01_aotag_coeff,
+        .coeff = &tegra210b01_aotag_coeff,
     };
 
     aotag_sensor_info_t aotag_sensor_info = {
-        .config  = NULL,
-        .fuse    = NULL,
-        .coeff   = NULL,
+        .config = NULL,
+        .fuse = NULL,
+        .coeff = NULL,
         .therm_a = 0,
         .therm_b = 0,
     };
 
-    aotag_sensor_info_t *info  = &aotag_sensor_info;
+    aotag_sensor_info_t *info = &aotag_sensor_info;
     aotag_platform_data *pdata = NULL;
 
     u32 ReadPmcReg(unsigned long offset) {
         SecmonArgs args = {};
-        args.X[0]       = 0xF0000002;
-        args.X[1]       = PMC_BASE + offset;
+        args.X[0] = 0xF0000002;
+        args.X[1] = PMC_BASE + offset;
         svcCallSecureMonitor(&args);
 
-        if (args.X[1] == (PMC_BASE + offset)) { // if param 1 is identical read failed
+        if (args.X[1] == (PMC_BASE + offset)) {  // if param 1 is identical read failed
             return 0;
         }
 
@@ -133,21 +133,21 @@ namespace tsensor {
 
     void WritePmcReg(u32 value, unsigned long offset) {
         SecmonArgs args = {};
-        args.X[0]       = 0xF0000002;
-        args.X[1]       = PMC_BASE + offset;
-        args.X[2]       = 0xFFFFFFFF;
-        args.X[3]       = (value);
+        args.X[0] = 0xF0000002;
+        args.X[1] = PMC_BASE + offset;
+        args.X[2] = 0xFFFFFFFF;
+        args.X[3] = (value);
         svcCallSecureMonitor(&args);
     }
 
     static inline void SetBit(unsigned long nr, volatile void *addr) {
-        int *m = ((int *) addr) + (nr >> 5);
-        *m    |= 1 << (nr & 31);
+        int *m = ((int *)addr) + (nr >> 5);
+        *m |= 1 << (nr & 31);
     }
 
     static inline void ClearBit(unsigned long nr, volatile void *addr) {
-        int *m = ((int *) addr) + (nr >> 5);
-        *m    &= ~(1 << (nr & 31));
+        int *m = ((int *)addr) + (nr >> 5);
+        *m &= ~(1 << (nr & 31));
     }
 
     void InitializeAotag(bool isMariko) {
@@ -156,7 +156,7 @@ namespace tsensor {
 
         if (isMariko) {
             // u32 major, minor, rev;
-            pdata        = &tegra210b01_plat_data;
+            pdata = &tegra210b01_plat_data;
             info->config = &tegra210b01_aotag_config;
             // tegra_fuse_readl(FUSE_CP_REV, &rev);
             // minor = rev & 0x1f;
@@ -166,10 +166,10 @@ namespace tsensor {
             // }
         } else {
             info->config = &tegra_aotag_config;
-            pdata        = &tegra210_plat_data;
+            pdata = &tegra210_plat_data;
         }
 
-        info->fuse  = &tegra_aotag_fuse;
+        info->fuse = &tegra_aotag_fuse;
         info->coeff = pdata->coeff;
 
         aotag_sensor_info_t *ps_info = &aotag_sensor_info;
@@ -215,18 +215,18 @@ namespace tsensor {
         }
 
         u32 regval = 0, abs = 0, fraction = 0, valid = 0, sign = 0;
-        s32 temp   = 0;
-        regval     = ReadPmcReg(PMC_TSENSOR_STATUS1);
-        valid      = REG_GET(regval, STATUS1_TEMP_VALID);
+        s32 temp = 0;
+        regval = ReadPmcReg(PMC_TSENSOR_STATUS1);
+        valid = REG_GET(regval, STATUS1_TEMP_VALID);
 
         if (!valid) {
             return -125;
         }
 
-        abs      = REG_GET(regval, STATUS1_TEMP_ABS);
+        abs = REG_GET(regval, STATUS1_TEMP_ABS);
         fraction = REG_GET(regval, STATUS1_TEMP_FRAC);
-        sign     = REG_GET(regval, STATUS1_TEMP_SIGN);
-        temp     = (abs * 1000) + (fraction * 500);
+        sign = REG_GET(regval, STATUS1_TEMP_SIGN);
+        temp = (abs * 1000) + (fraction * 500);
         if (sign) {
             temp = (-1) * (temp);
         }
@@ -238,4 +238,4 @@ namespace tsensor {
         return wasInit;
     }
 
-}
+}  // namespace tsensor

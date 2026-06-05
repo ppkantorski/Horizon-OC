@@ -526,23 +526,23 @@
 #define CL_DVFS_INTR_STS_0 0x5C
 #define CL_DVFS_I2C_CLK_DIVISOR_REGISTER_0 0x16C
 
-#define CLK_SOURCE_EMC  0x19c
+#define CLK_SOURCE_EMC 0x19c
 
-#define PLLC_BASE   0x080
-#define PLLM_BASE   0x090
-#define PLLP_BASE   0x0a0
-#define PLLA_BASE   0x0b0
-#define PLLU_BASE   0x0c0
-#define _PLLD_BASE   0x0d0
-#define PLLX_BASE   0x0e0
-#define PLLE_BASE   0x0e8
-#define PLLC2_BASE  0x4e8
-#define PLLC3_BASE  0x4fc
-#define PLLD2_BASE  0x4b8
-#define PLLRE_BASE  0x4c4
-#define PLLC4_BASE  0x5a4
-#define PLLMB_BASE  0x5e8
-#define PLLA1_BASE  0x6a4
-#define PLLDP_BASE  0x590
+#define PLLC_BASE 0x080
+#define PLLM_BASE 0x090
+#define PLLP_BASE 0x0a0
+#define PLLA_BASE 0x0b0
+#define PLLU_BASE 0x0c0
+#define _PLLD_BASE 0x0d0
+#define PLLX_BASE 0x0e0
+#define PLLE_BASE 0x0e8
+#define PLLC2_BASE 0x4e8
+#define PLLC3_BASE 0x4fc
+#define PLLD2_BASE 0x4b8
+#define PLLRE_BASE 0x4c4
+#define PLLC4_BASE 0x5a4
+#define PLLMB_BASE 0x5e8
+#define PLLA1_BASE 0x6a4
+#define PLLDP_BASE 0x590
 
 #define OSC_HZ 38400000ULL

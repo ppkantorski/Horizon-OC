@@ -3,6 +3,8 @@
  *
  * Copyright (c) 2023 hanai3Bi
  *
+ * Copyright (c) B3711
+ *
  * Copyright (c) Souldbminer and Horizon OC Contributors
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -50,15 +52,17 @@ namespace ams::ldr::hoc::pcv::mariko {
             R_THROW(ldr::ResultInvalidGpuDvfs());
         }
 
-        if (!C.marikoGpuVmin) {
-            R_SKIP();
+        if (C.marikoGpuBootVolt) {
+            PATCH_OFFSET(ptr - 3, C.marikoGpuBootVolt);
         }
 
-        PATCH_OFFSET(ptr,      C.marikoGpuVmin);
-        PATCH_OFFSET(ptr +  3, C.marikoGpuVmin);
-        PATCH_OFFSET(ptr +  6, C.marikoGpuVmin);
-        PATCH_OFFSET(ptr +  9, C.marikoGpuVmin);
-        PATCH_OFFSET(ptr + 12, C.marikoGpuVmin);
+        if (C.marikoGpuVmin) {
+            PATCH_OFFSET(ptr,      C.marikoGpuVmin);
+            PATCH_OFFSET(ptr +  3, C.marikoGpuVmin);
+            PATCH_OFFSET(ptr +  6, C.marikoGpuVmin);
+            PATCH_OFFSET(ptr +  9, C.marikoGpuVmin);
+            PATCH_OFFSET(ptr + 12, C.marikoGpuVmin);
+        }
 
         R_SUCCEED();
     }
@@ -297,8 +301,14 @@ namespace ams::ldr::hoc::pcv::mariko {
         case 2:
             max_clock = GetDvfsTableLastEntry(C.marikoGpuDvfsTableHiOPT)->freq;
             break;
+        case 3:
+            max_clock = GetDvfsTableLastEntry(C.marikoGpuDvfsTableHiOPT15)->freq;
+            break;
+        case 4:
+            max_clock = GetDvfsTableLastEntry(C.marikoGpuDvfsTableHighUV)->freq;
+            break;
         default:
-            max_clock = GetDvfsTableLastEntry(C.marikoGpuDvfsTable)->freq;
+            max_clock = GetDvfsTableLastEntry(C.marikoGpuDvfsTableHiOPT)->freq;
             break;
         }
 
@@ -635,13 +645,13 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     void MtcGenerateFreqTables() {
-        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
-            return;
-        }
-
         newEmcList.clear();
         newEmcList.reserve(DvfsTableEntryCount);
         newEmcList.insert(newEmcList.end(), std::begin(EmcListDefault), std::end(EmcListDefault));
+
+        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
+            return;
+        }
 
         u32 stepRate = 0;
         switch (C.stepMode) {
@@ -764,15 +774,15 @@ namespace ams::ldr::hoc::pcv::mariko {
         MarikoMtcTable *table = reinterpret_cast<MarikoMtcTable *>(startPtr + mtcOffset);
         R_TRY(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault));
 
-        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
-            R_SKIP();
-        }
-
         PrepareMtcMemoryRegion(startPtr, table);
         table = reinterpret_cast<MarikoMtcTable *>(startPtr);
 
         if (R_FAILED(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault))) {
             AbortInvalidMtc("Failed mtc validation");
+        }
+
+        if (C.marikoEmcMaxClock <= EmcClkOSLimit) {
+            R_SKIP();
         }
 
         MtcExtendTables(table);
@@ -834,33 +844,33 @@ namespace ams::ldr::hoc::pcv::mariko {
         DvbEntry emcDvbOcTableBrackets[] = {
             {  204000, {              637,  637,  637,  }, },
             { 1331200, {              650,  637,  637,  }, },
-            { 1600000, {              675,  650,  637,  }, }, 
-            { 1866000, { DVB(DvbVolt( 700,  675,  650)) }, }, 
-            { 2133000, { DVB(DvbVolt( 725,  700,  675)) }, }, 
-            { 2246000, { DVB(DvbVolt( 750,  725,  700)) }, }, 
-            { 2400000, { DVB(DvbVolt( 775,  750,  725)) }, }, 
-            { 2466000, { DVB(DvbVolt( 800,  775,  750)) }, }, 
-            { 2533000, { DVB(DvbVolt( 810,  785,  760)) }, }, 
-            { 2566000, { DVB(DvbVolt( 820,  795,  770)) }, }, 
-            { 2600000, { DVB(DvbVolt( 830,  805,  780)) }, }, 
-            { 2633000, { DVB(DvbVolt( 840,  815,  790)) }, }, 
-            { 2666000, { DVB(DvbVolt( 850,  825,  800)) }, }, 
-            { 2700000, { DVB(DvbVolt( 860,  835,  810)) }, }, 
-            { 2733000, { DVB(DvbVolt( 870,  845,  820)) }, },
-            { 2766000, { DVB(DvbVolt( 880,  855,  830)) }, },
-            { 2800000, { DVB(DvbVolt( 895,  865,  840)) }, },
-            { 2833000, { DVB(DvbVolt( 900,  875,  850)) }, },
-            { 2866000, { DVB(DvbVolt( 910,  885,  860)) }, },
-            { 2900000, { DVB(DvbVolt( 920,  895,  870)) }, },
-            { 2933000, { DVB(DvbVolt( 950,  905,  880)) }, },
-            { 2966000, { DVB(DvbVolt( 960,  915,  890)) }, },
-            { 3000000, { DVB(DvbVolt( 970,  925,  900)) }, },
-            { 3033000, { DVB(DvbVolt( 980,  940,  910)) }, },
-            { 3066000, { DVB(DvbVolt(1000,  955,  920)) }, },
-            { 3100000, { DVB(DvbVolt(1010,  990,  930)) }, },
-            { 3133000, { DVB(DvbVolt(1025, 1005,  940)) }, },
-            { 3166000, { DVB(DvbVolt(1035, 1015,  950)) }, },
-            { 3200000, { DVB(DvbVolt(1050, 1025,  960)) }, },
+            { 1600000, {              675,  650,  637,  }, },
+            { 1866000, { DVB(DvbVolt( 700,  675,  650)) }, },
+            { 2000000, { DVB(DvbVolt( 712,  687,  662)) }, },
+            { 2133000, { DVB(DvbVolt( 725,  700,  675)) }, },
+            { 2200000, { DVB(DvbVolt( 737,  712,  687)) }, },
+            { 2266000, { DVB(DvbVolt( 750,  725,  700)) }, },
+            { 2333000, { DVB(DvbVolt( 762,  737,  712)) }, },
+            { 2400000, { DVB(DvbVolt( 775,  750,  725)) }, },
+            { 2433000, { DVB(DvbVolt( 787,  762,  737)) }, },
+            { 2466000, { DVB(DvbVolt( 800,  775,  750)) }, },
+            { 2533000, { DVB(DvbVolt( 812,  787,  762)) }, },
+            { 2566000, { DVB(DvbVolt( 825,  800,  775)) }, },
+            { 2600000, { DVB(DvbVolt( 837,  812,  787)) }, },
+            { 2666000, { DVB(DvbVolt( 850,  825,  800)) }, },
+            { 2700000, { DVB(DvbVolt( 875,  850,  825)) }, },
+            { 2733000, { DVB(DvbVolt( 887,  862,  837)) }, },
+            { 2766000, { DVB(DvbVolt( 912,  887,  862)) }, },
+            { 2800000, { DVB(DvbVolt( 925,  900,  875)) }, },
+            { 2833000, { DVB(DvbVolt( 937,  912,  887)) }, },
+            { 2900000, { DVB(DvbVolt( 950,  925,  900)) }, },
+            { 2933000, { DVB(DvbVolt( 962,  937,  912)) }, },
+            { 3000000, { DVB(DvbVolt( 975,  950,  925)) }, },
+            { 3033000, { DVB(DvbVolt( 987,  962,  937)) }, },
+            { 3100000, { DVB(DvbVolt(1000,  975,  950)) }, },
+            { 3133000, { DVB(DvbVolt(1025, 1000,  975)) }, },
+            { 3166000, { DVB(DvbVolt(1037, 1012,  987)) }, },
+            { 3200000, { DVB(DvbVolt(1050, 1025, 1000)) }, },
             {     ~0u, {                                }, },
         };
         #undef DVB

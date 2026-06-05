@@ -25,8 +25,9 @@
  */
 
 #pragma once
-#include <switch.h>
 #include <hocclk.h>
+#include <switch.h>
+
 
 namespace board {
 
@@ -37,4 +38,4 @@ namespace board {
     void SchedSetFD2(u32 fd2);
     void NvSchedSucceed(Result nvSched);
 
-}
+}  // namespace board

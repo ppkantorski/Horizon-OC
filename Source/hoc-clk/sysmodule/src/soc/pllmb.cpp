@@ -14,35 +14,35 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #include "pllmb.hpp"
 
 namespace pllmb {
-    #define GET_BITS(VAL, HIGH, LOW)    ((VAL & ((1UL << (HIGH + 1UL)) - 1UL)) >> LOW)
-    #define GET_BIT(VAL, BIT)           GET_BITS(VAL, BIT, BIT)
+#define GET_BITS(VAL, HIGH, LOW) ((VAL & ((1UL << (HIGH + 1UL)) - 1UL)) >> LOW)
+#define GET_BIT(VAL, BIT) GET_BITS(VAL, BIT, BIT)
 
-    static inline volatile u32& REG(uintptr_t addr) {
-        return *reinterpret_cast<volatile u32*>(addr);
+    static inline volatile u32 &REG(uintptr_t addr) {
+        return *reinterpret_cast<volatile u32 *>(addr);
     }
 
     // From jetson nano kernel
     typedef enum {
         /* divider = 2 */
-        CLK_PLLX  = 5,
-        CLK_PLLM  = 2,
+        CLK_PLLX = 5,
+        CLK_PLLM = 2,
         CLK_PLLMB = 37,
         /* PLLX & PLLG are backup PLLs for CPU & GPU */
         /* divider = 1 */
-        CLK_CCLK_G = 18, // A57 CPU cluster
-        CLK_EMC   = 36,
-    } PTO_ID; // PLL Test Output Register ID
+        CLK_CCLK_G = 18,  // A57 CPU cluster
+        CLK_EMC = 36,
+    } PTO_ID;  // PLL Test Output Register ID
 
     /* See if GM20B clock GPC PLL regs are accessible. */
 
-    #define PLLX_MISC0 0xE4
-    #define PLLM_MISC2 0x9C
+#define PLLX_MISC0 0xE4
+#define PLLM_MISC2 0x9C
 
     double ptoGetMHz(PTO_ID pto_id, u32 divider = 1, u32 presel_reg = 0, u32 presel_mask = 0) {
         u32 pre_val, val, presel_val;
@@ -71,7 +71,7 @@ namespace pllmb {
         REG(board::clkVirtAddr + 0x60) = val | BIT(9);
         usleep(500);
 
-        while(REG(board::clkVirtAddr + 0x64) & BIT(31))
+        while (REG(board::clkVirtAddr + 0x64) & BIT(31))
             ;
 
         val = REG(board::clkVirtAddr + 0x64);
@@ -111,6 +111,6 @@ namespace pllmb {
 
         u32 pllmb = ptoGetMHz(CLK_PLLMB, 2, PLLM_MISC2, BIT(9));
         u32 pllm = ptoGetMHz(CLK_PLLM, 2, PLLM_MISC2, BIT(8));
-        return pllmb == 0 ? pllm : pllmb; // pllmb is zeroed out at times, fallback to pllm
+        return pllmb == 0 ? pllm : pllmb;  // pllmb is zeroed out at times, fallback to pllm
     }
-}
+}  // namespace pllmb

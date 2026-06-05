@@ -33,55 +33,54 @@
 
 /*! PTO_CLK_CNT */
 #define PTO_REF_CLK_WIN_CFG_MASK 0xF
-#define PTO_REF_CLK_WIN_CFG_16P  0xF
-#define PTO_CNT_EN               BIT(9)
-#define PTO_CNT_RST              BIT(10)
-#define PTO_CLK_ENABLE           BIT(13)
-#define PTO_SRC_SEL_SHIFT        14
-#define PTO_SRC_SEL_MASK         0x1FF
-#define PTO_DIV_SEL_MASK         (3 << 23)
-#define PTO_DIV_SEL_GATED        (0 << 23)
-#define PTO_DIV_SEL_DIV1         (1 << 23)
-#define PTO_DIV_SEL_DIV2_RISING  (2 << 23)
+#define PTO_REF_CLK_WIN_CFG_16P 0xF
+#define PTO_CNT_EN BIT(9)
+#define PTO_CNT_RST BIT(10)
+#define PTO_CLK_ENABLE BIT(13)
+#define PTO_SRC_SEL_SHIFT 14
+#define PTO_SRC_SEL_MASK 0x1FF
+#define PTO_DIV_SEL_MASK (3 << 23)
+#define PTO_DIV_SEL_GATED (0 << 23)
+#define PTO_DIV_SEL_DIV1 (1 << 23)
+#define PTO_DIV_SEL_DIV2_RISING (2 << 23)
 #define PTO_DIV_SEL_DIV2_FALLING (3 << 23)
-#define PTO_DIV_SEL_CPU_EARLY    (0 << 23)
-#define PTO_DIV_SEL_CPU_LATE     (1 << 23)
+#define PTO_DIV_SEL_CPU_EARLY (0 << 23)
+#define PTO_DIV_SEL_CPU_LATE (1 << 23)
 
-#define PTO_CLK_CNT_BUSY         BIT(31)
-#define PTO_CLK_CNT              0xFFFFFF
-#define CLK_PTO_CCLK_G_DIV2      0x13
-#define CLK_PTO_EMC              0x24
+#define PTO_CLK_CNT_BUSY BIT(31)
+#define PTO_CLK_CNT 0xFFFFFF
+#define CLK_PTO_CCLK_G_DIV2 0x13
+#define CLK_PTO_EMC 0x24
 
 #define CLOCK(x) (*(volatile u32 *)(g_clk_base + (x)))
 
 /* Actmon Global registers */
-#define ACTMON_GLB_STATUS          0x0
-#define ACTMON_MCCPU_MON_ACT      BIT(8)
-#define ACTMON_MCALL_MON_ACT      BIT(9)
-#define ACTMON_CPU_FREQ_MON_ACT   BIT(10)
-#define ACTMON_BPMP_MON_ACT       BIT(14)
-#define ACTMON_CPU_MON_ACT        BIT(15)
+#define ACTMON_GLB_STATUS 0x0
+#define ACTMON_MCCPU_MON_ACT BIT(8)
+#define ACTMON_MCALL_MON_ACT BIT(9)
+#define ACTMON_CPU_FREQ_MON_ACT BIT(10)
+#define ACTMON_BPMP_MON_ACT BIT(14)
+#define ACTMON_CPU_MON_ACT BIT(15)
 
-#define ACTMON_GLB_PERIOD_CTRL     0x4
-#define ACTMON_GLB_PERIOD_USEC    BIT(8)
+#define ACTMON_GLB_PERIOD_CTRL 0x4
+#define ACTMON_GLB_PERIOD_USEC BIT(8)
 #define ACTMON_GLB_PERIOD_SAMPLE(n) (((n) - 1) & 0xFF)
 
 /* Actmon Device Registers */
-#define ACTMON_DEV_SIZE           0x40
+#define ACTMON_DEV_SIZE 0x40
 /* Actmon CTRL */
-#define ACTMON_DEV_CTRL_K_VAL(k)                       (((k) & 7) << 10)
-#define ACTMON_DEV_CTRL_ENB_PERIODIC                   BIT(18)
-#define ACTMON_DEV_CTRL_ENB                            BIT(31)
+#define ACTMON_DEV_CTRL_K_VAL(k) (((k) & 7) << 10)
+#define ACTMON_DEV_CTRL_ENB_PERIODIC BIT(18)
+#define ACTMON_DEV_CTRL_ENB BIT(31)
 
 #define ACTMON_PERIOD_MS 20
 #define DEV_COUNT_WEIGHT 1024
 
-#define ACTMON_BASE     (g_act_base + 0x800)
+#define ACTMON_BASE (g_act_base + 0x800)
 #define ACTMON_DEV_BASE (ACTMON_BASE + 0x80)
 #define ACTMON(x) (*(volatile u32 *)(ACTMON_BASE + (x)))
 
-typedef enum _actmon_dev_t
-{
+typedef enum _actmon_dev_t {
     ACTMON_DEV_CPU,
     ACTMON_DEV_BPMP,
     ACTMON_DEV_AHB,
@@ -93,8 +92,7 @@ typedef enum _actmon_dev_t
     ACTMON_DEV_NUM,
 } actmon_dev_t;
 
-typedef struct _actmon_dev_reg_t
-{
+typedef struct _actmon_dev_reg_t {
     vu32 ctrl;
     vu32 upper_wnark;
     vu32 lower_wmark;
@@ -122,8 +120,7 @@ static u32 g_emc_bw_all = 0;
 static u32 g_emc_bw_cpu = 0;
 static u32 g_emc_bw_gpu = 0;
 
-static u32 _clock_get_dev_freq(u32 id, u32 multiplier)
-{
+static u32 _clock_get_dev_freq(u32 id, u32 multiplier) {
     const u32 pto_win = 16;
     const u32 pto_osc = 32768;
 
@@ -142,7 +139,7 @@ static u32 _clock_get_dev_freq(u32 id, u32 multiplier)
 
     CLOCK(CLK_RST_CONTROLLER_PTO_CLK_CNT_CNTL) = val | PTO_CNT_EN;
     (void)CLOCK(CLK_RST_CONTROLLER_PTO_CLK_CNT_CNTL);
-    usleep((1000000ULL * pto_win / pto_osc) + 12 + 2); // 502 us.
+    usleep((1000000ULL * pto_win / pto_osc) + 12 + 2);  // 502 us.
 
     while (CLOCK(CLK_RST_CONTROLLER_PTO_CLK_CNT_STATUS) & PTO_CLK_CNT_BUSY)
         ;
@@ -158,97 +155,81 @@ static u32 _clock_get_dev_freq(u32 id, u32 multiplier)
     return freq_khz;
 }
 
-static void _actmon_dev_enable(actmon_dev_t dev, u32 freq, u32 weight)
-{
+static void _actmon_dev_enable(actmon_dev_t dev, u32 freq, u32 weight) {
     actmon_dev_reg_t *regs = (actmon_dev_reg_t *)(ACTMON_DEV_BASE + (dev * ACTMON_DEV_SIZE));
 
     regs->init_avg = (u32)freq * ACTMON_PERIOD_MS / 2;
     regs->count_weight = weight;
 
-    regs->ctrl = ACTMON_DEV_CTRL_ENB | ACTMON_DEV_CTRL_ENB_PERIODIC | ACTMON_DEV_CTRL_K_VAL(3); // 8 samples average.
+    regs->ctrl = ACTMON_DEV_CTRL_ENB | ACTMON_DEV_CTRL_ENB_PERIODIC | ACTMON_DEV_CTRL_K_VAL(3);  // 8 samples average.
 }
 
-static u32 _actmon_dev_get_count_avg(actmon_dev_t dev)
-{
+static u32 _actmon_dev_get_count_avg(actmon_dev_t dev) {
     actmon_dev_reg_t *regs = (actmon_dev_reg_t *)(ACTMON_DEV_BASE + (dev * ACTMON_DEV_SIZE));
 
     return regs->avg_count;
 }
 
-static inline Result _svcQueryMemoryMappingFallback(u64* virtaddr, u64 physaddr, u64 size)
-{
-    if(hosversionAtLeast(10,0,0))
-    {
+static inline Result _svcQueryMemoryMappingFallback(u64 *virtaddr, u64 physaddr, u64 size) {
+    if (hosversionAtLeast(10, 0, 0)) {
         u64 out_size;
         return svcQueryMemoryMapping(virtaddr, &out_size, physaddr, size);
-    }
-    else
-    {
+    } else {
         return svcLegacyQueryIoMapping(virtaddr, physaddr, size);
     }
 }
 
-static void _clock_update_freqs(void)
-{
+static void _clock_update_freqs(void) {
     u64 ticks = armGetSystemTick();
-    if(armTicksToNs(ticks - g_update_ticks) <= WAIT_NS)
-    {
+    if (armTicksToNs(ticks - g_update_ticks) <= WAIT_NS) {
         return;
     }
 
     g_update_ticks = ticks;
 
-    if (!g_clk_base)
-    {
+    if (!g_clk_base) {
         _svcQueryMemoryMappingFallback(&g_clk_base, 0x60006000ul, 0x1000);
     }
 
-    if(!g_clk_base)
-    {
+    if (!g_clk_base) {
         return;
     }
 
     g_mem_freq = _clock_get_dev_freq(CLK_PTO_EMC, 1);
     g_cpu_freq = _clock_get_dev_freq(CLK_PTO_CCLK_G_DIV2, 2);
 
-    if (!g_gpu_base)
-    {
+    if (!g_gpu_base) {
         _svcQueryMemoryMappingFallback(&g_gpu_base, 0x57000000ul, 0x1000000);
     }
 
-    if (!g_gpu_base)
-    {
+    if (!g_gpu_base) {
         return;
     }
 
     bool gpu_enabled = (CLOCK(CLK_RST_CONTROLLER_CLK_OUT_ENB_X) & BIT(24)) && !(CLOCK(CLK_RST_CONTROLLER_RST_DEVICES_X) & BIT(24));
-    if(!gpu_enabled)
-    {
+    if (!gpu_enabled) {
         return;
     }
 
-    if (!g_act_base)
-    {
+    if (!g_act_base) {
         _svcQueryMemoryMappingFallback(&g_act_base, 0x6000C000ul, 0x1000);
     }
 
-    if(!g_act_base)
-    {
+    if (!g_act_base) {
         return;
     }
-    
+
     const u32 osc = 38400000;
     u32 coeff = GPU_TRIM_SYS_GPCPLL(GPU_TRIM_SYS_GPCPLL_COEFF);
     u32 divm = coeff & 0xFF;
-    u32 divn = (coeff >>  8) & 0xFF;
+    u32 divn = (coeff >> 8) & 0xFF;
     u32 divp = (coeff >> 16) & 0x3F;
     g_gpu_freq = osc * divn / (divm * divp) / 2;
 
     u32 emc_freq = g_mem_freq / 1000;
 
     // Check if actmon is disabled
-    if (!(ACTMON(ACTMON_GLB_STATUS) & ACTMON_MCALL_MON_ACT))
-    {
+    if (!(ACTMON(ACTMON_GLB_STATUS) & ACTMON_MCALL_MON_ACT)) {
         ACTMON(ACTMON_GLB_PERIOD_CTRL) = ACTMON_GLB_PERIOD_SAMPLE(ACTMON_PERIOD_MS);
         _actmon_dev_enable(ACTMON_DEV_MC_ALL, emc_freq, 256 * 4);
     }
@@ -270,57 +251,47 @@ static void _clock_update_freqs(void)
     g_emc_bw_gpu = g_emc_bw_all - g_emc_bw_cpu;
 }
 
-
-u32 t210ClkCpuFreq(void)
-{
+u32 t210ClkCpuFreq(void) {
     _clock_update_freqs();
     return g_cpu_freq;
 }
 
-u32 t210ClkMemFreq(void)
-{
+u32 t210ClkMemFreq(void) {
     _clock_update_freqs();
     return g_mem_freq;
 }
 
-u32 t210ClkGpuFreq(void)
-{
+u32 t210ClkGpuFreq(void) {
     _clock_update_freqs();
     return g_gpu_freq;
 }
 
-u32 t210EmcLoadAll()
-{
+u32 t210EmcLoadAll() {
     _clock_update_freqs();
     return g_emc_lall;
 }
 
-u32 t210EmcLoadCpu()
-{
+u32 t210EmcLoadCpu() {
     _clock_update_freqs();
     return g_emc_lcpu;
 }
 
-u32 t210EmcBwAll()
-{
+u32 t210EmcBwAll() {
     _clock_update_freqs();
     return g_emc_bw_all;
 }
 
-u32 t210EmcBwCpu()
-{
+u32 t210EmcBwCpu() {
     _clock_update_freqs();
     return g_emc_bw_cpu;
 }
 
-u32 t210EmcBwGpu()
-{
+u32 t210EmcBwGpu() {
     _clock_update_freqs();
     return g_emc_bw_gpu;
 }
 
-u32 t210EmcBwPeak()
-{
+u32 t210EmcBwPeak() {
     _clock_update_freqs();
     return ((u64)g_mem_freq * 16) / 1000000;
 }

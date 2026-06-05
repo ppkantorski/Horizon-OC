@@ -148,8 +148,6 @@ namespace ams::ldr::hoc::pcv::mariko {
     constexpr u32 EmcListDefault[]   = { 204000, 1331200, 1600000, };
     constexpr u32 EmcListSizeDefault = std::size(EmcListDefault);
     constexpr u32 EmcListEndDefault  = EmcListSizeDefault - 1;
-    constexpr u32 EmcRateStep        = 33'000;
-    constexpr u32 EmcRateStepScale   = 33'200;
 
     constexpr u32 EmcClkOSAlt     = 1331'200;
     constexpr u32 EmcClkPllmLimit = 2133'000'000;

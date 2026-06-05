@@ -46,7 +46,7 @@ namespace ams::ldr::hoc::pcv::mariko {
     }
 
     void AutoLatency(volatile u32 &latency, u32 freq, u32 latencyStep) {
-        if (freq > 1600'000 && freq <= 1866'000) { /* 1866tRWL */
+        if (freq > 1600'000 && freq <= 1862'400) { /* 1866tRWL */
             latency += latencyStep * 2;
         } else { /* 2133tRWL */
             latency += latencyStep * 3;

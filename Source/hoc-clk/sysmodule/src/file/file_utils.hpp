@@ -26,13 +26,13 @@
 
 #pragma once
 
-#include <switch.h>
-#include <time.h>
-#include <vector>
-#include <string>
 #include <atomic>
 #include <cstdarg>
 #include <hocclk.h>
+#include <string>
+#include <switch.h>
+#include <time.h>
+#include <vector>
 
 #define FILE_CONFIG_DIR "/config/" CONFIG_DIR
 #define FILE_FLAG_CHECK_INTERVAL_NS (10000ULL * 1000000000ULL)
@@ -47,7 +47,7 @@ namespace fileUtils {
     bool IsInitialized();
     bool IsLogEnabled();
     void InitializeAsync();
-    void LogLine(const char* format, ...);
-    void WriteContextToCsv(const HocClkContext* context);
+    void LogLine(const char *format, ...);
+    void WriteContextToCsv(const HocClkContext *context);
 
-}
+}  // namespace fileUtils

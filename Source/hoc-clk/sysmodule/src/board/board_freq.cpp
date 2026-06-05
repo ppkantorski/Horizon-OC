@@ -24,27 +24,32 @@
  * --------------------------------------------------------------------------
  */
 
-#include <switch.h>
 #include <hocclk.h>
-#include "../hos/apm_ext.h"
 #include <i2c.h>
-#include "../i2c/i2cDrv.h"
-#include <t210.h>
 #include <max17050.h>
+#include <switch.h>
+#include <t210.h>
 #include <tmp451.h>
-#include <ipc_server.h>
-#include <lockable_mutex.h>
+
 #include "../display/display_refresh_rate.hpp"
+#include "../file/config.hpp"
+#include "../file/errors.hpp"
+#include "../hos/apm_ext.h"
+#include "../i2c/i2cDrv.h"
+#include "../soc/gm20b.hpp"
+#include "../soc/pllmb.hpp"
 #include "board.hpp"
 #include "board_name.hpp"
-#include "../file/errors.hpp"
-#include "../soc/pllmb.hpp"
-#include "../file/config.hpp"
-#include "../soc/gm20b.hpp"
-#include "../file/config.hpp"
+#include <ipc_server.h>
+#include <lockable_mutex.h>
+
 namespace board {
-    #define MIDDLE_FREQ_TABLE_START_POINT 1228800000
     static u32 currentInjectedHz = 0;
+    static u32 gMarikoGm20bCutoff = 1228800000;
+
+    void SetMarikoGm20bCutoff(u32 hz) {
+        gMarikoGm20bCutoff = hz;
+    }
     PcvModule GetPcvModule(HocClkModule hocclkModule) {
         switch (hocclkModule) {
             case HocClkModule_CPU:
@@ -76,12 +81,12 @@ namespace board {
         ASSERT_RESULT_OK(pcvSetClockRate(moduleID, hz), "pcvSetClockRate");
     }
 
-    void HandleCpuUv()
-    {
+    void HandleCpuUv() {
         if (board::GetSocType() == HocClkSocType_Erista)
-            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000); // Erista tbreak is always 1581MHz
+            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000);  // Erista tbreak is always 1581MHz
         else
-            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_marikoCpuUVLow), config::GetConfigValue(KipConfigValue_marikoCpuUVHigh), board::CalculateTbreak(config::GetConfigValue(KipConfigValue_tableConf)));
+            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_marikoCpuUVLow), config::GetConfigValue(KipConfigValue_marikoCpuUVHigh),
+                                  board::CalculateTbreak(config::GetConfigValue(KipConfigValue_tableConf)));
     }
 
     void SetHz(HocClkModule module, u32 hz) {
@@ -97,7 +102,8 @@ namespace board {
             return;
         }
 
-        bool useGm20b = (module == HocClkModule_GPU) && (GetSocType() == HocClkSocType_Mariko) && (hz % 38400000 == 0) && (hz % 76800000 != 0) && hz < MIDDLE_FREQ_TABLE_START_POINT;
+        bool useGm20b = (module == HocClkModule_GPU) && (GetSocType() == HocClkSocType_Mariko) && (hz % 38400000 == 0) && (hz % 76800000 != 0) &&
+                        hz < gMarikoGm20bCutoff;
 
         u32 pcvHz = useGm20b ? ((hz + 76800000 - 1) / 76800000) * 76800000 : hz;
 
@@ -125,7 +131,7 @@ namespace board {
                 PcvSetHz(GetPcvModule(module), pcvHz);
             }
         }
-        if(config::GetConfigValue(HocClkConfigValue_LiveCpuUv) && module == HocClkModule_CPU) {
+        if (config::GetConfigValue(HocClkConfigValue_LiveCpuUv) && module == HocClkModule_CPU) {
             HandleCpuUv();
         }
         if (useGm20b) {
@@ -177,7 +183,9 @@ namespace board {
             case HocClkModule_GPU:
                 return t210ClkGpuFreq();
             case HocClkModule_MEM:
-                return config::GetConfigValue(HocClkConfigValue_MemoryFrequencyMeasurementMode) == MemoryFrequencyMeasurementMode_PLL ? pllmb::getRamClockRatePLLMB() : t210ClkMemFreq();
+                return config::GetConfigValue(HocClkConfigValue_MemoryFrequencyMeasurementMode) == MemoryFrequencyMeasurementMode_PLL
+                           ? pllmb::getRamClockRatePLLMB()
+                           : t210ClkMemFreq();
             case HocClkModule_Display:
                 return GetDisplayRate(hz);
             default:
@@ -192,7 +200,6 @@ namespace board {
         PcvClockRatesListType type;
         s32 tmpInMaxCount = maxCount;
         s32 tmpOutCount = 0;
-
 
         if (HOSSVC_HAS_CLKRST) {
             ClkrstSession session = {};
@@ -226,20 +233,20 @@ namespace board {
 
     void ResetToStock() {
         Result rc;
-        if (hosversionAtLeast(9,0,0)) {
+        if (hosversionAtLeast(9, 0, 0)) {
             std::uint32_t confId = 0;
             rc = apmExtGetCurrentPerformanceConfiguration(&confId);
             ASSERT_RESULT_OK(rc, "apmExtGetCurrentPerformanceConfiguration");
 
-            HocClkApmConfiguration* apmConfiguration = nullptr;
+            HocClkApmConfiguration *apmConfiguration = nullptr;
             for (size_t i = 0; hocclk_g_apm_configurations[i].id; ++i) {
-                if(hocclk_g_apm_configurations[i].id == confId) {
+                if (hocclk_g_apm_configurations[i].id == confId) {
                     apmConfiguration = &hocclk_g_apm_configurations[i];
                     break;
                 }
             }
 
-            if(!apmConfiguration) {
+            if (!apmConfiguration) {
                 ERROR_THROW("Unknown apm configuration: %x", confId);
             }
 
@@ -259,4 +266,4 @@ namespace board {
     void ResetToStockDisplay() {
         display::SetRate(60);
     }
-}
+}  // namespace board

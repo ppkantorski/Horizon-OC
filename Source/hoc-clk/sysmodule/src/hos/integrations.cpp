@@ -15,16 +15,17 @@
  *
  */
 
-#include "integrations.hpp"
-#include <sys/stat.h>
 #include <SaltyNX.h>
+
+#include "integrations.hpp"
 #include "process_management.hpp"
+#include <sys/stat.h>
 
 namespace integrations {
 
     namespace {
 
-        NxFpsSharedBlock* gNxFps = nullptr;
+        NxFpsSharedBlock *gNxFps = nullptr;
         SharedMemory gSharedMemory = {};
         bool gSharedMemoryUsed = false;
         Handle gRemoteSharedMemory = 1;
@@ -38,7 +39,8 @@ namespace integrations {
                     svcCloseHandle(saltysd);
                     break;
                 }
-                if (i == 66) return false;
+                if (i == 66)
+                    return false;
                 svcSleepThread(1'000'000);
             }
 
@@ -56,7 +58,7 @@ namespace integrations {
         void SearchSharedMemoryBlock(uintptr_t base) {
             ptrdiff_t search_offset = 0;
             while (search_offset < 0x1000) {
-                gNxFps = (NxFpsSharedBlock*)(base + search_offset);
+                gNxFps = (NxFpsSharedBlock *)(base + search_offset);
                 if (gNxFps->MAGIC == 0x465053)
                     return;
                 search_offset += 4;
@@ -74,21 +76,21 @@ namespace integrations {
                 gSharedMemoryUsed = true;
         }
 
-    }
+    }  // namespace
 
     bool GetSysDockState() {
-        struct stat st = {0};
+        struct stat st = { 0 };
         return stat("sdmc:/atmosphere/contents/42000000000000A0/flags/boot2.flag", &st) == 0;
     }
 
     bool GetSaltyNXState() {
-        struct stat st = {0};
+        struct stat st = { 0 };
         return stat("sdmc:/atmosphere/contents/0000000000534C56/flags/boot2.flag", &st) == 0;
     }
 
     bool GetRETROSuperStatus() {
-        struct stat st = {0};
-        return stat("sdmc:/config/horizon-oc/retro.flag", &st) == 0; // TODO: unhardcode this
+        struct stat st = { 0 };
+        return stat("sdmc:/config/horizon-oc/retro.flag", &st) == 0;  // TODO: unhardcode this
     }
 
     void LoadSaltyNX() {
@@ -143,13 +145,15 @@ namespace integrations {
                 resolutionLookup = 1;
                 return 0;
             } else if (resolutionLookup == 1) {
-                if (gNxFps->renderCalls[0].calls != 0xFFFF) resolutionLookup = 2;
-                else return 0;
+                if (gNxFps->renderCalls[0].calls != 0xFFFF)
+                    resolutionLookup = 2;
+                else
+                    return 0;
             }
-            
+
             return gNxFps->renderCalls[0].height == 0 ? gNxFps->viewportCalls[0].height : gNxFps->renderCalls[0].height;
         }
         return 0;
     }
 
-}
+}  // namespace integrations

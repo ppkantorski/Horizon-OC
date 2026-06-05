@@ -24,22 +24,24 @@
  * --------------------------------------------------------------------------
  */
 
-#include <switch.h>
+#include <algorithm>
+#include <battery.h>
 #include <hocclk.h>
-#include "../hos/apm_ext.h"
 #include <i2c.h>
-#include <t210.h>
+#include <math.h>
 #include <max17050.h>
+#include <minIni.h>
+#include <numeric>
+#include <switch.h>
+#include <t210.h>
 #include <tmp451.h>
+
+#include "../hos/apm_ext.h"
+#include "board.hpp"
+#include "board_misc.hpp"
 #include <ipc_server.h>
 #include <lockable_mutex.h>
-#include <algorithm>
-#include <math.h>
-#include <numeric>
-#include <minIni.h>
-#include <battery.h>
-#include "board_misc.hpp"
-#include "board.hpp"
+
 
 namespace board {
 
@@ -61,23 +63,24 @@ namespace board {
     constexpr double Systemtickfrequency = 19200000.0 * (static_cast<double>(CpuTimeOutNs) / 1'000'000'000.0);
 
     void GpuLoadThread(void *ptr) {
-        #define gpu_samples_average 8
-        #define NVGPU_GPU_IOCTL_PMU_GET_GPU_LOAD 0x80044715
-        uint32_t gpu_load_array[gpu_samples_average] = {0};
+#define gpu_samples_average 8
+#define NVGPU_GPU_IOCTL_PMU_GET_GPU_LOAD 0x80044715
+        uint32_t gpu_load_array[gpu_samples_average] = { 0 };
         size_t i = 0;
-        if (R_SUCCEEDED(nvCheck_load)) do {
-            u32 temp;
-            if (R_SUCCEEDED(nvIoctl(_fd, NVGPU_GPU_IOCTL_PMU_GET_GPU_LOAD, &temp))) {
-                gpu_load_array[i++ % gpu_samples_average] = temp;
-                gpuLoad = std::accumulate(&gpu_load_array[0], &gpu_load_array[gpu_samples_average], 0) / gpu_samples_average;
-            }
-            svcSleepThread(16'666'000); // wait a bit (this is the perfect amount of time to keep the reading accurate)
-        } while(true);
+        if (R_SUCCEEDED(nvCheck_load))
+            do {
+                u32 temp;
+                if (R_SUCCEEDED(nvIoctl(_fd, NVGPU_GPU_IOCTL_PMU_GET_GPU_LOAD, &temp))) {
+                    gpu_load_array[i++ % gpu_samples_average] = temp;
+                    gpuLoad = std::accumulate(&gpu_load_array[0], &gpu_load_array[gpu_samples_average], 0) / gpu_samples_average;
+                }
+                svcSleepThread(16'666'000);  // wait a bit (this is the perfect amount of time to keep the reading accurate)
+            } while (true);
     }
 
     void CheckCore(void *idletickPtr) {
-        u64* idletick = static_cast<u64 *>(idletickPtr);
-        while(true) {
+        u64 *idletick = static_cast<u64 *>(idletickPtr);
+        while (true) {
             u64 idletickA;
             u64 idletickB;
             svcGetInfo(&idletickB, InfoType_IdleTickCount, INVALID_HANDLE, -1);
@@ -107,11 +110,11 @@ namespace board {
         float cpuUsage0 = std::clamp(((Systemtickfrequency - idletick0) / static_cast<double>(Systemtickfrequency)) * 1000.0, 0.0, 1000.0);
         float cpuUsage1 = std::clamp(((Systemtickfrequency - idletick1) / static_cast<double>(Systemtickfrequency)) * 1000.0, 0.0, 1000.0);
         float cpuUsage2 = std::clamp(((Systemtickfrequency - idletick2) / static_cast<double>(Systemtickfrequency)) * 1000.0, 0.0, 1000.0);
-        return std::round(std::max({cpuUsage0, cpuUsage1, cpuUsage2}));
+        return std::round(std::max({ cpuUsage0, cpuUsage1, cpuUsage2 }));
     }
 
     u32 GetPartLoad(HocClkPartLoad loadSource) {
-        switch(loadSource) {
+        switch (loadSource) {
             case HocClkPartLoad_EMC:
                 return t210EmcLoadAll();
             case HocClkPartLoad_EMCCpu:
@@ -148,9 +151,9 @@ namespace board {
     }
 
     namespace {
-        constexpr u32 NVschedCtrlEnable  = 0x00000601;
+        constexpr u32 NVschedCtrlEnable = 0x00000601;
         constexpr u32 NVschedCtrlDisable = 0x00000602;
-    }
+    }  // namespace
 
     void SetGpuSchedulingMode(GpuSchedulingMode mode, GpuSchedulingOverrideMethod method) {
         if (R_FAILED(nvCheckSched) && method == GpuSchedulingOverrideMethod_NvService) {
@@ -160,7 +163,8 @@ namespace board {
         u32 temp;
         bool enabled = false;
         switch (mode) {
-            case GpuSchedulingMode_DoNotOverride: break;
+            case GpuSchedulingMode_DoNotOverride:
+                break;
             case GpuSchedulingMode_Disabled:
                 if (method == GpuSchedulingOverrideMethod_NvService) {
                     nvIoctl(_fd2, NVschedCtrlDisable, &temp);
@@ -198,4 +202,4 @@ namespace board {
         nvCheckSched = nvSched;
     }
 
-}
+}  // namespace board

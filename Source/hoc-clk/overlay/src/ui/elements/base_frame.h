@@ -28,20 +28,21 @@
 #pragma once
 
 #include <tesla.hpp>
-#include "../gui/base_gui.h"
+
+class BaseGui;
+
+static constexpr u16 HOC_HEADER_HEIGHT = 287;
+// Bottom edge of the drawn box: 106 + TOP_Y_OFFSET(15) + 156 = 277
+static constexpr u16 HOC_BOX_BOTTOM    = 277;
 
 class BaseFrame : public tsl::elm::HeaderOverlayFrame
 {
     public:
-        BaseFrame(BaseGui* gui) : tsl::elm::HeaderOverlayFrame(234) {
+        BaseFrame(BaseGui* gui, u16 headerHeight = HOC_HEADER_HEIGHT) : tsl::elm::HeaderOverlayFrame(headerHeight) {
             this->gui = gui;
         }
 
-        void draw(tsl::gfx::Renderer* renderer) override
-        {
-            tsl::elm::HeaderOverlayFrame::draw(renderer);
-            this->gui->preDraw(renderer);
-        }
+        void draw(tsl::gfx::Renderer* renderer) override;
 
     protected:
         BaseGui* gui;

@@ -28,7 +28,5 @@
 #include <hocclk.h>
 
 namespace board {
-
     HocClkProfile GetProfile();
-
 }

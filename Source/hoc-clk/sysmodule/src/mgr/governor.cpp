@@ -15,14 +15,15 @@
  *
  */
 
-#include "governor.hpp"
 #include "../hos/process_management.hpp"
+#include "governor.hpp"
 #include <hocclk/clock_manager.h>
+
 namespace governor {
 
-    #define POLL_NS 5'000'000  // 5 ms  – governor poll rate
-    #define DOWN_HOLD_TICKS 10         // 50 ms – how long to in POLL_NS to hold while ramping down
-    #define STEP_UTIL 900        // multiplier for step calculations
+#define POLL_NS 5'000'000   // 5 ms  – governor poll rate
+#define DOWN_HOLD_TICKS 10  // 50 ms – how long to in POLL_NS to hold while ramping down
+#define STEP_UTIL 900       // multiplier for step calculations
 
     bool isGpuGovernorEnabled = false;
     bool isCpuGovernorEnabled = false;
@@ -44,8 +45,10 @@ namespace governor {
         }
 
         auto resolve = [](u8 app, u8 temp) -> u8 {
-            if (temp == ComponentGovernor_Disabled) return ComponentGovernor_Disabled;
-            if (temp != ComponentGovernor_DoNotOverride) return temp;
+            if (temp == ComponentGovernor_Disabled)
+                return ComponentGovernor_Disabled;
+            if (temp != ComponentGovernor_DoNotOverride)
+                return temp;
             return app;
         };
 
@@ -68,8 +71,10 @@ namespace governor {
         if (newVrrGovernorState == false && lastVrrGovernorState == true)
             board::ResetToStockDisplay();
 
-        if (newCpuGovernorState != lastCpuGovernorState || newGpuGovernorState != lastGpuGovernorState || newVrrGovernorState != lastVrrGovernorState) {
-            fileUtils::LogLine("[mgr] Governor state changed: CPU %s, GPU %s, VRR %s", newCpuGovernorState ? "enabled" : "disabled", newGpuGovernorState ? "enabled" : "disabled", newVrrGovernorState ? "enabled" : "disabled");
+        if (newCpuGovernorState != lastCpuGovernorState || newGpuGovernorState != lastGpuGovernorState ||
+            newVrrGovernorState != lastVrrGovernorState) {
+            fileUtils::LogLine("[mgr] Governor state changed: CPU %s, GPU %s, VRR %s", newCpuGovernorState ? "enabled" : "disabled",
+                               newGpuGovernorState ? "enabled" : "disabled", newVrrGovernorState ? "enabled" : "disabled");
             lastCpuGovernorState = newCpuGovernorState;
             lastGpuGovernorState = newGpuGovernorState;
             lastVrrGovernorState = newVrrGovernorState;
@@ -81,7 +86,7 @@ namespace governor {
         return (u32)(std::min(hz, static_cast<u64>(tableMaxHz)));
     }
 
-    u32 TableIndexForHz(const clockManager::FreqTable& table, u32 targetHz) {
+    u32 TableIndexForHz(const clockManager::FreqTable &table, u32 targetHz) {
         for (u32 i = 0; i < table.count; i++)
             if (table.list[i] >= targetHz)
                 return i;
@@ -91,17 +96,13 @@ namespace governor {
     u32 ResolveTargetHz(HocClkModule module) {
         u32 hz = clockManager::gContext.overrideFreqs[module];
         if (!hz)
-            hz = config::GetAutoClockHz(
-                    clockManager::gContext.applicationId, module,
-                    clockManager::gContext.profile, false);
+            hz = config::GetAutoClockHz(clockManager::gContext.applicationId, module, clockManager::gContext.profile, false);
         if (!hz)
-            hz = config::GetAutoClockHz(
-                    HOCCLK_GLOBAL_PROFILE_TID, module,
-                    clockManager::gContext.profile, false);
+            hz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, module, clockManager::gContext.profile, false);
         return hz;
     }
 
-    void GovernorThread(void* arg) {
+    void GovernorThread(void *arg) {
         (void)arg;
 
         u32 cpuDownHoldRemaining = 0;
@@ -135,8 +136,8 @@ namespace governor {
                 } else {
                     isCpuGovernorInBoostMode = false;
 
-                    auto& table = clockManager::gFreqTable[HocClkModule_CPU];
-                    std::scoped_lock lock{clockManager::gContextMutex};
+                    auto &table = clockManager::gFreqTable[HocClkModule_CPU];
+                    std::scoped_lock lock{ clockManager::gContextMutex };
 
                     u32 cpuLoad = board::GetPartLoad(HocClkPartLoad_CPUMax);
                     u32 tableMaxHz = table.list[table.count - 1];
@@ -146,7 +147,7 @@ namespace governor {
 
                     if (targetHz && desiredHz > targetHz)
                         desiredHz = targetHz;
-                    if (maxHz    && desiredHz > maxHz)
+                    if (maxHz && desiredHz > maxHz)
                         desiredHz = maxHz;
 
                     u32 newHz = table.list[TableIndexForHz(table, desiredHz)];
@@ -162,6 +163,15 @@ namespace governor {
 
                     if (++cpuTick > 50) {
                         minHz = config::GetConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq);
+                        if (config::GetConfigValue(HocClkConfigValue_AutoRAMCPUOverclock)) {
+                            u32 ramHz = clockManager::gContext.freqs[HocClkModule_MEM];
+                            u32 threshold = (u32)config::GetConfigValue(HocClkConfigValue_AutoRamCpuRamOCThreshold) * 1000;
+                            if (ramHz >= threshold) {
+                                u32 overrideHz = (u32)config::GetConfigValue(HocClkConfigValue_AutoRamCpuCpuOCFreq) * 1000;
+                                if (overrideHz > minHz)
+                                    minHz = overrideHz;
+                            }
+                        }
                         cpuTick = 0;
                     }
 
@@ -182,8 +192,8 @@ namespace governor {
             }
 
             if (isGpuGovernorEnabled) {
-                auto& table = clockManager::gFreqTable[HocClkModule_GPU];
-                std::scoped_lock lock{clockManager::gContextMutex};
+                auto &table = clockManager::gFreqTable[HocClkModule_GPU];
+                std::scoped_lock lock{ clockManager::gContextMutex };
 
                 u32 gpuLoad = board::GetPartLoad(HocClkPartLoad_GPU);
                 u32 tableMaxHz = table.list[table.count - 1];
@@ -193,7 +203,7 @@ namespace governor {
 
                 if (targetHz && desiredHz > targetHz)
                     desiredHz = targetHz;
-                if (maxHz    && desiredHz > maxHz)
+                if (maxHz && desiredHz > maxHz)
                     desiredHz = maxHz;
 
                 u32 newHz = table.list[TableIndexForHz(table, desiredHz)];
@@ -235,13 +245,15 @@ namespace governor {
                     u8 fps = integrations::GetSaltyNXFPS();
 
                     if (fps != 254) {
-                        std::scoped_lock lock{clockManager::gContextMutex};
+                        std::scoped_lock lock{ clockManager::gContextMutex };
 
                         u32 targetHz = clockManager::gContext.overrideFreqs[HocClkModule_Display];
                         if (!targetHz) {
-                            targetHz = config::GetAutoClockHz(clockManager::gContext.applicationId, HocClkModule_Display, clockManager::gContext.profile, false);
+                            targetHz = config::GetAutoClockHz(clockManager::gContext.applicationId, HocClkModule_Display,
+                                                              clockManager::gContext.profile, false);
                             if (!targetHz)
-                                targetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Display, clockManager::gContext.profile, false);
+                                targetHz =
+                                    config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Display, clockManager::gContext.profile, false);
                         }
 
                         u8 maxDisplay = targetHz ? (u8)targetHz : 60;
@@ -283,19 +295,11 @@ namespace governor {
     }
 
     void startThreads() {
-        threadCreate(
-            &governorTHREAD,
-            GovernorThread,
-            nullptr,
-            NULL,
-            0x2000,
-            0x3F,
-            -2
-        );
+        threadCreate(&governorTHREAD, GovernorThread, nullptr, NULL, 0x2000, 0x3F, -2);
         threadStart(&governorTHREAD);
     }
 
     void exitThreads() {
         threadClose(&governorTHREAD);
     }
-}
+}  // namespace governor

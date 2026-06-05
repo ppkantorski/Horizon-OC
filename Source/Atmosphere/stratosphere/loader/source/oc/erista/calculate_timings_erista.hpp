@@ -18,6 +18,6 @@
 
 namespace ams::ldr::hoc::pcv::erista {
 
-    void CalculateTimings(double tCK_avg);
+    void CalculateTimings(double tCK_avg, u32 freq);
 
 }

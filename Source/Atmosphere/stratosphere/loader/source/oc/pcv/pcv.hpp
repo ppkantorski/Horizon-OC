@@ -127,8 +127,14 @@ namespace ams::ldr::hoc::pcv {
                 case 2:
                     customize_table = const_cast<cvb_entry_t *>(C.marikoGpuDvfsTableHiOPT);
                     break;
+                case 3:
+                    customize_table = const_cast<cvb_entry_t *>(C.marikoGpuDvfsTableHiOPT15);
+                    break;
+                case 4:
+                    customize_table = const_cast<cvb_entry_t *>(C.marikoGpuDvfsTableHighUV);
+                    break;
                 default:
-                    customize_table = const_cast<cvb_entry_t *>(C.marikoGpuDvfsTable);
+                    customize_table = const_cast<cvb_entry_t *>(C.marikoGpuDvfsTableHiOPT);
                     break;
                 }
         } else {
@@ -169,14 +175,14 @@ namespace ams::ldr::hoc::pcv {
                     PATCH_OFFSET(&(entry->cvb_pll_param.c0), (C.marikoGpuVoltArray[i] * 1000));
                     ClearCvbPllEntry(entry);
                 } else {
-                    PATCH_OFFSET(&(entry->cvb_pll_param.c0), (entry->cvb_pll_param.c0 - C.commonGpuVoltOffset * 1000));
+                    PATCH_OFFSET(&(entry->cvb_pll_param.c0), (u32)((s32)entry->cvb_pll_param.c0 + C.commonGpuVoltOffset * 1000));
                 }
             } else {
                 if (C.eristaGpuVoltArray[i] != 0) {
                     PATCH_OFFSET(&(entry->cvb_pll_param.c0), (C.eristaGpuVoltArray[i] * 1000));
                     ClearCvbPllEntry(entry);
                 } else {
-                    PATCH_OFFSET(&(entry->cvb_pll_param.c0), (entry->cvb_pll_param.c0 - C.commonGpuVoltOffset * 1000));
+                    PATCH_OFFSET(&(entry->cvb_pll_param.c0), (u32)((s32)entry->cvb_pll_param.c0 + C.commonGpuVoltOffset * 1000));
                 }
             }
             ++entry;
@@ -184,7 +190,7 @@ namespace ams::ldr::hoc::pcv {
         if (C.commonGpuVoltOffset && !(isMariko ? C.marikoGpuUV : C.eristaGpuUV)) {
             cvb_entry_t *entry = static_cast<cvb_entry_t *>(gpu_cvb_table_head);
             for (size_t i = 0; i < customize_entry_count; ++i) {
-                PATCH_OFFSET(&(entry->cvb_pll_param.c0), (entry->cvb_pll_param.c0 - C.commonGpuVoltOffset * 1000));
+                PATCH_OFFSET(&(entry->cvb_pll_param.c0), (u32)((s32)entry->cvb_pll_param.c0 + C.commonGpuVoltOffset * 1000));
                 ++entry;
             }
         }

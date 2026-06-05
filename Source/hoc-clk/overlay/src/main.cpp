@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,72 +24,62 @@
  * --------------------------------------------------------------------------
  */
 
-
 #define TESLA_INIT_IMPL
 #include <tesla.hpp>
+
 #include "ui/gui/fatal_gui.h"
 #include "ui/gui/main_gui.h"
 
-class AppOverlay : public tsl::Overlay
-{
+class AppOverlay : public tsl::Overlay {
     public:
-        AppOverlay() {}
-        ~AppOverlay() {}
+    AppOverlay() {
+    }
+    ~AppOverlay() {
+    }
 
-        //virtual void initServices() override {
-        //    rgltrInitialize();
-        //}
+    // virtual void initServices() override {
+    //     rgltrInitialize();
+    // }
 
-        virtual void exitServices() override {
-            hocclkIpcExit();
+    virtual void exitServices() override {
+        hocclkIpcExit();
+    }
+
+    virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
+        uint32_t apiVersion;
+        smInitialize();
+
+        tsl::hlp::ScopeGuard smGuard([] { smExit(); });
+
+        if (!hocclkIpcRunning()) {
+            return initially<FatalGui>("hoc-clk is not running.\n\n"
+                                       "\n"
+                                       "Please make sure it is correctly\n\n"
+                                       "installed and enabled.",
+                                       "");
         }
 
-        virtual std::unique_ptr<tsl::Gui> loadInitialGui() override
-        {
-            uint32_t apiVersion;
-            smInitialize();
-
-            tsl::hlp::ScopeGuard smGuard([] { smExit(); });
-
-            if(!hocclkIpcRunning())
-            {
-                return initially<FatalGui>(
-                    "hoc-clk is not running.\n\n"
-                    "\n"
-                    "Please make sure it is correctly\n\n"
-                    "installed and enabled.",
-                    ""
-                );
-            }
-
-            if(R_FAILED(hocclkIpcInitialize()) || R_FAILED(hocclkIpcGetAPIVersion(&apiVersion)))
-            {
-                return initially<FatalGui>(
-                    "Could not connect to hoc-clk.\n\n"
-                    "\n"
-                    "Please make sure it is correctly\n\n"
-                    "installed and enabled.",
-                    ""
-                );
-            }
-
-            if(HOCCLK_IPC_API_VERSION != apiVersion)
-            {
-                return initially<FatalGui>(
-                    "Overlay not compatible with\n\n"
-                    "the running hoc-clk version.\n\n"
-                    "\n"
-                    "Please make sure everything is\n\n"
-                    "installed and up to date.",
-                    ""
-                );
-            }
-
-            return initially<MainGui>();
+        if (R_FAILED(hocclkIpcInitialize()) || R_FAILED(hocclkIpcGetAPIVersion(&apiVersion))) {
+            return initially<FatalGui>("Could not connect to hoc-clk.\n\n"
+                                       "\n"
+                                       "Please make sure it is correctly\n\n"
+                                       "installed and enabled.",
+                                       "");
         }
+
+        if (HOCCLK_IPC_API_VERSION != apiVersion) {
+            return initially<FatalGui>("Overlay not compatible with\n\n"
+                                       "the running hoc-clk version.\n\n"
+                                       "\n"
+                                       "Please make sure everything is\n\n"
+                                       "installed and up to date.",
+                                       "");
+        }
+
+        return initially<MainGui>();
+    }
 };
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     return tsl::loop<AppOverlay>(argc, argv);
 }

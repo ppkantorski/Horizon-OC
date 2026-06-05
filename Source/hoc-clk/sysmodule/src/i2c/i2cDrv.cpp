@@ -12,7 +12,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 #include "i2cDrv.h"
 
@@ -37,8 +37,12 @@ Result I2cSet_U8(I2cDevice dev, u8 reg, u8 val) {
 }
 
 Result I2cRead_OutU8(I2cDevice dev, u8 reg, u8 *out) {
-    struct { u8 reg; } __attribute__((packed)) cmd;
-    struct { u8 val; } __attribute__((packed)) rec;
+    struct {
+        u8 reg;
+    } __attribute__((packed)) cmd;
+    struct {
+        u8 val;
+    } __attribute__((packed)) rec;
 
     I2cSession _session;
     Result res = i2cOpenSession(&_session, dev);
@@ -63,8 +67,12 @@ Result I2cRead_OutU8(I2cDevice dev, u8 reg, u8 *out) {
 }
 
 Result I2cRead_OutU16(I2cDevice dev, u8 reg, u16 *out) {
-    struct { u8 reg;  } __attribute__((packed)) cmd;
-    struct { u16 val; } __attribute__((packed)) rec;
+    struct {
+        u8 reg;
+    } __attribute__((packed)) cmd;
+    struct {
+        u16 val;
+    } __attribute__((packed)) rec;
 
     I2cSession _session;
     Result res = i2cOpenSession(&_session, dev);
@@ -94,20 +102,20 @@ float I2c_Max17050_GetBatteryCurrent() {
     if (res)
         return 0.f;
 
-    const float SenseResistor   = 5.; // in uOhm
-    const float CGain           = 1.99993;
+    const float SenseResistor = 5.;  // in uOhm
+    const float CGain = 1.99993;
     return (s16)val * (1.5625 / (SenseResistor * CGain));
 }
 
-u32 I2c_BuckConverter_MultiplierToMvOut(const I2c_BuckConverter_Domain* domain, u8 multiplier) {
+u32 I2c_BuckConverter_MultiplierToMvOut(const I2c_BuckConverter_Domain *domain, u8 multiplier) {
     return (domain->uv_min + domain->uv_step * multiplier) / 1000;
 }
 
-u32 I2c_BuckConverter_MultiplierToUvOut(const I2c_BuckConverter_Domain* domain, u8 multiplier) {
+u32 I2c_BuckConverter_MultiplierToUvOut(const I2c_BuckConverter_Domain *domain, u8 multiplier) {
     return domain->uv_min + domain->uv_step * multiplier;
 }
 
-u8 I2c_BuckConverter_MvOutToMultiplier(const I2c_BuckConverter_Domain* domain, u32 mvolt) {
+u8 I2c_BuckConverter_MvOutToMultiplier(const I2c_BuckConverter_Domain *domain, u32 mvolt) {
     u32 uvolt = mvolt * 1000;
     if (uvolt < domain->uv_min)
         uvolt = domain->uv_min;
@@ -117,7 +125,7 @@ u8 I2c_BuckConverter_MvOutToMultiplier(const I2c_BuckConverter_Domain* domain, u
     return (uvolt - domain->uv_min) / domain->uv_step;
 }
 
-u32 I2c_BuckConverter_GetMvOut(const I2c_BuckConverter_Domain* domain) {
+u32 I2c_BuckConverter_GetMvOut(const I2c_BuckConverter_Domain *domain) {
     u8 val;
     // Retry 5 times if received POR value
     for (int i = 0; i < 5; i++) {
@@ -133,7 +141,7 @@ u32 I2c_BuckConverter_GetMvOut(const I2c_BuckConverter_Domain* domain) {
     return I2c_BuckConverter_MultiplierToMvOut(domain, val & domain->volt_mask);
 }
 
-u32 I2c_BuckConverter_GetUvOut(const I2c_BuckConverter_Domain* domain) {
+u32 I2c_BuckConverter_GetUvOut(const I2c_BuckConverter_Domain *domain) {
     u8 val;
     // Retry 5 times if received POR value
     for (int i = 0; i < 5; i++) {
@@ -149,7 +157,7 @@ u32 I2c_BuckConverter_GetUvOut(const I2c_BuckConverter_Domain* domain) {
     return I2c_BuckConverter_MultiplierToUvOut(domain, val & domain->volt_mask);
 }
 
-Result I2c_BuckConverter_SetMvOut(const I2c_BuckConverter_Domain* domain, u32 mvolt) {
+Result I2c_BuckConverter_SetMvOut(const I2c_BuckConverter_Domain *domain, u32 mvolt) {
     u8 val;
     Result res = I2cRead_OutU8(domain->device, domain->reg, &val);
     if (R_FAILED(res))
@@ -179,7 +187,7 @@ u8 I2c_Bq24193_Convert_mA_Raw(u32 ma) {
     // Adjustment is required
     u8 raw = 0;
 
-    if (ma > MA_RANGE_MAX) // capping
+    if (ma > MA_RANGE_MAX)  // capping
         ma = MA_RANGE_MAX;
 
     bool pct20 = ma <= (MA_RANGE_MIN - 64);
@@ -188,8 +196,8 @@ u8 I2c_Bq24193_Convert_mA_Raw(u32 ma) {
         raw |= 0x1;
     }
 
-    ma -= ma % 100; // round to 100
-    ma -= (MA_RANGE_MIN - 64); // ceiling
+    ma -= ma % 100;             // round to 100
+    ma -= (MA_RANGE_MIN - 64);  // ceiling
     raw |= (ma >> 6) << 2;
 
     return raw;
@@ -219,4 +227,78 @@ Result I2c_Bq24193_GetFastChargeCurrentLimit(u32 *ma) {
 Result I2c_Bq24193_SetFastChargeCurrentLimit(u32 ma) {
     u8 raw = I2c_Bq24193_Convert_mA_Raw(ma);
     return I2cSet_U8(I2cDevice_Bq24193, BQ24193_CHARGE_CURRENT_CONTROL_REG, raw);
+}
+
+// Converts mA to the raw value for bits [2:0] of REG00
+static u8 I2c_Bq24193_Convert_InputmA_Raw(u32 ma) {
+    if (ma <= 100)
+        return 0b000;
+    if (ma <= 150)
+        return 0b001;
+    if (ma <= 500)
+        return 0b010;
+    if (ma <= 900)
+        return 0b011;
+    if (ma <= 1200)
+        return 0b100;
+    if (ma <= 1500)
+        return 0b101;
+    if (ma <= 2000)
+        return 0b110;
+    return 0b111;  // 3000mA max
+}
+
+Result I2c_Bq24193_SetInputCurrentLimit(u32 ma) {
+    // don't do anything if it's disabled
+    if (ma == 0)
+        return 0;
+
+    u8 raw;
+    Result res = I2cRead_OutU8(I2cDevice_Bq24193, BQ24193_INPUT_SOURCE_CONTROL_REG, &raw);
+    if (R_FAILED(res))
+        return res;
+
+    raw &= ~0x07;
+    raw |= I2c_Bq24193_Convert_InputmA_Raw(ma);
+
+    return I2cSet_U8(I2cDevice_Bq24193, BQ24193_INPUT_SOURCE_CONTROL_REG, raw);
+}
+
+// not used
+Result I2c_Bq24193_GetInputCurrentLimit(u32 *ma) {
+    u8 raw;
+    Result res = I2cRead_OutU8(I2cDevice_Bq24193, BQ24193_INPUT_SOURCE_CONTROL_REG, &raw);
+    if (R_FAILED(res))
+        return res;
+
+    switch (raw & 0x07) {
+        case 0b000:
+            *ma = 100;
+            break;
+        case 0b001:
+            *ma = 150;
+            break;
+        case 0b010:
+            *ma = 500;
+            break;
+        case 0b011:
+            *ma = 900;
+            break;
+        case 0b100:
+            *ma = 1200;
+            break;
+        case 0b101:
+            *ma = 1500;
+            break;
+        case 0b110:
+            *ma = 2000;
+            break;
+        case 0b111:
+            *ma = 3000;
+            break;
+        default:
+            *ma = 0;
+            break;
+    }
+    return 0;
 }

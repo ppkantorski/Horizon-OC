@@ -35,10 +35,8 @@ volatile CustomizeTable C = {
 /* Disables RAM powerdown */
 .hpMode = DISABLED,
 
-.commonEmcMemVolt   = 1175000, /* LPDDR4(X) JEDEC Specification */
-.eristaEmcMaxClock  = 1600000, /* Maximum HB-MGCH ram rating */
-.eristaEmcMaxClock1 = 1600000,
-.eristaEmcMaxClock2 = 1600000,
+.commonEmcMemVolt  = 1175000, /* LPDDR4(X) JEDEC Specification */
+.eristaEmcMaxClock = 1600000, /* Maximum HB-MGCH ram rating */
 
 /* Available: 66MHz step rate, 100MHz step rate, 133MHz step rate and jedec. */
 /* Jedec freqs are 1333MHz, 1600MHz, 1866MHz, 2133MHz, 2400MHz, 2666MHz, 2933MHz, 3200MHz. */
@@ -84,24 +82,6 @@ volatile CustomizeTable C = {
     /* 2133 */ 0,
 },
 
-/* You can mix and match different latencies if needed */
-/*
- * Read:
- *  2133RL = 40
- *  1866RL = 36
- *  1600RL = 32
- *  1331RL = 28
- * Write:
- *  2133WL = 18
- *  1866WL = 16
- *  1600WL = 14
- *  1331WL = 12
- */
-
-/* Erista only. */
-.mem_burst_read_latency  = RL_1600,
-.mem_burst_write_latency = WL_1600,
-
 .eristaCpuUV      = 0,
 .eristaCpuVmin    = 800,
 .eristaCpuMaxVolt = 1200,
@@ -133,15 +113,13 @@ volatile CustomizeTable C = {
 .eristaGpuUV   = 0,
 .eristaGpuVmin = 810,
 
-.marikoGpuUV = 0,
-/* Vmin past 795mV won't work due boot voltage being 800mV. */
+.marikoGpuUV = 2,
+/* Vmin past 795mV won't work due boot voltage being 800mV (can be adjusted though). */
 .marikoGpuVmin = 610,
+.marikoGpuBootVolt = 800, /* Used during boot and when temp is <20°C */
 .marikoGpuVmax = 800,
 
 .commonGpuVoltOffset = 0,
-
-/* Speedo is automatically set by hoc-clk on first boot */
-.gpuSpeedo = 1450,
 
 /* Setting DEACTIVATED_GPU_FREQ on any freq will disable it and all freqs greater than it. (the latter is a bug :/) */
 /* AUTO: Voltage is optimally chosen; with commonGpuVoltOffset applied. */
@@ -479,6 +457,47 @@ volatile CustomizeTable C = {
 },
 
 .marikoGpuDvfsTable = {
+    {   76800, {}, {  610000,                                 } },
+    {  153600, {}, {  610000,                                 } },
+    {  230400, {}, {  610000,                                 } },
+    {  307200, {}, {  610000,                                 } },
+    {  384000, {}, {  610000,                                 } },
+    {  460800, {}, {  610000,                                 } },
+    {  537600, {}, {  801688, -10900, -163,  298, -10599, 162 } },
+    {  614400, {}, {  824214,  -5743, -452,  238,  -6325,  81 } },
+    {  691200, {}, {  848830,  -3903, -552,  119,  -4030,  -2 } },
+    {  768000, {}, {  891575,  -4409, -584,    0,  -2849,  39 } },
+    {  844800, {}, {  940071,  -5367, -602,  -60,    -63, -93 } },
+    {  921600, {}, {  986765,  -6637, -614, -179,   1905, -13 } },
+    {  998400, {}, { 1098475, -13529, -497, -179,   3626,   9 } },
+    // { 1075200, {}, { 1163644, -12688, -648,    0,   1077,  40 } },
+    // { 1152000, {}, { 1204812,  -9908, -830,    0,   1469, 110 } },
+    // { 1228800, {}, { 1277303, -11675, -859,    0,   3722, 313 } },
+    // { 1267200, {}, { 1335531, -12567, -867,    0,   3681, 559 } },
+    // { 1305600, {}, { 1374130, -13725, -859,    0,   4442, 576 } },
+},
+
+.marikoGpuDvfsTableSLT = {
+    {   76800, {}, {  590000,                                         } }, 
+	{  153600, {}, {  590000,                                         } },
+	{  230400, {}, {  590000,                                         } },
+	{  307200, {}, {  590000,                                         } },
+	{  384000, {}, {  590000,                                         } },
+	{  460800, {}, {  795089, -11096,   -163,    298,  -10421,    162 } },
+	{  537600, {}, {  795089, -11096,   -163,    298,  -10421,    162 } },
+	{  614400, {}, {  820606,  -6285,   -452,    238,   -6182,     81 } },
+	{  691200, {}, {  846289,  -4565,   -552,    119,   -3958,     -2 } },
+	{  768000, {}, {  888720,  -5110,   -584,      0,   -2849,     39 } },
+	{  844800, {}, {  936634,  -6089,   -602,    -60,     -99,    -93 } },
+	{  921600, {}, {  982562,  -7373,   -614,   -179,    1797,    -13 } },
+	{  998400, {}, { 1090179, -14125,   -497,   -179,    3518,      9 } },
+	{ 1075200, {}, { 1155798, -13465,   -648,      0,    1077,     40 } },
+	// { 1152000, {}, { 1198568, -10904,   -830,      0,    1469,    110 } },
+	// { 1228800, {}, { 1269988, -12707,   -859,      0,    3722,    313 } },
+	// { 1267200, {}, { 1308155, -13694,   -867,      0,    3681,    559 } },
+},
+
+.marikoGpuDvfsTableHiOPT = {
     {   76800, { }, {  GPU_MIN_MIN_VOLT,                    } },
     {  153600, { }, {  GPU_MIN_MIN_VOLT,                    } },
     {  230400, { }, {  GPU_MIN_MIN_VOLT,                    } },
@@ -493,12 +512,12 @@ volatile CustomizeTable C = {
     {  921600, { }, {  970060,-10108, -614,-179,  1508, -13 } },
     {  998400, { }, { 1065665,-16075, -497,-179,  3213,   9 } },
     { 1075200, { }, { 1132576,-16093, -648,   0,  1077,  40 } },
-//  { 1152000, { }, { 1180029,-14534, -830,   0,  1469, 110 } },
+    { 1152000, { }, { 1180029,-14534, -830,   0,  1469, 110 } },
 //  { 1228800, { }, { 1248293,-16383, -859,   0,  3722, 313 } },
 //  { 1267200, { }, { 1286399,-17475, -867,   0,  3681, 559 } },
 },
 
-.marikoGpuDvfsTableSLT = {
+.marikoGpuDvfsTableHiOPT15 = {
     {   76800, { }, {  GPU_MIN_MIN_VOLT,                      } },
     {  153600, { }, {  GPU_MIN_MIN_VOLT,                      } },
     {  230400, { }, {  GPU_MIN_MIN_VOLT,                      } },
@@ -514,11 +533,11 @@ volatile CustomizeTable C = {
     {  998400, { }, { 1065665, -16075, -497, -179,  3213,   9 } },
     { 1075200, { }, { 1132576, -16093, -648,    0,  1077,  40 } },
     { 1152000, { }, { 1180029, -14534, -830,    0,  1469, 110 } },
-    { 1228800, { }, { 1238293, -16383, -859,    0,  3722, 313 } },
+//  { 1228800, { }, { 1238293, -16383, -859,    0,  3722, 313 } },
 //  { 1267200, { }, { 1276399, -17475, -867,    0,  3681, 559 } },
 },
 
-.marikoGpuDvfsTableHiOPT = {
+.marikoGpuDvfsTableHighUV = {
     {   76800, { }, {  GPU_MIN_MIN_VOLT,                      } },
     {  153600, { }, {  GPU_MIN_MIN_VOLT,                      } },
     {  230400, { }, {  GPU_MIN_MIN_VOLT,                      } },

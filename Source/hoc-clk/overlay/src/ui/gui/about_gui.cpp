@@ -41,11 +41,11 @@ tsl::elm::ListItem* ramBWItemMax = NULL;
 tsl::elm::ListItem* bqtempitem = NULL;
 tsl::elm::ListItem* aotagTempItem = NULL;
 tsl::elm::ListItem* cTypeItem = NULL;
+tsl::elm::ListItem* creditsItem = NULL;
 
-ImageElement* CatImage = NULL;
-HideableCategoryHeader* CatHeader = NULL;
-HideableCustomDrawer* CatSpacer = NULL;
-int lightosClickCount = 0;
+#define R_ARROW "\u2192"
+
+class CreditsSubMenu;
 
 AboutGui::AboutGui()
 {
@@ -166,156 +166,19 @@ void AboutGui::listUI()
     this->listElement->addItem(saltyNXStatusItem);
 
     this->listElement->addItem(
-        new tsl::elm::CategoryHeader("Credits")
+        new tsl::elm::CategoryHeader("General Info")
     );
 
-    this->listElement->addItem(
-        new tsl::elm::CategoryHeader("Developers")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Souldbminer")
-    );
-
-    // Create special clickable item for Lightos
-    auto lightosItem = new tsl::elm::ListItem("Lightos_");
-    lightosItem->setClickListener([this](u64 keys) -> bool {
+    creditsItem = new tsl::elm::ListItem("Credits");
+    creditsItem->setClickListener([](u64 keys) {
         if (keys & HidNpadButton_A) {
-            lightosClickCount++;
-            if (lightosClickCount >= 10) {
-                if (CatImage != NULL) CatImage->setVisible(true);
-                if (CatHeader != NULL) CatHeader->setVisible(true);
-                if (CatSpacer != NULL) CatSpacer->setVisible(true);
-            }
+            tsl::changeTo<CreditsSubMenu>();
             return true;
         }
         return false;
     });
-    this->listElement->addItem(lightosItem);
-
-    // ---- Contributors ----
-    this->listElement->addItem(
-        new tsl::elm::CategoryHeader("Contributors")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Dom")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Blaise25")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("tetetete-ctrl")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("B3711")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("TDRR")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("MasaGratoR")
-    );
-
-    // ---- Testers ----
-    this->listElement->addItem(
-        new tsl::elm::CategoryHeader("Testers")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Samybigio2011")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("arcdelta")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Miki1305")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Happy")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Winnerboi77")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Blaise25")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("WE1ZARD")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Alvise")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("agjeococh")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Xenshen")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("Frost")
-    );
-
-    // ---- Special Thanks ----
-    this->listElement->addItem(
-        new tsl::elm::CategoryHeader("Special Thanks")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("SciresM - Atmosphere CFW")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("KazushiMe - Switch OC Suite")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("hanai3Bi - Switch OC Suite & EOS")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("NaGaa95 - L4T-OC-Kernel")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("RetroNX - sys-clk")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("ppkantorski - Ultrahand")
-    );
-
-    this->listElement->addItem(
-        new tsl::elm::ListItem("CtCaer - Hekate, L4T and Proper Timings")
-    );
-
-    // Create cat elements but hide them initially
-    CatHeader = new HideableCategoryHeader("Cat");
-    CatHeader->setVisible(false);
-    this->listElement->addItem(CatHeader);
-
-    CatImage = new ImageElement(CAT_DATA, CAT_WIDTH, CAT_HEIGHT);
-    CatImage->setVisible(false);
-    this->listElement->addItem(CatImage);
-
-    CatSpacer = new HideableCustomDrawer(75);
-    CatSpacer->setVisible(false);
-    this->listElement->addItem(CatSpacer);
+    creditsItem->setValue(R_ARROW);
+    this->listElement->addItem(creditsItem);
 }
 
 std::string AboutGui::formatRamModule() {
@@ -446,5 +309,158 @@ void AboutGui::refresh()
     bqtempitem->setValue(strings[10]);
 
     cTypeItem->setValue(hocClkFormatConsoleType(this->context->consoleType, true));
-
 }
+
+class CreditsSubMenu : public AboutGui {
+    public:
+        CreditsSubMenu() { }
+
+    protected:
+        ImageElement* CatImage = NULL;
+        HideableCategoryHeader* CatHeader = NULL;
+        HideableCustomDrawer* CatSpacer = NULL;
+        int lightosClickCount = 0;
+
+        void listUI() override {
+            this->listElement->addItem(
+                new tsl::elm::CategoryHeader("Developers")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Souldbminer")
+            );
+
+            // Create special clickable item for Lightos
+            auto lightosItem = new tsl::elm::ListItem("Lightos_");
+            lightosItem->setClickListener([this](u64 keys) -> bool {
+                if (keys & HidNpadButton_A) {
+                    lightosClickCount++;
+                    if (lightosClickCount >= 10) {
+                        if (CatImage != NULL) CatImage->setVisible(true);
+                        if (CatHeader != NULL) CatHeader->setVisible(true);
+                        if (CatSpacer != NULL) CatSpacer->setVisible(true);
+                    }
+                    return true;
+                }
+                return false;
+            });
+            this->listElement->addItem(lightosItem);
+
+            // ---- Contributors ----
+            this->listElement->addItem(
+                new tsl::elm::CategoryHeader("Contributors")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Dom")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Blaise25")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("tetetete-ctrl")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("B3711")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("TDRR")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("MasaGratoR")
+            );
+
+            // ---- Testers ----
+            this->listElement->addItem(
+                new tsl::elm::CategoryHeader("Testers")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Samybigio2011")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("arcdelta")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Miki1305")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Happy")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Winnerboi77")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Blaise25")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("WE1ZARD")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Alvise")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("agjeococh")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Frost")
+            );
+
+            // ---- Special Thanks ----
+            this->listElement->addItem(
+                new tsl::elm::CategoryHeader("Special Thanks")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("SciresM, hexkyz and Alula - Atmosphere CFW")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("KazushiMe - Switch OC Suite")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("hanai3Bi - Switch OC Suite & EOS")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("RetroNX - sys-clk")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("ppkantorski - Ultrahand")
+            );
+
+            this->listElement->addItem(
+                new tsl::elm::ListItem("CtCaer - Hekate, L4T and Proper Timings")
+            );
+
+            // Create cat elements but hide them initially
+            CatHeader = new HideableCategoryHeader("Cat");
+            CatHeader->setVisible(false);
+            this->listElement->addItem(CatHeader);
+
+            CatImage = new ImageElement(CAT_DATA, CAT_WIDTH, CAT_HEIGHT);
+            CatImage->setVisible(false);
+            this->listElement->addItem(CatImage);
+
+            CatSpacer = new HideableCustomDrawer(75);
+            CatSpacer->setVisible(false);
+            this->listElement->addItem(CatSpacer);
+        }
+
+};

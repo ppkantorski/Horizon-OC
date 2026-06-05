@@ -24,8 +24,9 @@
  * --------------------------------------------------------------------------
  */
 
-#include <switch.h>
 #include <hocclk.h>
+#include <switch.h>
+
 #include "board.hpp"
 
 namespace board {
@@ -50,4 +51,4 @@ namespace board {
         return hocclkFormatPowerSensor(sensor, pretty);
     }
 
-}
+}  // namespace board

@@ -35,6 +35,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Options:",
                 "- MHz: Megahertz (e.g. 1600 MHz)",
                 "- MT/s: MegaTransfers per second (e.g. 3200 MT/s)",
+                "- MHz and MT/s: Display in both MHz and MT/s",
                 "Default: MHz"
             };
 
@@ -89,6 +90,13 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 isHoag ? "Default: 1664 mA" : "2048 mA"
             };
 
+
+        case HocClkConfigValue_InputCurrentLimit:
+            return {
+                "Overrides the maximum input current from the charger.",
+                isHoag ? "Default: 900 mA" : "1200 mA" 
+            };
+
         case HocClkConfigValue_AulaDisplayColorPreset:
             return {
                 "Current display color preset. Default is Basic",
@@ -97,8 +105,8 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "- Washed: Washed out colors.",
                 "- Basic: Real natural profile.",
                 "- Natural: Not actually natural.. Extra saturation.",
-                "- Vivid: Saturated.",      
-                "Default: Do not override"  
+                "- Vivid: Saturated.",
+                "Default: Do not override"
             };
 
         case HocClkConfigValue_CpuGovernorMinimumFreq:
@@ -110,7 +118,9 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
         case HocClkConfigValue_OverwriteRefreshRate:
             return {
                 "Controls the availability of display refresh rate features.",
-                "When enabled, allows changing the display refresh rate and using display refresh rate related features."
+                "When enabled, allows changing the display refresh rate and using display refresh rate related features.",
+                "This feature conflicts with FPSLocker's feature that does the same thing.",
+                "Default: OFF"
             };
 
         case HocClkConfigValue_MaxDisplayClockH:
@@ -134,13 +144,17 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                     "Warning: Enabling this may cause damage to your device without a proper undervolt. Use with caution!",
                     "Clock cappings:",
                     "- Handheld:",
-                    "  - GPU (HiOPT): 614 MHz",
-                    "  - GPU (HiOPT - 15mV): 691 MHz",
-                    "  - GPU (High UV): 768 MHz",
+                    "  - GPU (No UV): 614 MHz",
+                    "  - GPU (SLT): 691 MHz",
+                    "  - GPU (HiOPT): 768 MHz",
+                    "  - GPU (HiOPT - 15mV): 844 MHz",
+                    "  - GPU (High UV): 921 MHz",
                     "- USB Charger",
-                    "  - GPU (HiOPT): 844 MHz",
-                    "  - GPU (HiOPT - 15mV): 921 MHz",
-                    "  - GPU (High UV): 998 MHz",
+                    "  - GPU (No UV): 844 MHz",
+                    "  - GPU (SLT): 921 MHz",
+                    "  - GPU (HiOPT): 998 MHz",
+                    "  - GPU (HiOPT - 15mV): 1075 MHz",
+                    "  - GPU (High UV): 1152 MHz",
                     "- PD Charger / Docked:",
                     "  - No capping applied",
                     "Default: OFF"
@@ -165,19 +179,6 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
             return {
                 "If enabled, Resets to stock clocks after the threshold is applied",
                 "Default: ON",
-            };
-
-        case HocClkConfigValue_HandheldTDP:
-            return {
-                "If enabled, Resets to stock clocks when power consumption is above the threshold in handheld mode",
-                "Default: ON",
-            };
-
-        case HocClkConfigValue_HandheldTDPLimit:
-        case HocClkConfigValue_LiteTDPLimit:
-            return {
-                "The power consumption threshold (in mW) for resetting to stock clocks in handheld mode when Handheld TDP is enabled.",
-                isHoag ? "Default: 6400mW" : "Default: 9600mW"
             };
 
         case HocClkConfigValue_ThermalThrottleThreshold:
@@ -224,7 +225,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Default: 600 mV"
             };
 
-        case KipConfigValue_stepMode:         
+        case KipConfigValue_stepMode:
             return {
                 "The step that RAM clocks take.",
                 "Options (with examples):",
@@ -247,8 +248,6 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
             };
 
         case KipConfigValue_eristaEmcMaxClock:
-        case KipConfigValue_eristaEmcMaxClock1:
-        case KipConfigValue_eristaEmcMaxClock2:
             return {
                 "The RAM frequency used in the particular slot. Higher frequencies may cause instability, so increase this gradually and test for stability.",
                 "Default: Disabled (1600 MHz)"
@@ -360,19 +359,6 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "These properties apply for both write and read latencies, and you can mix-and-match the brackets if necessary",
                 "Default: -"
             };
-
-        case KipConfigValue_mem_burst_read_latency:
-            return {
-                "The read latency for the ram",
-                "Default: 1600 RL"
-            };
-
-        case KipConfigValue_mem_burst_write_latency:
-            return {
-                "The write latency for the ram",
-                "Default: 1600 WL"
-            };
-
         case KipConfigValue_marikoCpuUVLow:
             return {
                 "The CPU UV level used before tBreak",
@@ -460,6 +446,23 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "The clock used for the CPU in \"boost mode\"",
                 "Default: 1785 MHz"
             };
+        case HocClkConfigValue_AutoRAMCPUOverclock:
+            return {
+                "When enabled, automatically raises the CPU clock to the configured OC frequency when RAM clock meets or exceeds the threshold to meet the increased voltage requirement.",
+                "Default: ON"
+            };
+
+        case HocClkConfigValue_AutoRamCpuCpuOCFreq:
+            return {
+                "The CPU clock (in MHz) applied when Auto High RAM CPU OC is enabled and the RAM threshold is met.",
+                "Default: 1683 MHz"
+            };
+
+        case HocClkConfigValue_AutoRamCpuRamOCThreshold:
+            return {
+                "The RAM clock threshold (in MHz) at or above which the Auto High RAM CPU OC will activate.",
+                "Default: 2133MHz"
+            };
 
         case HocClkConfigValue_OverwriteBoostMode:
             return {
@@ -471,9 +474,11 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
             return {
                 "GPU undervolt level",
                 "Options:",
-                " - HiOPT: L4T Custom HiOPT table",
+                " - No Undervolt: No Undervolt, HOS default",
+                " - SLT Table: NVIDIA custom SLT Table",
+                " - HiOPT: L4T Custom HiOPT table, HOC Default",
                 " - HiOPT - 15mV: L4T Custom HiOPT table with a 15mV offset",
-                " - High UV: The highest undervolt table, recommended",
+                " - High UV: The highest undervolt table",
                 "Default: HiOPT"
             };
 
@@ -489,7 +494,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Maximum GPU voltage",
                 "Default: 800 mV"
             };
-
+        
         case HocClkConfigValue_DVFSMode:
             return {
                 "The mode used for GPU DVFS",
@@ -510,10 +515,10 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
             return {
                 "GPU undervolt level",
                 "Options:",
+                " - No Undervolt: No Undervolt...",
+                " - SLT Table: NVIDIA custom SLT Table",
                 " - HiOPT: L4T Custom HiOPT table",
-                " - HiOPT - 15mV: L4T Custom HiOPT table with a 15mV offset",
-                " - High UV: The highest undervolt table, recommended",
-                "Default: HiOPT"
+                "Default: No Undervolt"
             };
 
         case KipConfigValue_eristaGpuVmin:
@@ -524,7 +529,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
 
         case KipConfigValue_commonGpuVoltOffset:
             return {
-                "The offset added/subtracted to all AUTO GPU voltages",
+                "The offset added/subtracted to all GPU voltages marked as \"auto\"",
                 "Default: 0 mV (Disabled)"
             };
 
@@ -537,7 +542,12 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "- Enabled: Enables GPU scheduling, 96.5% GPU max load",
                 "Default: Do not override"
             };
-
+        case KipConfigValue_marikoGpuBootVolt:
+            return {
+                "The voltage supplied to the GPU during boot and when the temperature is below 20°C (in mV).",
+                "Warning: Changing this value may cause instability.",
+                "Default: 800mV"
+            };
         default:
             return {};
     }

@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include <switch.h>
 #include <hocclk.h>
+#include <switch.h>
 
 namespace integrations {
 
@@ -39,9 +39,9 @@ namespace integrations {
         uint8_t SetActiveBuffers;
         union {
             struct {
-                bool handheld: 1;
-                bool docked: 1;
-                unsigned int reserved: 6;
+                bool handheld : 1;
+                bool docked : 1;
+                unsigned int reserved : 6;
             } NX_PACKED ds;
             uint8_t general;
         } displaySync;
@@ -66,4 +66,4 @@ namespace integrations {
     u8 GetSaltyNXFPS();
     u16 GetSaltyNXResolutionHeight();
 
-}
+}  // namespace integrations

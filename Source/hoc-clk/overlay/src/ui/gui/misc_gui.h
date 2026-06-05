@@ -16,67 +16,51 @@
  *
  */
 #pragma once
-#include "../../ipc.h"
-#include "base_menu_gui.h"
-#include <initializer_list>
 #include <set>
-#include <unordered_map>
 #include <string>
 #include <vector>
+
+#include "../../ipc.h"
+#include "base_menu_gui.h"
 #include "freq_choice_gui.h"
-#include "value_choice_gui.h"
 #include "info_gui.h"
-class MiscGui : public BaseMenuGui
-{
-public:
+#include "value_choice_gui.h"
+#include <initializer_list>
+#include <unordered_map>
+class MiscGui : public BaseMenuGui {
+    public:
     MiscGui();
     ~MiscGui();
     void listUI() override;
     void refresh() override;
 
-protected:
-    HocClkConfigValueList* configList;
-    std::map<HocClkConfigValue, tsl::elm::ListItem*> configButtons;
+    protected:
+    HocClkConfigValueList *configList;
+    std::map<HocClkConfigValue, tsl::elm::ListItem *> configButtons;
     std::map<HocClkConfigValue, ValueRange> configRanges;
     std::map<HocClkConfigValue, std::vector<NamedValue>> configNamedValues;
-    std::map<HocClkConfigValue, tsl::elm::ToggleListItem*> configToggles;
-    std::map<HocClkConfigValue, std::tuple<tsl::elm::TrackBar*, tsl::elm::ListItem*, std::vector<uint64_t>>> configTrackbars;
+    std::map<HocClkConfigValue, tsl::elm::ToggleListItem *> configToggles;
+    std::map<HocClkConfigValue, std::tuple<tsl::elm::TrackBar *, tsl::elm::ListItem *, std::vector<uint64_t>>> configTrackbars;
     std::set<HocClkConfigValue> configButtonSKeys;
     std::map<HocClkConfigValue, std::string> configButtonSSubtext;
     std::set<HocClkConfigValue> emcClockConfigs;
 
-    void addConfigToggle(HocClkConfigValue configVal, const char* altName, bool kip = false);
-    void addConfigTrackbar(HocClkConfigValue configVal, const char* altName, const ValueRange& range, bool kip = true);
-    void addMappedConfigTrackbar(HocClkConfigValue configVal, const char* altName,
-                                  std::vector<u32> vals,
-                                  std::initializer_list<std::string> names, bool kip = true);
-    void addConfigButton(HocClkConfigValue configVal,
-        const char* altName,
-        const ValueRange& range,
-        const std::string& categoryName,
-        const ValueThresholds* thresholds,
-        const std::map<uint32_t, std::string>& labels = {},
-        const std::vector<NamedValue>& namedValues = {},
-        bool showDefaultValue = true,
-        bool kip = false);
+    void addConfigToggle(HocClkConfigValue configVal, const char *altName, bool kip = false);
+    void addConfigTrackbar(HocClkConfigValue configVal, const char *altName, const ValueRange &range, bool kip = true);
+    void addMappedConfigTrackbar(HocClkConfigValue configVal, const char *altName, std::vector<u32> vals, std::initializer_list<std::string> names,
+                                 bool kip = true);
+    void addConfigButton(HocClkConfigValue configVal, const char *altName, const ValueRange &range, const std::string &categoryName,
+                         const ValueThresholds *thresholds, const std::map<uint32_t, std::string> &labels = {},
+                         const std::vector<NamedValue> &namedValues = {}, bool showDefaultValue = true, bool kip = false);
 
-    void addConfigButtonS(HocClkConfigValue configVal,
-        const char* altName,
-        const ValueRange& range,
-        const std::string& categoryName,
-        const ValueThresholds* thresholds,
-        const std::map<uint32_t, std::string>& labels = {},
-        const std::vector<NamedValue>& namedValues = {},
-        bool showDefaultValue = true,
-        const char* subText = nullptr,
-        bool kip = false);
-    void addFreqButton(HocClkConfigValue configVal,
-                            const char* altName,
-                            HocClkModule module,
-                            const std::map<uint32_t, std::string>& labels = {});
+    void addConfigButtonS(HocClkConfigValue configVal, const char *altName, const ValueRange &range, const std::string &categoryName,
+                          const ValueThresholds *thresholds, const std::map<uint32_t, std::string> &labels = {},
+                          const std::vector<NamedValue> &namedValues = {}, bool showDefaultValue = true, const char *subText = nullptr,
+                          bool kip = false);
+    void addFreqButton(HocClkConfigValue configVal, const char *altName, HocClkModule module, const std::map<uint32_t, std::string> &labels = {});
     void updateConfigToggles();
 
-    tsl::elm::ToggleListItem* enabledToggle;
+    tsl::elm::ToggleListItem *enabledToggle;
     u8 frameCounter = 60;
     bool shouldSaveKip = false;
 };
