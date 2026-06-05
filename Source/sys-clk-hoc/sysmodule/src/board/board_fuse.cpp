@@ -22,23 +22,42 @@
 namespace board {
 
     void SetGpuBracket(u16 speedo, u8 &gpuBracket) {
-        if (speedo <= 1624) {
-            gpuBracket = 0;
-            return;
-        }
+        /* SoC-agnostic: Mariko and Erista speedo ranges do not overlap, so the
+           bracket is derived purely from the speedo value. This avoids any
+           dependence on SoC-type resolution timing when the bracket is cached. */
+        switch (speedo) {
+            // Mariko
+            case 1300 ... 1624:
+                gpuBracket = 0;
+                break;
+            case 1625 ... 1689:
+                gpuBracket = 1;
+                break;
+            case 1690 ... 1753:
+                gpuBracket = 2;
+                break;
+            case 1754 ... 1849:
+                gpuBracket = 3;
+                break;
 
-        if (speedo <= 1689) {
-            gpuBracket = 1;
-            return;
-        }
+            // Erista
+            case 1850 ... 1925:
+                gpuBracket = 0;
+                break;
+            case 1926 ... 2025:
+                gpuBracket = 1;
+                break;
+            case 2026 ... 2100:
+                gpuBracket = 2;
+                break;
+            case 2101 ... 2200:
+                gpuBracket = 3;
+                break;
 
-        if (speedo <= 1753) {
-            gpuBracket = 2;
-            return;
+            default:
+                gpuBracket = 0;
+                break;
         }
-
-        /* >= 1754 */
-        gpuBracket = 3;
     }
 
     void ReadFuses(FuseData &speedo, u64 fuseVa) {
