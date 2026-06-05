@@ -71,7 +71,7 @@ namespace kip {
      */
     void GetKipData()
     {
-        fileUtils::LogLine("[kip] GetKipData start (read-only, build: v6)");
+        fileUtils::LogLine("[kip] GetKipData start (read-only, build: v7 / 2.4.0 layout)");
 
         // Refresh() returns false if the file mtime is unchanged AND
         // config is already loaded. That's normal on subsequent calls.
@@ -109,8 +109,6 @@ namespace kip {
 
         configValues.values[KipConfigValue_commonEmcMemVolt]       = cust_get_common_emc_volt(&table);
         configValues.values[KipConfigValue_eristaEmcMaxClock]      = cust_get_erista_emc_max(&table);
-        configValues.values[KipConfigValue_eristaEmcMaxClock1]     = cust_get_erista_emc_max1(&table);
-        configValues.values[KipConfigValue_eristaEmcMaxClock2]     = cust_get_erista_emc_max2(&table);
         configValues.values[KipConfigValue_marikoEmcMaxClock]      = cust_get_mariko_emc_max(&table);
         configValues.values[KipConfigValue_marikoEmcVddqVolt]      = cust_get_mariko_emc_vddq(&table);
         configValues.values[KipConfigValue_emcDvbShift]            = cust_get_emc_dvb_shift(&table);
@@ -141,9 +139,6 @@ namespace kip {
         configValues.values[KipConfigValue_write_latency_1866]     = cust_get_write_latency_1866(&table);
         configValues.values[KipConfigValue_write_latency_2133]     = cust_get_write_latency_2133(&table);
 
-        configValues.values[KipConfigValue_mem_burst_read_latency]  = cust_get_burst_read_lat(&table);
-        configValues.values[KipConfigValue_mem_burst_write_latency] = cust_get_burst_write_lat(&table);
-
         configValues.values[KipConfigValue_eristaCpuUV]            = cust_get_erista_cpu_uv(&table);
         configValues.values[KipConfigValue_eristaCpuVmin]          = cust_get_eristaCpuVmin(&table);
         configValues.values[KipConfigValue_eristaCpuMaxVolt]       = cust_get_erista_cpu_max_volt(&table);
@@ -164,12 +159,9 @@ namespace kip {
         configValues.values[KipConfigValue_eristaGpuVmin]          = cust_get_erista_gpu_vmin(&table);
         configValues.values[KipConfigValue_marikoGpuUV]            = cust_get_mariko_gpu_uv(&table);
         configValues.values[KipConfigValue_marikoGpuVmin]          = cust_get_mariko_gpu_vmin(&table);
+        configValues.values[KipConfigValue_marikoGpuBootVolt]      = cust_get_mariko_gpu_boot_volt(&table);
         configValues.values[KipConfigValue_marikoGpuVmax]          = cust_get_mariko_gpu_vmax(&table);
         configValues.values[KipConfigValue_commonGpuVoltOffset]    = cust_get_common_gpu_offset(&table);
-
-        // gpuSpeedo: official prefers the live fuse value over the KIP field.
-        // We do the same - fuse data is more reliable than a stored copy.
-        configValues.values[KipConfigValue_gpuSpeedo]              = board::GetFuseData()->gpuSpeedo;
 
         for (int i = 0; i < 24; i++) {
             configValues.values[KipConfigValue_g_volt_76800 + i]   = cust_get_mariko_gpu_volt(&table, i);
