@@ -271,6 +271,19 @@ namespace clockManager {
         }
     }
 
+    // SoCs that support RAM-OC GPU-voltage DVFS via the PCV GPU voltage-table
+    // hijack. Both Mariko and Erista locate the table at the same regulator
+    // signature + offset (CacheGpuVoltTable), and SyncGpuVoltTable /
+    // PcvHijackGpuVolts operate only on the cached table - they no-op safely if
+    // the table was not found (voltTableAddress == 0). The per-SoC voltage
+    // values come from board::GetMinimumGpuVmin, which has its own Mariko/Erista
+    // branches.
+    static inline bool GpuVoltDvfsSoc()
+    {
+        HocClkSocType soc = board::GetSocType();
+        return soc == HocClkSocType_Mariko || soc == HocClkSocType_Erista;
+    }
+
     void DVFSBeforeSet(u32 memTargetHz)
     {
         s32 dvfsOffset = config::GetConfigValue(HocClkConfigValue_DVFSOffset);
@@ -289,9 +302,15 @@ namespace clockManager {
 
         // Raise hardware voltage immediately if below the required floor.
         // This covers the gap between the table write and the next PCV GPU event.
-        // Only raises (never lowers), so safe to call unconditionally.
-        if (vmin && I2c_BuckConverter_GetMvOut(&I2c_Mariko_GPU) < vmin) {
-            I2c_BuckConverter_SetMvOut(&I2c_Mariko_GPU, vmin);
+        // Only raises (never lowers), so safe to call.
+        // Mariko only: I2c_Mariko_GPU is the Mariko GPU rail. Erista has no
+        // equivalent rail abstraction here, so on Erista we rely solely on the
+        // SyncGpuVoltTable write + the GPU clock bounce (DVFSAfterSet) to make PCV
+        // re-read the floored table - matching hoc-clk's Erista behaviour.
+        if (board::GetSocType() == HocClkSocType_Mariko) {
+            if (vmin && I2c_BuckConverter_GetMvOut(&I2c_Mariko_GPU) < vmin) {
+                I2c_BuckConverter_SetMvOut(&I2c_Mariko_GPU, vmin);
+            }
         }
 
         gContext.voltages[HocClkVoltage_GPU] = vmin * 1000;
@@ -355,7 +374,7 @@ namespace clockManager {
 
     void DVFSReset()
     {
-        if (board::GetSocType() == HocClkSocType_Mariko && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
+        if (GpuVoltDvfsSoc() && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
             fileUtils::LogLine("[dvfs] DVFSReset: un-hijacking");
             board::PcvHijackGpuVolts(0);
 
@@ -526,7 +545,7 @@ namespace clockManager {
             // entry — offset shifts the floor down/up; natural voltages above the
             // adjusted floor are never modified by the offset directly.
             // Bounce the GPU clock after so PCV re-reads the newly-written table.
-            if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
+            if (module == HocClkModule_GPU && GpuVoltDvfsSoc()
                 && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                 s32 currentOffset = (s32)config::GetConfigValue(HocClkConfigValue_DVFSOffset);
                 if (currentOffset != s_lastDvfsOffset) {
@@ -563,7 +582,7 @@ namespace clockManager {
                         targetHz / 1000000, targetHz / 100000 - targetHz / 1000000 * 10
                     );
 
-                    if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko
+                    if (module == HocClkModule_MEM && GpuVoltDvfsSoc()
                         && targetHz > oldHz
                         && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                         DVFSBeforeSet(targetHz);
@@ -578,7 +597,7 @@ namespace clockManager {
                     }
                     gContext.freqs[module] = nearestHz;
 
-                    if (module == HocClkModule_MEM && board::GetSocType() == HocClkSocType_Mariko
+                    if (module == HocClkModule_MEM && GpuVoltDvfsSoc()
                         && targetHz < oldHz
                         && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                         DVFSAfterSet(targetHz);
@@ -586,7 +605,7 @@ namespace clockManager {
 
                     // GPU going DOWN: lower voltage after lowering the clock.
                     // DVFSVoltUpdate (not DVFSAfterSet) because the SetHz already happened.
-                    if (module == HocClkModule_GPU && board::GetSocType() == HocClkSocType_Mariko
+                    if (module == HocClkModule_GPU && GpuVoltDvfsSoc()
                         && targetHz < oldHz
                         && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                         DVFSVoltUpdate();
@@ -649,7 +668,7 @@ namespace clockManager {
             // — the 300 ms sleep is for GPU voltage settling, not CPU stability.
             board::ResetToStockGpu();
             board::ResetToStockMem();
-            if (board::GetSocType() == HocClkSocType_Mariko && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
+            if (GpuVoltDvfsSoc() && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
                 fileUtils::LogLine("[mgr] hasChanged: PcvHijackGpuVolts(0) + GPU reset");
                 board::PcvHijackGpuVolts(0);
                 board::ResetToStockGpu();
@@ -868,7 +887,7 @@ namespace clockManager {
         // was still pinned at 2600 MHz, which violates PCV's consistency
         // checks between RAM frequency and GPU voltage requirements.
 
-        if (board::GetSocType() == HocClkSocType_Mariko
+        if (GpuVoltDvfsSoc()
             && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
             fileUtils::LogLine("[dvfs] PrepareForShutdown: ResetToStock (drops RAM first)");
             board::ResetToStock();
