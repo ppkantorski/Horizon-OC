@@ -26,42 +26,37 @@
 namespace board {
 
     void SetGpuBracket(u16 speedo, u8 &gpuBracket) {
-        if (GetSocType() == HocClkSocType_Mariko) {
-            if (speedo <= 1624) {
+        switch (speedo) {
+            // Mariko
+            case 1300 ... 1624:
                 gpuBracket = 0;
-                return;
-            }
-
-            if (speedo <= 1689) {
+                break;
+            case 1625 ... 1689:
                 gpuBracket = 1;
-                return;
-            }
-
-            if (speedo <= 1753) {
+                break;
+            case 1690 ... 1753:
                 gpuBracket = 2;
-                return;
-            }
+                break;
+            case 1754 ... 1849:
+                gpuBracket = 3;
+                break;
 
-            /* >= 1754 */
-            gpuBracket = 3;
-        } else {
-            switch (speedo) {
-                case 1850 ... 1925:
-                    gpuBracket = 0;
-                    break;
-                case 1926 ... 2025:
-                    gpuBracket = 1;
-                    break;
-                case 2026 ... 2100:
-                    gpuBracket = 2;
-                    break;
-                case 2101 ... 2200:
-                    gpuBracket = 3;
-                    break;
-                default:
-                    gpuBracket = 0;
-                    break;
-            }
+            // Erista
+            case 1850 ... 1925:
+                gpuBracket = 0;
+                break;
+            case 1926 ... 2025:
+                gpuBracket = 1;
+                break;
+            case 2026 ... 2100:
+                gpuBracket = 2;
+                break;
+            case 2101 ... 2200:
+                gpuBracket = 3;
+                break;
+            default:
+                gpuBracket = 0;
+                break;
         }
     }
 

@@ -449,6 +449,7 @@ namespace board {
                     break;
                 }
             }
+            return baseVolt;
         } else {
             struct DvfsEntry {
                 u32 freq;
@@ -546,8 +547,7 @@ namespace board {
                     break;
                 }
             }
+            return baseVolt;
         }
-
-        return baseVolt;
     }
 }  // namespace board
