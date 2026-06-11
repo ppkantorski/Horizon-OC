@@ -24,31 +24,32 @@
  * --------------------------------------------------------------------------
  */
 
-#include "../hos/apm_ext.h"
-#include <i2c.h>
-#include <t210.h>
-#include <max17050.h>
-#include <tmp451.h>
-#include <ipc_server.h>
-#include <lockable_mutex.h>
+#include <battery.h>
 #include <hocclk.h>
-#include <switch.h>
+#include <i2c.h>
+#include <max17050.h>
+#include <notification.h>
 #include <pwm.h>
 #include <registers.h>
-#include <battery.h>
-#include "../display/display_refresh_rate.hpp"
-#include <notification.h>
+#include <switch.h>
+#include <t210.h>
+#include <tmp451.h>
 
+#include "../display/display_refresh_rate.hpp"
+#include "../file/file_utils.hpp"
+#include "../hos/apm_ext.h"
+#include "../hos/integrations.hpp"
+#include "../hos/rgltr.h"
+#include "../tsensor/aotag.hpp"
+#include "../tsensor/soctherm.hpp"
 #include "board.hpp"
 #include "board_fuse.hpp"
 #include "board_load.hpp"
-#include "board_volt.hpp"
 #include "board_misc.hpp"
-#include "../tsensor/soctherm.hpp"
-#include "../tsensor/aotag.hpp"
-#include "../hos/integrations.hpp"
-#include "../file/file_utils.hpp"
-#include "../hos/rgltr.h"
+#include "board_volt.hpp"
+#include <ipc_server.h>
+#include <lockable_mutex.h>
+
 namespace board {
 
     u64 clkVirtAddr, dsiVirtAddr, apbVirtAddr, fuseVirtAddr;
@@ -62,26 +63,25 @@ namespace board {
 
     u32 fd = 0, fd2 = 0;
 
-    #define PMC_BASE 0x7000E400
-    #define APB_MISC_GP_HIDREV 0x804
-    #define GP_HIDREV_MAJOR_T210 0x1
-    #define GP_HIDREV_MAJOR_T210B01 0x2
-    #define APB_BASE 0x70000000
-    #define FUSE_RESERVED_ODMX(x) (0x1C8 + 4 * (x))
-    #define FUSE_OFFSET 0x800
+#define PMC_BASE 0x7000E400
+#define APB_MISC_GP_HIDREV 0x804
+#define GP_HIDREV_MAJOR_T210 0x1
+#define GP_HIDREV_MAJOR_T210B01 0x2
+#define APB_BASE 0x70000000
+#define FUSE_RESERVED_ODMX(x) (0x1C8 + 4 * (x))
+#define FUSE_OFFSET 0x800
     void FetchHardwareInfos() {
         ReadFuses(fuseData, fuseVirtAddr);
         SetGpuBracket(fuseData.gpuSpeedo, speedoBracket);
 
-        u32 hidrev = *(u32*)(apbVirtAddr + APB_MISC_GP_HIDREV);
+        u32 hidrev = *(u32 *)(apbVirtAddr + APB_MISC_GP_HIDREV);
         if (((hidrev >> 4) & 0xF) >= GP_HIDREV_MAJOR_T210B01) {
             gSocType = HocClkSocType_Mariko;
-            CacheGpuVoltTable();
         } else {
             gSocType = HocClkSocType_Erista;
         }
 
-        u32 odm4 = *(u32*)(fuseVirtAddr + FUSE_OFFSET + FUSE_RESERVED_ODMX(4));
+        u32 odm4 = *(u32 *)(fuseVirtAddr + FUSE_OFFSET + FUSE_RESERVED_ODMX(4));
 
         if (gSocType == HocClkSocType_Mariko) {
             switch ((odm4 & 0xF0000) >> 16) {
@@ -124,7 +124,7 @@ namespace board {
         rc = psmInitialize();
         ASSERT_RESULT_OK(rc, "psmInitialize");
 
-        if(HOSSVC_HAS_TC) {
+        if (HOSSVC_HAS_TC) {
             rc = tcInitialize();
             ASSERT_RESULT_OK(rc, "tcInitialize");
         }
@@ -171,7 +171,7 @@ namespace board {
 
         batteryInfoInitialize();
 
-        tsensor::InitializeSoctherm(); // SOCTHERM must be init before AOTAG
+        tsensor::InitializeSoctherm();  // SOCTHERM must be init before AOTAG
 
         // PMC exosphere check
         SecmonArgs args = {};
@@ -179,21 +179,25 @@ namespace board {
         args.X[1] = PMC_BASE;
         svcCallSecureMonitor(&args);
 
-        if (args.X[1] != PMC_BASE) { // if param 1 is identical read failed
+        if (args.X[1] != PMC_BASE) {  // if param 1 is identical read failed
             tsensor::InitializeAotag(GetSocType() == HocClkSocType_Mariko);
         }
 
         Result pwmCheck = 1;
-        if (hosversionAtLeast(6,0,0) && R_SUCCEEDED(pwmInitialize())) {
+        if (hosversionAtLeast(6, 0, 0) && R_SUCCEEDED(pwmInitialize())) {
             pwmCheck = pwmOpenSession2(&iCon, 0x3D000001);
         }
 
         StartMiscThread(pwmCheck, &iCon);
 
-        display::DisplayRefreshConfig cfg = {.clkVirtAddr = clkVirtAddr, .dsiVirtAddr = dsiVirtAddr, .isLite = (GetConsoleType() == HocClkConsoleType_Hoag), .isRetroSUPER = integrations::GetRETROSuperStatus()};
+        display::DisplayRefreshConfig cfg = { .clkVirtAddr = clkVirtAddr,
+                                              .dsiVirtAddr = dsiVirtAddr,
+                                              .isLite = (GetConsoleType() == HocClkConsoleType_Hoag),
+                                              .isRetroSUPER = integrations::GetRETROSuperStatus() };
         display::Initialize(&cfg);
 
         CacheDfllData();
+        CacheGpuVoltTable();
     }
 
     void Exit() {
@@ -243,7 +247,7 @@ namespace board {
         args.X[1] = MC_REGISTER_BASE + MC_EMEM_CFG_0;
         svcCallSecureMonitor(&args);
 
-        if (args.X[1] == (MC_REGISTER_BASE + MC_EMEM_CFG_0)) { // if param 1 is identical read failed
+        if (args.X[1] == (MC_REGISTER_BASE + MC_EMEM_CFG_0)) {  // if param 1 is identical read failed
             notification::writeNotification("Horizon OC\nSecmon read failed!\n This may be a hardware issue!");
             return false;
         }
@@ -270,4 +274,4 @@ namespace board {
         return false; /* stub for now. */
     }
 
-}
+}  // namespace board

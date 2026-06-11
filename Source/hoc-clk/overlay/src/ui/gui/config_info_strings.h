@@ -16,8 +16,9 @@
  *
  */
 #pragma once
-#include "misc_gui.h"
-#include <vector>
 #include <string>
+#include <vector>
+
+#include "misc_gui.h"
 
 std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko, bool isHoag);

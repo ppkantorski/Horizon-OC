@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,12 +24,10 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <switch.h>
@@ -37,19 +35,19 @@ extern "C"
 Result apmExtInitialize(void);
 void apmExtExit(void);
 
-Result apmExtGetPerformanceMode(u32* out_mode);
+Result apmExtGetPerformanceMode(u32 *out_mode);
 Result apmExtSysRequestPerformanceMode(u32 mode);
-Result apmExtGetCurrentPerformanceConfiguration(u32* out_conf);
+Result apmExtGetCurrentPerformanceConfiguration(u32 *out_conf);
 Result apmExtSysRequestPerformanceMode(u32 mode);
 Result apmExtSysSetCpuBoostMode(u32 mode);
 
 Result apmExtGetPerformanceMode(u32 *out_mode);
 Result apmExtGetCurrentPerformanceConfiguration(u32 *out_conf);
 
-inline bool apmExtIsCPUBoosted(u32 conf_id) { // CPU boosted to 1785 MHz
+inline bool apmExtIsCPUBoosted(u32 conf_id) {  // CPU boosted to 1785 MHz
     return (conf_id == 0x92220009 || conf_id == 0x9222000A);
 };
-inline bool apmExtIsBoostMode(u32 conf_id)  { // GPU throttled to 76.8 MHz
+inline bool apmExtIsBoostMode(u32 conf_id) {  // GPU throttled to 76.8 MHz
     return (conf_id >= 0x92220009 && conf_id <= 0x9222000C);
 };
 

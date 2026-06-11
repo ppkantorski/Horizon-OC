@@ -24,19 +24,20 @@
  * --------------------------------------------------------------------------
  */
 
-
-#include "process_management.hpp"
-#include "../file/file_utils.hpp"
-#include "../file/errors.hpp"
 #include <cstring>
+
+#include "../file/errors.hpp"
+#include "../file/file_utils.hpp"
+#include "process_management.hpp"
+
 
 namespace processManagement {
 
     namespace {
-        constexpr u64 Qlaunch   = 0x0100000000001000ULL;
+        constexpr u64 Qlaunch = 0x0100000000001000ULL;
         constexpr u32 IsQlaunch = 0x20f;
         Service pdmqryClone;
-    }
+    }  // namespace
 
     void Initialize() {
         Result rc = 0;
@@ -50,11 +51,10 @@ namespace processManagement {
         rc = pdmqryInitialize();
         ASSERT_RESULT_OK(rc, "pdmqryInitialize");
 
-        Service* pdmqrySrv = pdmqryGetServiceSession();
+        Service *pdmqrySrv = pdmqryGetServiceSession();
         serviceClone(pdmqrySrv, &pdmqryClone);
         serviceClose(pdmqrySrv);
         memcpy(pdmqrySrv, &pdmqryClone, sizeof(Service));
-
     }
 
     void WaitForQLaunch() {
@@ -62,12 +62,12 @@ namespace processManagement {
         u64 pid = 0;
         do {
             rc = pmdmntGetProcessId(&pid, Qlaunch);
-            svcSleepThread(50 * 1000000ULL); // 50ms
+            svcSleepThread(50 * 1000000ULL);  // 50ms
         } while (R_FAILED(rc));
     }
 
     // Ty to Masa for this function!
-    Result isApplicationOutOfFocus(bool* outOfFocus) {
+    Result isApplicationOutOfFocus(bool *outOfFocus) {
         static s32 last_total_entries = 0;
         static bool isOutOfFocus = false;
         s32 total_entries = 0;
@@ -77,12 +77,15 @@ namespace processManagement {
         u64 PIDnow;
 
         Result rc = pmdmntGetApplicationProcessId(&PIDnow);
-        if(R_FAILED(rc)) return rc;
+        if (R_FAILED(rc))
+            return rc;
         rc = pmdmntGetProgramId(&TIDnow, PIDnow);
-        if(R_FAILED(rc)) return rc;
+        if (R_FAILED(rc))
+            return rc;
 
         rc = pdmqryGetAvailablePlayEventRange(&total_entries, &start_entry_index, &end_entry_index);
-        if (R_FAILED(rc)) return rc;
+        if (R_FAILED(rc))
+            return rc;
         if (total_entries == last_total_entries) {
             *outOfFocus = isOutOfFocus;
             return 0;
@@ -92,13 +95,16 @@ namespace processManagement {
         PdmPlayEvent events[16];
         s32 out = 0;
         s32 start_entry = end_entry_index - 15;
-        if (start_entry < 0) start_entry = 0;
+        if (start_entry < 0)
+            start_entry = 0;
         rc = pdmqryQueryPlayEvent(start_entry, events, sizeof(events) / sizeof(events[0]), &out);
-        if (R_FAILED(rc)) return rc;
-        if (out == 0) return 1;
+        if (R_FAILED(rc))
+            return rc;
+        if (out == 0)
+            return 1;
 
         int itr = -1;
-        for (int i = out-1; i >= 0; i--) {
+        for (int i = out - 1; i >= 0; i--) {
             if (events[i].play_event_type != PdmPlayEventType_Applet)
                 continue;
             if (events[i].event_data.applet.applet_id != AppletId_application)
@@ -112,8 +118,6 @@ namespace processManagement {
             TID.parts.part[0] = events[i].event_data.applet.program_id[1];
             TID.parts.part[1] = events[i].event_data.applet.program_id[0];
 
-
-
             if (TID.full != (TIDnow & ~0xFFF))
                 continue;
             else {
@@ -121,9 +125,11 @@ namespace processManagement {
                 break;
             }
         }
-        if (itr == -1) return 1;
+        if (itr == -1)
+            return 1;
 
-        bool isOut = events[itr].event_data.applet.event_type == PdmAppletEventType_OutOfFocus || events[itr].event_data.applet.event_type == PdmAppletEventType_OutOfFocus4;
+        bool isOut = events[itr].event_data.applet.event_type == PdmAppletEventType_OutOfFocus ||
+                     events[itr].event_data.applet.event_type == PdmAppletEventType_OutOfFocus4;
         *outOfFocus = isOut;
         isOutOfFocus = isOut;
         return 0;
@@ -158,4 +164,4 @@ namespace processManagement {
         pdmqryExit();
     }
 
-}
+}  // namespace processManagement

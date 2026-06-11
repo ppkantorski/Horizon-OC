@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,17 +24,16 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
 
 #if defined(__cplusplus)
-#include "cpp_util.hpp"
+    #include "cpp_util.hpp"
 
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <hocclk.h>
+
 #include <hocclk/client/ipc.h>
 
 #if defined(__cplusplus)

@@ -22,12 +22,12 @@ BUILD		:=	build
 OUTDIR		:=	out
 RESOURCES	:=	res
 SOURCES		:=	src src/ui/gui src/ui/elements ../common/src ../common/src/client
-DATA		:=	data
+DATA		:=	data ../assets
 INCLUDES	:=	../common/include
 EXEFS_SRC	:=	exefs_src
 IS_MINIMAL	:=	0
 
-APP_TITLE	:=	Horizon OC Gaea
+APP_TITLE	:=	Horizon OC
 NO_ICON		:=	1
 
 
@@ -39,7 +39,7 @@ include ${TOPDIR}/lib/libultrahand/ultrahand.mk
 # version control constants
 #---------------------------------------------------------------------------------
 #TARGET_VERSION	:= $(shell git describe --dirty --always --tags)
-APP_VERSION		:= 2.3.1 # ensure to set KIP_VERSION and CUST_REV in sysmodule Makefile when updating this
+APP_VERSION		:= 2.4.0 # ensure to set KIP_VERSION and CUST_REV in sysmodule Makefile when updating this
 TARGET_VERSION := $(APP_VERSION)
 
 #---------------------------------------------------------------------------------
@@ -162,6 +162,11 @@ $(OUTPUT).elf: $(OFILES)
 # you need a rule like this for each extension you use as binary data
 #---------------------------------------------------------------------------------
 %.bin.o	:	%.bin
+#---------------------------------------------------------------------------------
+	@echo $(notdir $<)
+	@$(bin2o)
+
+%.rgba.o	:	%.rgba
 #---------------------------------------------------------------------------------
 	@echo $(notdir $<)
 	@$(bin2o)

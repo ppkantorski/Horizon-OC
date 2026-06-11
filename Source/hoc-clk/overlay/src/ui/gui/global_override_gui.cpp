@@ -16,6 +16,7 @@
  *
  */
 
+#include "ult_ext.h"
 #include "../format.h"
 #include "fatal_gui.h"
 #include "global_override_gui.h"

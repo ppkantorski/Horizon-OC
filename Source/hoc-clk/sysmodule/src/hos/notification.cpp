@@ -15,14 +15,13 @@
  *
  */
 
-
 #include "notification.h"
 
 namespace notification {
-    void writeNotification(const std::string& message) {
-        static const char* flagPath = "sdmc:/config/ultrahand/flags/NOTIFICATIONS.flag";
+    void writeNotification(const std::string &message) {
+        static const char *flagPath = "sdmc:/config/ultrahand/flags/NOTIFICATIONS.flag";
 
-        FILE* flagFile = fopen(flagPath, "r");
+        FILE *flagFile = fopen(flagPath, "r");
         if (!flagFile) {
             return;
         }
@@ -31,7 +30,7 @@ namespace notification {
         std::string filename = "hoc-" + std::to_string(std::time(nullptr)) + ".notify";
         std::string fullPath = "sdmc:/config/ultrahand/notifications/" + filename;
 
-        FILE* file = fopen(fullPath.c_str(), "w");
+        FILE *file = fopen(fullPath.c_str(), "w");
         if (file) {
             fprintf(file, "{\n");
             fprintf(file, "  \"text\": \"%s\",\n", message.c_str());
@@ -40,4 +39,4 @@ namespace notification {
             fclose(file);
         }
     }
-}
+}  // namespace notification

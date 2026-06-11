@@ -24,12 +24,13 @@
  * --------------------------------------------------------------------------
  */
 
-#include "file_utils.hpp"
-#include "../hos/apm_ext.h"
 #include <i2c.h>
-#include <t210.h>
 #include <max17050.h>
+#include <t210.h>
 #include <tmp451.h>
+
+#include "../hos/apm_ext.h"
+#include "file_utils.hpp"
 #include <ipc_server.h>
 #include <lockable_mutex.h>
 
@@ -52,7 +53,7 @@ namespace fileUtils {
                 return;
             }
 
-            FILE* file = fopen(FILE_LOG_FLAG_PATH, "r");
+            FILE *file = fopen(FILE_LOG_FLAG_PATH, "r");
             if (file) {
                 g_log_enabled = true;
                 fclose(file);
@@ -63,11 +64,11 @@ namespace fileUtils {
             g_last_flag_check = now;
         }
 
-        void InitializeThreadFunc(void* args) {
+        void InitializeThreadFunc(void *args) {
             Initialize();
         }
 
-    }
+    }  // namespace
 
     bool IsInitialized() {
         return g_has_initialized;
@@ -77,8 +78,8 @@ namespace fileUtils {
         return g_log_enabled;
     }
 
-    void LogLine(const char* format, ...) {
-        std::scoped_lock lock{g_log_mutex};
+    void LogLine(const char *format, ...) {
+        std::scoped_lock lock{ g_log_mutex };
 
         va_list args;
         va_start(args, format);
@@ -86,7 +87,7 @@ namespace fileUtils {
             RefreshFlags(false);
 
             if (g_log_enabled) {
-                FILE* file = fopen(FILE_LOG_FILE_PATH, "a");
+                FILE *file = fopen(FILE_LOG_FILE_PATH, "a");
 
                 if (file) {
                     timespec now = {};
@@ -102,10 +103,10 @@ namespace fileUtils {
         va_end(args);
     }
 
-    void WriteContextToCsv(const HocClkContext* context) {
-        std::scoped_lock lock{g_csv_mutex};
+    void WriteContextToCsv(const HocClkContext *context) {
+        std::scoped_lock lock{ g_csv_mutex };
 
-        FILE* file = fopen(FILE_CONTEXT_CSV_PATH, "a");
+        FILE *file = fopen(FILE_CONTEXT_CSV_PATH, "a");
 
         if (file) {
             // Print header
@@ -134,7 +135,8 @@ namespace fileUtils {
             struct timespec now;
             clock_gettime(CLOCK_REALTIME, &now);
 
-            fprintf(file, "%ld%03ld,%s,%016lx", now.tv_sec, now.tv_nsec / 1000000UL, hocclkFormatProfile(context->profile, false), context->applicationId);
+            fprintf(file, "%ld%03ld,%s,%016lx", now.tv_sec, now.tv_nsec / 1000000UL, hocclkFormatProfile(context->profile, false),
+                    context->applicationId);
 
             for (unsigned int module = 0; module < HocClkModule_EnumMax; module++) {
                 fprintf(file, ",%d", context->freqs[module]);
@@ -164,7 +166,7 @@ namespace fileUtils {
     }
 
     void InitializeAsync() {
-        Thread initThread = {0};
+        Thread initThread = { 0 };
         threadCreate(&initThread, InitializeThreadFunc, NULL, NULL, 0x4000, 0x15, 0);
         threadStart(&initThread);
     }
@@ -210,4 +212,4 @@ namespace fileUtils {
         fsExit();
     }
 
-}
+}  // namespace fileUtils

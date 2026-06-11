@@ -24,21 +24,22 @@
  * --------------------------------------------------------------------------
  */
 
-#include "ipc_service.hpp"
 #include <cstring>
-#include <switch.h>
-#include "../hos/apm_ext.h"
 #include <i2c.h>
-#include <t210.h>
 #include <max17050.h>
+#include <switch.h>
+#include <t210.h>
 #include <tmp451.h>
+
+#include "../file/config.hpp"
+#include "../file/errors.hpp"
+#include "../file/file_utils.hpp"
+#include "../file/kip.hpp"
+#include "../hos/apm_ext.h"
+#include "../mgr/clock_manager.hpp"
+#include "ipc_service.hpp"
 #include <ipc_server.h>
 #include <lockable_mutex.h>
-#include "../file/file_utils.hpp"
-#include "../file/errors.hpp"
-#include "../mgr/clock_manager.hpp"
-#include "../file/config.hpp"
-#include "../file/kip.hpp"
 namespace ipcService {
 
     namespace {
@@ -48,19 +49,19 @@ namespace ipcService {
         LockableMutex gThreadMutex;
         IpcServer gServer;
 
-        Result GetApiVersion(u32* out_version) {
+        Result GetApiVersion(u32 *out_version) {
             *out_version = HOCCLK_IPC_API_VERSION;
             return 0;
         }
 
-        Result GetVersionString(char* out_buf, size_t bufSize) {
+        Result GetVersionString(char *out_buf, size_t bufSize) {
             if (bufSize) {
-                strncpy(out_buf, TARGET_VERSION, bufSize-1);
+                strncpy(out_buf, TARGET_VERSION, bufSize - 1);
             }
             return 0;
         }
 
-        Result GetCurrentContext(HocClkContext* out_ctx) {
+        Result GetCurrentContext(HocClkContext *out_ctx) {
             *out_ctx = clockManager::GetCurrentContext();
             return 0;
         }
@@ -70,7 +71,7 @@ namespace ipcService {
             return 0;
         }
 
-        Result GetProfileCount(std::uint64_t* tid, std::uint8_t* out_count) {
+        Result GetProfileCount(std::uint64_t *tid, std::uint8_t *out_count) {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
@@ -78,7 +79,7 @@ namespace ipcService {
             return 0;
         }
 
-        Result GetProfiles(std::uint64_t* tid, HocClkTitleProfileList* out_profiles) {
+        Result GetProfiles(std::uint64_t *tid, HocClkTitleProfileList *out_profiles) {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
@@ -86,7 +87,7 @@ namespace ipcService {
             return 0;
         }
 
-        Result SetProfiles(HocClkIpc_SetProfiles_Args* args) {
+        Result SetProfiles(HocClkIpc_SetProfiles_Args *args) {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
@@ -97,12 +98,12 @@ namespace ipcService {
             return 0;
         }
 
-        Result SetEnabled(std::uint8_t* enabled) {
+        Result SetEnabled(std::uint8_t *enabled) {
             config::SetEnabled(*enabled);
             return 0;
         }
 
-        Result SetOverride(HocClkIpc_SetOverride_Args* args) {
+        Result SetOverride(HocClkIpc_SetOverride_Args *args) {
             if (!HOCCLK_ENUM_VALID(HocClkModule, args->module)) {
                 return HOCCLK_ERROR(Generic);
             }
@@ -110,7 +111,7 @@ namespace ipcService {
             return 0;
         }
 
-        Result GetConfigValuesHandler(HocClkConfigValueList* out_configValues) {
+        Result GetConfigValuesHandler(HocClkConfigValueList *out_configValues) {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
@@ -118,7 +119,7 @@ namespace ipcService {
             return 0;
         }
 
-        Result SetConfigValuesHandler(HocClkConfigValueList* configValues) {
+        Result SetConfigValuesHandler(HocClkConfigValueList *configValues) {
             if (!config::HasProfilesLoaded()) {
                 return HOCCLK_ERROR(ConfigNotLoaded);
             }
@@ -129,30 +130,28 @@ namespace ipcService {
             return 0;
         }
 
-        Result GetFreqList(HocClkIpc_GetFreqList_Args* args, std::uint32_t* out_list, std::size_t size, std::uint32_t* out_count) {
+        Result GetFreqList(HocClkIpc_GetFreqList_Args *args, std::uint32_t *out_list, std::size_t size, std::uint32_t *out_count) {
             if (!HOCCLK_ENUM_VALID(HocClkModule, args->module)) {
                 return HOCCLK_ERROR(Generic);
             }
-            if (args->maxCount != size/sizeof(*out_list)) {
+            if (args->maxCount != size / sizeof(*out_list)) {
                 return HOCCLK_ERROR(Generic);
             }
             clockManager::GetFreqList(args->module, out_list, args->maxCount, out_count);
             return 0;
         }
 
-        Result ServiceHandlerFunc(void* arg, const IpcServerRequest* r, u8* out_data, size_t* out_dataSize) {
+        Result ServiceHandlerFunc(void *arg, const IpcServerRequest *r, u8 *out_data, size_t *out_dataSize) {
             (void)arg;
             switch (r->data.cmdId) {
                 case HocClkIpcCmd_GetApiVersion:
                     *out_dataSize = sizeof(u32);
-                    return GetApiVersion((u32*)out_data);
+                    return GetApiVersion((u32 *)out_data);
 
                 case HocClkIpcCmd_GetVersionString:
                     if (r->hipc.meta.num_recv_buffers >= 1) {
-                        return GetVersionString(
-                            (char*)hipcGetBufferAddress(r->hipc.data.recv_buffers),
-                            hipcGetBufferSize(r->hipc.data.recv_buffers)
-                        );
+                        return GetVersionString((char *)hipcGetBufferAddress(r->hipc.data.recv_buffers),
+                                                hipcGetBufferSize(r->hipc.data.recv_buffers));
                     }
                     break;
 
@@ -160,7 +159,7 @@ namespace ipcService {
                     if (r->data.size >= sizeof(std::uint64_t) && r->hipc.meta.num_recv_buffers >= 1) {
                         size_t bufSize = hipcGetBufferSize(r->hipc.data.recv_buffers);
                         if (bufSize >= sizeof(HocClkContext)) {
-                            return GetCurrentContext((HocClkContext*)hipcGetBufferAddress(r->hipc.data.recv_buffers));
+                            return GetCurrentContext((HocClkContext *)hipcGetBufferAddress(r->hipc.data.recv_buffers));
                         }
                     }
                     break;
@@ -171,7 +170,7 @@ namespace ipcService {
                 case HocClkIpcCmd_GetProfileCount:
                     if (r->data.size >= sizeof(std::uint64_t)) {
                         *out_dataSize = sizeof(std::uint8_t);
-                        return GetProfileCount((std::uint64_t*)r->data.ptr, (std::uint8_t*)out_data);
+                        return GetProfileCount((std::uint64_t *)r->data.ptr, (std::uint8_t *)out_data);
                     }
                     break;
 
@@ -179,26 +178,27 @@ namespace ipcService {
                     if (r->data.size >= sizeof(std::uint64_t) && r->hipc.meta.num_recv_buffers >= 1) {
                         size_t bufSize = hipcGetBufferSize(r->hipc.data.recv_buffers);
                         if (bufSize >= sizeof(HocClkTitleProfileList)) {
-                            return GetProfiles((std::uint64_t*)r->data.ptr, (HocClkTitleProfileList*)hipcGetBufferAddress(r->hipc.data.recv_buffers));
+                            return GetProfiles((std::uint64_t *)r->data.ptr,
+                                               (HocClkTitleProfileList *)hipcGetBufferAddress(r->hipc.data.recv_buffers));
                         }
                     }
                     break;
 
                 case HocClkIpcCmd_SetProfiles:
                     if (r->data.size >= sizeof(HocClkIpc_SetProfiles_Args)) {
-                        return SetProfiles((HocClkIpc_SetProfiles_Args*)r->data.ptr);
+                        return SetProfiles((HocClkIpc_SetProfiles_Args *)r->data.ptr);
                     }
                     break;
 
                 case HocClkIpcCmd_SetEnabled:
                     if (r->data.size >= sizeof(std::uint8_t)) {
-                        return SetEnabled((std::uint8_t*)r->data.ptr);
+                        return SetEnabled((std::uint8_t *)r->data.ptr);
                     }
                     break;
 
                 case HocClkIpcCmd_SetOverride:
                     if (r->data.size >= sizeof(HocClkIpc_SetOverride_Args)) {
-                        return SetOverride((HocClkIpc_SetOverride_Args*)r->data.ptr);
+                        return SetOverride((HocClkIpc_SetOverride_Args *)r->data.ptr);
                     }
                     break;
 
@@ -206,7 +206,7 @@ namespace ipcService {
                     if (r->hipc.meta.num_recv_buffers >= 1) {
                         size_t bufSize = hipcGetBufferSize(r->hipc.data.recv_buffers);
                         if (bufSize >= sizeof(HocClkConfigValueList)) {
-                            return GetConfigValuesHandler((HocClkConfigValueList*)hipcGetBufferAddress(r->hipc.data.recv_buffers));
+                            return GetConfigValuesHandler((HocClkConfigValueList *)hipcGetBufferAddress(r->hipc.data.recv_buffers));
                         }
                     }
                     break;
@@ -215,7 +215,7 @@ namespace ipcService {
                     if (r->hipc.meta.num_send_buffers >= 1) {
                         size_t bufSize = hipcGetBufferSize(r->hipc.data.send_buffers);
                         if (bufSize >= sizeof(HocClkConfigValueList)) {
-                            return SetConfigValuesHandler((HocClkConfigValueList*)hipcGetBufferAddress(r->hipc.data.send_buffers));
+                            return SetConfigValuesHandler((HocClkConfigValueList *)hipcGetBufferAddress(r->hipc.data.send_buffers));
                         }
                     }
                     break;
@@ -223,12 +223,9 @@ namespace ipcService {
                 case HocClkIpcCmd_GetFreqList:
                     if (r->data.size >= sizeof(HocClkIpc_GetFreqList_Args) && r->hipc.meta.num_recv_buffers >= 1) {
                         *out_dataSize = sizeof(std::uint32_t);
-                        return GetFreqList(
-                            (HocClkIpc_GetFreqList_Args*)r->data.ptr,
-                            (std::uint32_t*)hipcGetBufferAddress(r->hipc.data.recv_buffers),
-                            hipcGetBufferSize(r->hipc.data.recv_buffers),
-                            (std::uint32_t*)out_data
-                        );
+                        return GetFreqList((HocClkIpc_GetFreqList_Args *)r->data.ptr,
+                                           (std::uint32_t *)hipcGetBufferAddress(r->hipc.data.recv_buffers),
+                                           hipcGetBufferSize(r->hipc.data.recv_buffers), (std::uint32_t *)out_data);
                     }
                     break;
 
@@ -243,7 +240,7 @@ namespace ipcService {
             return HOCCLK_ERROR(Generic);
         }
 
-        void ProcessThreadFunc(void* arg) {
+        void ProcessThreadFunc(void *arg) {
             (void)arg;
             Result rc;
             while (true) {
@@ -259,7 +256,7 @@ namespace ipcService {
             }
         }
 
-    }
+    }  // namespace
 
     void Initialize() {
         std::int32_t priority;
@@ -281,7 +278,7 @@ namespace ipcService {
     }
 
     void SetRunning(bool running) {
-        std::scoped_lock lock{gThreadMutex};
+        std::scoped_lock lock{ gThreadMutex };
         if (gRunning == running) {
             return;
         }
@@ -297,4 +294,4 @@ namespace ipcService {
         }
     }
 
-}
+}  // namespace ipcService

@@ -40,8 +40,8 @@ namespace config {
     bool HasProfilesLoaded();
 
     std::uint8_t GetProfileCount(std::uint64_t tid);
-    void GetProfiles(std::uint64_t tid, HocClkTitleProfileList* out_profiles);
-    bool SetProfiles(std::uint64_t tid, HocClkTitleProfileList* profiles, bool immediate);
+    void GetProfiles(std::uint64_t tid, HocClkTitleProfileList *out_profiles);
+    bool SetProfiles(std::uint64_t tid, HocClkTitleProfileList *profiles, bool immediate);
     std::uint32_t GetAutoClockHz(std::uint64_t tid, HocClkModule module, HocClkProfile profile, bool returnRaw);
 
     void SetEnabled(bool enabled);
@@ -50,12 +50,13 @@ namespace config {
     std::uint32_t GetOverrideHz(HocClkModule module);
 
     std::uint64_t GetConfigValue(HocClkConfigValue val);
-    const char* GetConfigValueName(HocClkConfigValue val, bool pretty);
-    void GetConfigValues(HocClkConfigValueList* out_configValues);
-    bool SetConfigValues(HocClkConfigValueList* configValues, bool immediate);
+    const char *GetConfigValueName(HocClkConfigValue val, bool pretty);
+    void GetConfigValues(HocClkConfigValueList *out_configValues);
+    bool SetConfigValues(HocClkConfigValueList *configValues, bool immediate);
     bool ResetConfigValue(HocClkConfigValue kval);
     bool SetConfigValue(HocClkConfigValue kval, std::uint64_t value, bool immediate = true);
+    void DeleteKey(const char *section, const char *key);
 
     extern uint64_t configValues[HocClkConfigValue_EnumMax];
 
-}
+}  // namespace config

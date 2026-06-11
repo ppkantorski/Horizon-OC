@@ -22,20 +22,21 @@
 
 #pragma once
 
-#include <switch.h>
 #include <hocclk.h>
+#include <switch.h>
+
 
 namespace tsensor {
 
     enum SocthermTSensor : u32 {
-        SocthermTSensor_CPU0    = 0,
-        SocthermTSensor_CPU1    = 1,
-        SocthermTSensor_CPU2    = 2,
-        SocthermTSensor_CPU3    = 3,
-        SocthermTSensor_GPU     = 4,
-        SocthermTSensor_PLLX    = 5,
-        SocthermTSensor_MEM0    = 6,
-        SocthermTSensor_MEM1    = 7,
+        SocthermTSensor_CPU0 = 0,
+        SocthermTSensor_CPU1 = 1,
+        SocthermTSensor_CPU2 = 2,
+        SocthermTSensor_CPU3 = 3,
+        SocthermTSensor_GPU = 4,
+        SocthermTSensor_PLLX = 5,
+        SocthermTSensor_MEM0 = 6,
+        SocthermTSensor_MEM1 = 7,
         SocthermTSensor_EnumMax = 8,
     };
 
@@ -49,4 +50,4 @@ namespace tsensor {
     void InitializeSoctherm();
     void ReadTSensors(TSensorTemps &temps);
 
-}
+}  // namespace tsensor

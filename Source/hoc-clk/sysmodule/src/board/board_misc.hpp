@@ -26,9 +26,9 @@
 
 #pragma once
 
-#include <switch.h>
 #include <hocclk.h>
 #include <pwm.h>
+#include <switch.h>
 
 namespace board {
 
@@ -36,4 +36,4 @@ namespace board {
     void ExitMiscThread();
     u8 GetFanLevel();
 
-}
+}  // namespace board

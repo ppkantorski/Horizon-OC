@@ -16,18 +16,18 @@
  *
  */
 #pragma once
-#include "base_menu_gui.h"
 #include <string>
 #include <vector>
 
-class InfoGui : public BaseMenuGui
-{
-public:
+#include "base_menu_gui.h"
+
+class InfoGui : public BaseMenuGui {
+    public:
     InfoGui(std::string title, std::vector<std::string> strings);
     ~InfoGui() = default;
     void listUI() override;
 
-private:
+    private:
     std::string m_title;
     std::vector<std::string> m_strings;
 };

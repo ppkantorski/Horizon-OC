@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,22 +24,21 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
 
-#include <list>
 #include <functional>
+#include <list>
 #include <map>
+
 #include "base_menu_gui.h"
 
 using FreqChoiceListener = std::function<bool(std::uint32_t hz)>;
 
-class FreqChoiceGui : public BaseMenuGui
-{
-protected:
-    HocClkConfigValueList* configList;
+class FreqChoiceGui : public BaseMenuGui {
+    protected:
+    HocClkConfigValueList *configList;
     std::uint32_t selectedHz;
-    std::uint32_t* hzList;
+    std::uint32_t *hzList;
     std::uint32_t hzCount;
     HocClkModule module;
     FreqChoiceListener listener;
@@ -47,16 +46,11 @@ protected:
 
     std::map<uint32_t, std::string> labels;
 
-    tsl::elm::ListItem* createFreqListItem(std::uint32_t hz, bool selected, int safety);
+    tsl::elm::ListItem *createFreqListItem(std::uint32_t hz, bool selected, int safety);
 
-public:
-    FreqChoiceGui(std::uint32_t selectedHz,
-                  std::uint32_t* hzList,
-                  std::uint32_t hzCount,
-                  HocClkModule module,
-                  FreqChoiceListener listener,
-                  bool checkMax = true,
-                  std::map<uint32_t, std::string> labels = {});
+    public:
+    FreqChoiceGui(std::uint32_t selectedHz, std::uint32_t *hzList, std::uint32_t hzCount, HocClkModule module, FreqChoiceListener listener,
+                  bool checkMax = true, std::map<uint32_t, std::string> labels = {});
 
     ~FreqChoiceGui();
 

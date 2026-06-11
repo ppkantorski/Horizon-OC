@@ -24,7 +24,7 @@
 
 namespace ams::ldr::hoc::pcv {
 
-    constexpr u32 NopIns = 0x1f2003d5;
+    constexpr u32 NopIns = 0xD503201F;
 
     template <typename Compare>
     u32 *ScanAssembly(u32 *ptr, u32 scanLimit, u32 pattern, Compare comp) {
@@ -76,6 +76,30 @@ namespace ams::ldr::hoc::pcv {
         SF | Op | S  |                   | RM             | Cond        | 0  | 0  | Rn        | Rd
         31 | 30 | 29 | 28 27 26 25 24 23 | 20 19 18 17 16 | 15 14 13 12 | 11 | 10 | 9 8 7 6 5 | 4 3 2 1 0
     */
+    inline auto AsmCbzCompareOpcodeOnly = [](u32 ins1, u32 ins2) {
+        return ((ins1 ^ ins2) >> 24) == 0;
+    };
+
+    inline auto AsmBlCompareOpcodeOnly = [](u32 ins1, u32 ins2) {
+        return ((ins1 ^ ins2) >> 26) == 0;
+    };
+    inline bool AsmComparePrologue(u32 ins1, u32 ins2, u32 ins3, u32 cmp1, u32 cmp2, u32 cmp3) {
+        constexpr u32 StpImmMask = ~((((1u << 7) - 1u) << 15));
+
+        bool firstMatch = (ins1 & StpImmMask) == (cmp1 & StpImmMask);
+
+        constexpr u32 StpRegsImmMask = ~(((1u << 5) - 1u) |(((1u << 5) - 1u) << 10) | (((1u << 7) - 1u) << 15));
+
+        bool secondMatch = (ins2 & StpRegsImmMask) == (cmp2 & StpRegsImmMask);
+
+
+        constexpr u32 MovMask = ~((1u << 5) - 1u);
+
+        bool thirdMatch = (ins3 & MovMask) == (cmp3 & MovMask);
+
+        return firstMatch && secondMatch && thirdMatch;
+    }
+
     inline auto AsmCompareCselNoReg = [](u32 ins1, u32 ins2) {
         constexpr u32 ClearReg = ~(((1 << 10) - 1) | (((1 << 5) - 1) << 16));
         return ((ins1 & ClearReg) ^ (ins2 & ClearReg)) == 0;

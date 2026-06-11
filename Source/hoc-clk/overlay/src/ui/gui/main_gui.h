@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,16 +24,20 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
 
 #include "base_menu_gui.h"
 
-class MainGui : public BaseMenuGui
-{
+class MainGui : public BaseMenuGui {
     public:
-        MainGui() {}
-        ~MainGui() {}
-        void listUI() override;
-        void refresh() override;
+    MainGui() {
+    }
+    ~MainGui() {
+    }
+    tsl::elm::Element *baseUI() override;
+    void listUI() override;
+    void refresh() override;
+    u16 headerHeight() const override {
+        return HOC_HEADER_HEIGHT - 25;
+    }
 };

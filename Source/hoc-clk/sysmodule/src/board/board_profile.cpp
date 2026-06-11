@@ -24,16 +24,17 @@
  * --------------------------------------------------------------------------
  */
 
-#include <switch.h>
 #include <hocclk.h>
-#include "../hos/apm_ext.h"
 #include <i2c.h>
-#include <t210.h>
 #include <max17050.h>
+#include <switch.h>
+#include <t210.h>
 #include <tmp451.h>
+
+#include "../hos/apm_ext.h"
+#include "board.hpp"
 #include <ipc_server.h>
 #include <lockable_mutex.h>
-#include "board.hpp"
 
 namespace board {
 
@@ -60,4 +61,4 @@ namespace board {
         return HocClkProfile_Handheld;
     }
 
-}
+}  // namespace board

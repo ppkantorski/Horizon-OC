@@ -26,8 +26,8 @@
 
 namespace tsensor {
 
-    #define FUSE_TSENSOR_COMMON 0xA80
-    #define FUSE_OFFSET 0x800
+#define FUSE_TSENSOR_COMMON 0xA80
+#define FUSE_OFFSET 0x800
 
     struct TSensorConfig {
         u32 tall;
@@ -96,27 +96,23 @@ namespace tsensor {
         u32 actual_temp_ft;
     };
 
-    template<typename T = u32>
-    static inline T ReadReg(u64 base, u32 offset) {
-        return *reinterpret_cast<volatile T*>(base + offset);
+    template <typename T = u32> static inline T ReadReg(u64 base, u32 offset) {
+        return *reinterpret_cast<volatile T *>(base + offset);
     }
 
-    template<typename T = u32>
-    static inline void WriteReg(u64 base, u32 offset, T value) {
-        *reinterpret_cast<volatile T*>(base + offset) = value;
+    template <typename T = u32> static inline void WriteReg(u64 base, u32 offset, T value) {
+        *reinterpret_cast<volatile T *>(base + offset) = value;
     }
 
-    template<typename T = u32>
-    static inline void SetBits(u64 base, u32 offset, T mask) {
+    template <typename T = u32> static inline void SetBits(u64 base, u32 offset, T mask) {
         WriteReg(base, offset, ReadReg<T>(base, offset) | mask);
     }
 
-    template<typename T = u32>
-    static inline void ClearBits(u64 base, u32 offset, T mask) {
+    template <typename T = u32> static inline void ClearBits(u64 base, u32 offset, T mask) {
         WriteReg(base, offset, ReadReg<T>(base, offset) & ~mask);
     }
 
     void CalcSharedCal(const TSensorFuse *tfuse, TSensorSharedCalib *shared, u64 fuseVa);
     void CalcTSensorCalib(const TSensorConfig *cfg, TSensorSharedCalib *shared, const FuseCorrCoeff *corr, u32 *calibration, u32 offset, u64 fuseVa);
 
-}
+}  // namespace tsensor

@@ -16,57 +16,57 @@
  */
 
 #pragma once
-#include <switch.h>
 #include <inttypes.h>
 #include <string.h>
+#include <switch.h>
 typedef enum {
-    BatteryFlag_NoHub  = BIT(0),  // Hub is disconnected
-    BatteryFlag_Rail   = BIT(8),  // At least one Joy-con is charging from rail
-    BatteryFlag_SPDSRC = BIT(12), // OTG
-    BatteryFlag_ACC    = BIT(16)  // Accessory
+    BatteryFlag_NoHub = BIT(0),    // Hub is disconnected
+    BatteryFlag_Rail = BIT(8),     // At least one Joy-con is charging from rail
+    BatteryFlag_SPDSRC = BIT(12),  // OTG
+    BatteryFlag_ACC = BIT(16)      // Accessory
 } BatteryChargeFlags;
 
 typedef enum {
-    PDState_NewPDO      = 1, // Received new Power Data Object
-    PDState_NoPD        = 2, // No Power Delivery source is detected
+    PDState_NewPDO = 1,      // Received new Power Data Object
+    PDState_NoPD = 2,        // No Power Delivery source is detected
     PDState_AcceptedRDO = 3  // Received and accepted Request Data Object
 } BatteryPDControllerState;
 
 // Charger type detection
 typedef enum {
-    ChargerType_None         = 0,
-    ChargerType_PD           = 1,
+    ChargerType_None = 0,
+    ChargerType_PD = 1,
     ChargerType_TypeC_1500mA = 2,
     ChargerType_TypeC_3000mA = 3,
-    ChargerType_DCP          = 4, // Dedicated Charging Port
-    ChargerType_CDP          = 5, // Charging Downstream Port
-    ChargerType_SDP          = 6, // Standard Downstream Port
-    ChargerType_Apple_500mA  = 7,
+    ChargerType_DCP = 4,  // Dedicated Charging Port
+    ChargerType_CDP = 5,  // Charging Downstream Port
+    ChargerType_SDP = 6,  // Standard Downstream Port
+    ChargerType_Apple_500mA = 7,
     ChargerType_Apple_1000mA = 8,
     ChargerType_Apple_2000mA = 9
 } BatteryChargerType;
 typedef enum {
-    PowerRole_Sink   = 1, // Device is receiving power
+    PowerRole_Sink = 1,   // Device is receiving power
     PowerRole_Source = 2  // Device is providing power
 } BatteryPowerRole;
 
 typedef struct {
-    int32_t InputCurrentLimit;       // Input (Sink) current limit in mA
-    int32_t VBUSCurrentLimit;        // Output (Source/VBUS/OTG) current limit in mA
-    int32_t ChargeCurrentLimit;      // Battery charging current limit in mA
-    int32_t ChargeVoltageLimit;      // Battery charging voltage limit in mV
-    int32_t unk_x10;                 // Unknown field (possibly enum)
-    int32_t unk_x14;                 // Unknown field (possibly flags)
-    BatteryPDControllerState PDControllerState; // PD Controller State
-    int32_t BatteryTemperature;      // Battery temperature in milli-Celsius
-    int32_t RawBatteryCharge;        // Battery charge in percentmille
-    int32_t VoltageAvg;              // Average voltage in mV
-    int32_t BatteryAge;              // Battery health (capacity full/design) in pcm
-    BatteryPowerRole PowerRole;      // Current power role
-    BatteryChargerType ChargerType;  // Type of charger connected
-    int32_t ChargerVoltageLimit;     // Charger voltage limit in mV
-    int32_t ChargerCurrentLimit;     // Charger current limit in mA
-    BatteryChargeFlags Flags;        // Various status flags
+    int32_t InputCurrentLimit;                   // Input (Sink) current limit in mA
+    int32_t VBUSCurrentLimit;                    // Output (Source/VBUS/OTG) current limit in mA
+    int32_t ChargeCurrentLimit;                  // Battery charging current limit in mA
+    int32_t ChargeVoltageLimit;                  // Battery charging voltage limit in mV
+    int32_t unk_x10;                             // Unknown field (possibly enum)
+    int32_t unk_x14;                             // Unknown field (possibly flags)
+    BatteryPDControllerState PDControllerState;  // PD Controller State
+    int32_t BatteryTemperature;                  // Battery temperature in milli-Celsius
+    int32_t RawBatteryCharge;                    // Battery charge in percentmille
+    int32_t VoltageAvg;                          // Average voltage in mV
+    int32_t BatteryAge;                          // Battery health (capacity full/design) in pcm
+    BatteryPowerRole PowerRole;                  // Current power role
+    BatteryChargerType ChargerType;              // Type of charger connected
+    int32_t ChargerVoltageLimit;                 // Charger voltage limit in mV
+    int32_t ChargerCurrentLimit;                 // Charger current limit in mA
+    BatteryChargeFlags Flags;                    // Various status flags
 } BatteryChargeInfo;
 
 #define IS_BATTERY_CHARGING_ENABLED(info) (((info)->unk_x14 >> 8) & 1)
@@ -96,6 +96,6 @@ Result batteryInfoEnableCharging(void);
 Result batteryInfoDisableCharging(void);
 Result batteryInfoEnableFastCharging(void);
 Result batteryInfoDisableFastCharging(void);
-const char* batteryInfoGetChargerTypeString(BatteryChargerType type);
-const char* batteryInfoGetPowerRoleString(BatteryPowerRole role);
-const char* batteryInfoGetPDStateString(BatteryPDControllerState state);
+const char *batteryInfoGetChargerTypeString(BatteryChargerType type);
+const char *batteryInfoGetPowerRoleString(BatteryPowerRole role);
+const char *batteryInfoGetPDStateString(BatteryPDControllerState state);

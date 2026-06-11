@@ -81,7 +81,11 @@ namespace board {
                 gSocType = HocClkSocType_Erista;
         }
 
-        if (gSocType == HocClkSocType_Mariko) {
+        // Cache the PCV GPU voltage table on both Mariko and Erista. Both SoCs
+        // expose the table at the same regulator signature + offset; the scan
+        // validates entries and leaves voltTableAddress == 0 (DVFS safely
+        // disabled) if no valid table is found for this firmware.
+        if (gSocType == HocClkSocType_Mariko || gSocType == HocClkSocType_Erista) {
             CacheGpuVoltTable();
         }
 

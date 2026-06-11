@@ -12,14 +12,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #pragma once
 
-#include <string>
-#include <ctime>
 #include <cstdio>
+#include <ctime>
+#include <string>
 namespace notification {
-    void writeNotification(const std::string& message);
+    void writeNotification(const std::string &message);
 }

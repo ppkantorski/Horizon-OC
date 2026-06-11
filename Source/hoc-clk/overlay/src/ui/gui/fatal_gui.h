@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,23 +24,23 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
 
 #include <list>
 
 #include "base_gui.h"
 
-class FatalGui : public BaseGui
-{
+class FatalGui : public BaseGui {
     protected:
-        std::string message;
-        std::string info;
+    std::string message;
+    std::string info;
 
     public:
-        FatalGui(const std::string message, const std::string info);
-        ~FatalGui() {}
-        tsl::elm::Element* baseUI() override;
-        bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft, HidAnalogStickState joyStickPosRight);
-        static void openWithResultCode(std::string tag, Result rc);
+    FatalGui(const std::string message, const std::string info);
+    ~FatalGui() {
+    }
+    tsl::elm::Element *baseUI() override;
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft,
+                     HidAnalogStickState joyStickPosRight);
+    static void openWithResultCode(std::string tag, Result rc);
 };

@@ -25,8 +25,8 @@
  */
 
 #pragma once
-#include <switch.h>
 #include <hocclk.h>
+#include <switch.h>
 
 namespace board {
 
@@ -35,4 +35,4 @@ namespace board {
     const char *GetThermalSensorName(HocClkThermalSensor sensor, bool pretty);
     const char *GetPowerSensorName(HocClkPowerSensor sensor, bool pretty);
 
-}
+}  // namespace board

@@ -33,4 +33,4 @@ namespace board {
     s32 GetTemperatureMilli(HocClkThermalSensor sensor);
     s32 GetPowerMw(HocClkPowerSensor sensor);
 
-}
+}  // namespace board

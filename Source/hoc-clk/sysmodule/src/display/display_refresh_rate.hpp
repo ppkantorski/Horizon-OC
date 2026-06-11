@@ -12,14 +12,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 namespace display {
     typedef struct {
         uint16_t hFrontPorch;
@@ -71,35 +71,35 @@ namespace display {
     } NvdcModeDB2;
 
     typedef struct {
-        unsigned int PLLD_DIVM: 8;
-        unsigned int reserved_1: 3;
-        unsigned int PLLD_DIVN: 8;
-        unsigned int reserved_2: 1;
-        unsigned int PLLD_DIVP: 3;
-        unsigned int CSI_CLK_SRC: 1;
-        unsigned int reserved_3: 1;
-        unsigned int PLL_D: 1;
-        unsigned int reserved_4: 1;
-        unsigned int PLLD_LOCK: 1;
-        unsigned int reserved_5: 1;
-        unsigned int PLLD_REF_DIS: 1;
-        unsigned int PLLD_ENABLE: 1;
-        unsigned int PLLD_BYPASS: 1;
+        unsigned int PLLD_DIVM : 8;
+        unsigned int reserved_1 : 3;
+        unsigned int PLLD_DIVN : 8;
+        unsigned int reserved_2 : 1;
+        unsigned int PLLD_DIVP : 3;
+        unsigned int CSI_CLK_SRC : 1;
+        unsigned int reserved_3 : 1;
+        unsigned int PLL_D : 1;
+        unsigned int reserved_4 : 1;
+        unsigned int PLLD_LOCK : 1;
+        unsigned int reserved_5 : 1;
+        unsigned int PLLD_REF_DIS : 1;
+        unsigned int PLLD_ENABLE : 1;
+        unsigned int PLLD_BYPASS : 1;
     } PLLD_BASE;
 
     typedef struct {
-        signed int PLLD_SDM_DIN: 16;
-        unsigned int PLLD_EN_SDM: 1;
-        unsigned int PLLD_LOCK_OVERRIDE: 1;
-        unsigned int PLLD_EN_LCKDET: 1;
-        unsigned int PLLD_FREQLOCK: 1;
-        unsigned int PLLD_IDDQ: 1;
-        unsigned int PLLD_ENABLE_CLK: 1;
-        unsigned int PLLD_KVCO: 1;
-        unsigned int PLLD_KCP: 2;
-        unsigned int PLLD_PTS: 2;
-        unsigned int PLLD_LDPULSE_ADJ: 3;
-        unsigned int reserved: 2;
+        signed int PLLD_SDM_DIN : 16;
+        unsigned int PLLD_EN_SDM : 1;
+        unsigned int PLLD_LOCK_OVERRIDE : 1;
+        unsigned int PLLD_EN_LCKDET : 1;
+        unsigned int PLLD_FREQLOCK : 1;
+        unsigned int PLLD_IDDQ : 1;
+        unsigned int PLLD_ENABLE_CLK : 1;
+        unsigned int PLLD_KVCO : 1;
+        unsigned int PLLD_KCP : 2;
+        unsigned int PLLD_PTS : 2;
+        unsigned int PLLD_LDPULSE_ADJ : 3;
+        unsigned int reserved : 2;
     } PLLD_MISC;
 
     typedef struct {
@@ -116,12 +116,12 @@ namespace display {
         bool displaySyncDocked;
         bool displaySyncDockedOutOfFocus60;
     } DisplayRefreshConfig;
-    bool Initialize(const DisplayRefreshConfig* config);
+    bool Initialize(const DisplayRefreshConfig *config);
     void SetDockedState(bool isDocked);
     bool SetRate(uint32_t new_refreshRate);
-    bool GetRate(uint32_t* out_refreshRate, bool internal);
+    bool GetRate(uint32_t *out_refreshRate, bool internal);
     uint8_t GetDockedHighestAllowed(void);
     void CorrectOledGamma(uint32_t refresh_rate);
     void SetAllowedDockedRatesIPC(uint32_t refreshRates, bool is720p);
     void Shutdown(void);
-}
+}  // namespace display

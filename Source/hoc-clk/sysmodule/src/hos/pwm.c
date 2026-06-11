@@ -12,11 +12,12 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #define NX_SERVICE_ASSUME_NON_DOMAIN
 #include <switch.h>
+
 #include "../util/service_guard.h"
 #include "pwm.h"
 
@@ -32,18 +33,15 @@ void _pwmCleanup(void) {
     serviceClose(&g_pwmSrv);
 }
 
-Service* pwmGetServiceSession(void) {
+Service *pwmGetServiceSession(void) {
     return &g_pwmSrv;
 }
 
 Result pwmOpenSession2(PwmChannelSession *out, u32 device_code) {
-    return serviceDispatchIn(&g_pwmSrv, 2, device_code,
-        .out_num_objects = 1,
-        .out_objects = &out->s,
-    );
+    return serviceDispatchIn(&g_pwmSrv, 2, device_code, .out_num_objects = 1, .out_objects = &out->s, );
 }
 
-Result pwmChannelSessionGetDutyCycle(PwmChannelSession *c, double* out) {
+Result pwmChannelSessionGetDutyCycle(PwmChannelSession *c, double *out) {
     return serviceDispatchOut(&c->s, 7, *out);
 }
 

@@ -15,39 +15,26 @@
  *
  */
 
-#include <switch.h>
 #include <cstring>
+#include <switch.h>
+
 #include "battery.h"
 
 // Internal PSM service handle
-static Service g_psmService = {0};
+static Service g_psmService = { 0 };
 static bool g_batteryInfoInitialized = false;
 
-static const char* s_chargerTypeStrings[] = {
-    "None",
-    "Power Delivery",
-    "USB-C @ 1.5A",
-    "USB-C @ 3.0A",
-    "USB-DCP",
-    "USB-CDP",
-    "USB-SDP",
-    "Apple @ 0.5A",
-    "Apple @ 1.0A",
-    "Apple @ 2.0A",
+static const char *s_chargerTypeStrings[] = {
+    "None", "Power Delivery", "USB-C @ 1.5A", "USB-C @ 3.0A", "USB-DCP", "USB-CDP", "USB-SDP", "Apple @ 0.5A", "Apple @ 1.0A", "Apple @ 2.0A",
 };
 
-static const char* s_powerRoleStrings[] = {
+static const char *s_powerRoleStrings[] = {
     "Unknown",
     "Sink",
     "Source",
 };
 
-static const char* s_pdStateStrings[] = {
-    "Unknown",
-    "New PDO Received",
-    "No PD Source",
-    "RDO Accepted"
-};
+static const char *s_pdStateStrings[] = { "Unknown", "New PDO Received", "No PD Source", "RDO Accepted" };
 
 // Internal PSM command implementations
 static Result psmGetBatteryChargeInfoFields(BatteryChargeInfo *out) {
@@ -143,21 +130,21 @@ Result batteryInfoDisableFastCharging(void) {
     return psmDisableFastBatteryCharging_internal();
 }
 
-const char* batteryInfoGetChargerTypeString(BatteryChargerType type) {
+const char *batteryInfoGetChargerTypeString(BatteryChargerType type) {
     if (type < 0 || type > ChargerType_Apple_2000mA)
         return "Unknown";
 
     return s_chargerTypeStrings[type];
 }
 
-const char* batteryInfoGetPowerRoleString(BatteryPowerRole role) {
+const char *batteryInfoGetPowerRoleString(BatteryPowerRole role) {
     if (role < PowerRole_Sink || role > PowerRole_Source)
         return s_powerRoleStrings[0];
 
     return s_powerRoleStrings[role];
 }
 
-const char* batteryInfoGetPDStateString(BatteryPDControllerState state) {
+const char *batteryInfoGetPDStateString(BatteryPDControllerState state) {
     if (state < PDState_NewPDO || state > PDState_AcceptedRDO)
         return s_pdStateStrings[0];
 

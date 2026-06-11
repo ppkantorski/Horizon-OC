@@ -22,15 +22,15 @@
  *
  */
 
-#include "max17050.h"
 #include "i2c.h"
+#include "max17050.h"
 
 #define MAX17050_WAIT_NS 1000000000UL
 
-#define MAX17050_VCELL      0x09
-#define MAX17050_Current    0x0A
+#define MAX17050_VCELL 0x09
+#define MAX17050_Current 0x0A
 #define MAX17050_AvgCurrent 0x0B
-#define MAX17050_AvgVCELL   0x19
+#define MAX17050_AvgVCELL 0x19
 
 #define MAX17050_BOARD_CGAIN 2
 #define MAX17050_BOARD_SNS_RESISTOR_UOHM 5000
@@ -40,15 +40,13 @@ static u64 g_update_ticks = 0;
 static s32 g_power_now = 0;
 static s32 g_power_avg = 0;
 
-static Result _max17050_get_power(s32 *out_mw_now, s32 *out_mw_avg)
-{
+static Result _max17050_get_power(s32 *out_mw_now, s32 *out_mw_avg) {
     s64 ma, mv;
-    u16 values[3] = {0};
+    u16 values[3] = { 0 };
 
     Result rc = i2csessionExtRegReceive(&g_i2c_session, MAX17050_VCELL, values, sizeof(values));
 
-    if (R_SUCCEEDED(rc))
-    {
+    if (R_SUCCEEDED(rc)) {
         ma = (s16)values[1];
         ma = ma * 1562500 / (MAX17050_BOARD_SNS_RESISTOR_UOHM * MAX17050_BOARD_CGAIN);
 
@@ -57,13 +55,11 @@ static Result _max17050_get_power(s32 *out_mw_now, s32 *out_mw_avg)
         *out_mw_now = ma * mv / 1000000;
     }
 
-    if (R_SUCCEEDED(rc))
-    {
+    if (R_SUCCEEDED(rc)) {
         rc = i2csessionExtRegReceive(&g_i2c_session, MAX17050_AvgVCELL, values, sizeof(u16));
     }
 
-    if (R_SUCCEEDED(rc))
-    {
+    if (R_SUCCEEDED(rc)) {
         ma = (s16)values[2];
         ma = ma * 1562500 / (MAX17050_BOARD_SNS_RESISTOR_UOHM * MAX17050_BOARD_CGAIN);
 
@@ -75,50 +71,42 @@ static Result _max17050_get_power(s32 *out_mw_now, s32 *out_mw_avg)
     return rc;
 }
 
-static void _max17050_update()
-{
+static void _max17050_update() {
     u64 ticks = armGetSystemTick();
-    if(armTicksToNs(ticks - g_update_ticks) <= MAX17050_WAIT_NS)
-    {
+    if (armTicksToNs(ticks - g_update_ticks) <= MAX17050_WAIT_NS) {
         return;
     }
 
     g_update_ticks = ticks;
 
-    if(!serviceIsActive(&g_i2c_session.s))
-    {
+    if (!serviceIsActive(&g_i2c_session.s)) {
         return;
     }
 
     _max17050_get_power(&g_power_now, &g_power_avg);
 }
 
-Result max17050Initialize(void)
-{
+Result max17050Initialize(void) {
     Result rc = i2cInitialize();
 
-    if(R_SUCCEEDED(rc))
-    {
+    if (R_SUCCEEDED(rc)) {
         rc = i2cOpenSession(&g_i2c_session, I2cDevice_Max17050);
     }
 
     return rc;
 }
 
-void max17050Exit(void)
-{
+void max17050Exit(void) {
     i2csessionClose(&g_i2c_session);
     i2cExit();
 }
 
-s32 max17050PowerNow(void)
-{
+s32 max17050PowerNow(void) {
     _max17050_update();
     return g_power_now;
 }
 
-s32 max17050PowerAvg(void)
-{
+s32 max17050PowerAvg(void) {
     _max17050_update();
     return g_power_avg;
 }

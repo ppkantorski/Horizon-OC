@@ -28,6 +28,7 @@
 
 #include <hocclk.h>
 #include <switch.h>
+
 #include "../util/lockable_mutex.h"
 
 namespace clockManager {
@@ -36,7 +37,6 @@ namespace clockManager {
         std::uint32_t count;
         std::uint32_t list[HOCCLK_FREQ_LIST_MAX];
     };
-
 
     extern bool hasChanged;
 
@@ -50,7 +50,6 @@ namespace clockManager {
     extern std::uint64_t gLastPowerLogNs;
     extern std::uint64_t gLastCsvWriteNs;
 
-
     void Initialize();
     void Exit();
 
@@ -62,8 +61,8 @@ namespace clockManager {
     std::uint32_t GetMaxAllowedHz(HocClkModule module, HocClkProfile profile);
     bool IsAssignableHz(HocClkModule module, std::uint32_t hz);
 
-    void GetFreqList(HocClkModule module, std::uint32_t* list, std::uint32_t maxCount, std::uint32_t* outCount);
+    void GetFreqList(HocClkModule module, std::uint32_t *list, std::uint32_t maxCount, std::uint32_t *outCount);
 
     void Tick();
     void WaitForNextTick();
-}
+}  // namespace clockManager

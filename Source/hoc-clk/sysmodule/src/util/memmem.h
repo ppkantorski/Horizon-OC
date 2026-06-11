@@ -31,8 +31,7 @@
 extern "C" {
 #endif
 
-void *memmem_impl(const void *haystack, size_t haystacklen,
-                  const void *needle, size_t needlelen);
+void *memmem_impl(const void *haystack, size_t haystacklen, const void *needle, size_t needlelen);
 
 #ifdef __cplusplus
 }

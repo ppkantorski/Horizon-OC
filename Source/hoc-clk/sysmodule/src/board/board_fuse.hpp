@@ -37,4 +37,4 @@ namespace board {
     void ReadFuses(FuseData &speedo, u64 fuseVa);
     void SetGpuBracket(u16 gpuSpeedo, u8 &gpuBracket);
 
-}
+}  // namespace board

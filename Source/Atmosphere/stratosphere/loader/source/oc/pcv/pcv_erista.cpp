@@ -3,6 +3,8 @@
  *
  * Copyright (c) 2023 hanai3Bi
  *
+ * Copyright (c) B3711
+ *
  * Copyright (c) Souldbminer, Lightos_ and Horizon OC Contributors
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -18,6 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <vector>
 #include "pcv.hpp"
 #include "../mtc_timing_value.hpp"
 #include "../erista/calculate_timings_erista.hpp"
@@ -215,7 +218,7 @@ namespace ams::ldr::hoc::pcv::erista {
 
         const u32 dyn_self_ref_control = (static_cast<u32>(7605.0 / tCK_avg) + 260) | (table->burst_regs.emc_dyn_self_ref_control & 0xffff0000);
 
-        CalculateTimings(tCK_avg);
+        CalculateTimings(tCK_avg, table->rate_khz);
 
         WRITE_PARAM_ALL_REG(table, emc_rd_rcd, GET_CYCLE_CEIL(tRCD));
         WRITE_PARAM_ALL_REG(table, emc_wr_rcd, GET_CYCLE_CEIL(tRCD));
@@ -254,16 +257,17 @@ namespace ams::ldr::hoc::pcv::erista {
         WRITE_PARAM_ALL_REG(table, emc_rw2pden, tWTPDEN);
 
         /* Accept imperfection or prepare for suffering. */
+        // #if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
         // WRITE_PARAM_ALL_REG(table, emc_einput, einput);
         // WRITE_PARAM_ALL_REG(table, emc_einput_duration, einput_duration);
-        // WRITE_PARAM_ALL_REG(table, emc_obdly, obdly);
+        WRITE_PARAM_ALL_REG(table, emc_obdly, obdly);
         // WRITE_PARAM_ALL_REG(table, emc_ibdly, ibdly);
         // WRITE_PARAM_ALL_REG(table, emc_wdv_mask, wdv);
         // WRITE_PARAM_ALL_REG(table, emc_quse_width, quse_width);
         // WRITE_PARAM_ALL_REG(table, emc_quse, quse);
-        // WRITE_PARAM_ALL_REG(table, emc_wdv, wdv);
-        // WRITE_PARAM_ALL_REG(table, emc_wsv, wsv);
-        // WRITE_PARAM_ALL_REG(table, emc_wev, wev);
+        WRITE_PARAM_ALL_REG(table, emc_wdv, wdv);
+        WRITE_PARAM_ALL_REG(table, emc_wsv, wsv);
+        WRITE_PARAM_ALL_REG(table, emc_wev, wev);
         // WRITE_PARAM_ALL_REG(table, emc_qrst, qrst);
         // WRITE_PARAM_ALL_REG(table, emc_tr_qrst, qrst);
         // WRITE_PARAM_ALL_REG(table, emc_qsafe, qsafe);
@@ -276,8 +280,9 @@ namespace ams::ldr::hoc::pcv::erista {
         // WRITE_PARAM_ALL_REG(table, emc_rdv_early_mask, rdv);
         // WRITE_PARAM_ALL_REG(table, emc_rdv_mask, rdv + 2);
         // WRITE_PARAM_ALL_REG(table, emc_tr_rdv, rdv);
-        // table->emc_mrw2 = (table->emc_mrw2 & ~0xFFu) | static_cast<u32>(mrw2);
+        table->emc_mrw2 = (table->emc_mrw2 & ~0xFFu) | static_cast<u32>(mrw2);
         // table->dram_timings.rl = RL;
+        // #endif
 
         constexpr double MC_ARB_DIV = 4.0;
         constexpr u32 MC_ARB_SFA    = 2;
@@ -360,65 +365,176 @@ namespace ams::ldr::hoc::pcv::erista {
         table->min_volt           = std::clamp(900 + (C.emcDvbShift * 25), 900, 1050);
     }
 
-    /* Probably more intuitive to point to 40800 rather than 1600000, but oh well. */
-    Result MemFreqMtcTable(u32 *ptr) {
-        u32 khz_list[] = { 40800, 68000, 102000, 204000, 408000, 665600, 800000, 1065600, 1331200, 1600000 };
-        std::sort(maxEmcClocks, maxEmcClocks + std::size(maxEmcClocks));
-        u32 khz_list_size = std::size(khz_list);
+    namespace {
+        std::vector<u32> newEmcList;
+        u32 *nsoStart;
+    }
 
-        // Generate list for mtc table pointers
-        EristaMtcTable *table_list[khz_list_size];
-        for (u32 i = 0; i < khz_list_size; i++) {
-            u32 mtcIndex = khz_list_size - 1 - i;
-            u8 *table = reinterpret_cast<u8 *>(ptr) - offsetof(EristaMtcTable, rate_khz) - i * sizeof(EristaMtcTable);
-            table_list[mtcIndex] = reinterpret_cast<EristaMtcTable *>(table);
-            R_UNLESS(table_list[mtcIndex]->rate_khz == khz_list[mtcIndex], ldr::ResultInvalidMtcTable());
-            R_UNLESS(table_list[mtcIndex]->rev == MTC_TABLE_REV, ldr::ResultInvalidMtcTable());
+    /* The silicon instructs; the children obey... */
+    void MtcGenerateFreqTables() {
+        newEmcList.clear();
+        newEmcList.reserve(DvfsTableEntryCount);
+        newEmcList.insert(newEmcList.end(), std::begin(EmcListDefault), std::end(EmcListDefault));
+
+        if (C.eristaEmcMaxClock <= EmcClkOSLimit) {
+            return;
         }
 
-        if (GET_MAX_OF_ARR(maxEmcClocks) <= EmcClkOSLimit) {
+        /* This is scuffed, but Eristas step rate is... weird? */
+        /* 1766MHz seems to cause crashes with other freqs near it... why is anyones guess... */
+        u32 freqsLow[]                = { 1633000, 1666000, 1700000, 1733000, 1800000, 1833000, 1862400, };
+        constexpr size_t freqsLowSize = std::size(freqsLow);
+
+        for (size_t i = 0; i < freqsLowSize; ++i) {
+            if (freqsLow[i] <= C.eristaEmcMaxClock) {
+                newEmcList.push_back(freqsLow[i]);
+            } else {
+                break;
+            }
+        }
+
+        if (C.eristaEmcMaxClock <= freqsLow[freqsLowSize - 1]) {
+            return;
+        }
+
+        /* High range. */
+        constexpr u32 StepRate = 38400;
+        while (newEmcList.back() + StepRate < C.eristaEmcMaxClock) {
+            newEmcList.push_back(newEmcList.back() + StepRate);
+        }
+
+        if (newEmcList.back() != C.eristaEmcMaxClock) {
+            newEmcList.push_back(static_cast<u32>(C.eristaEmcMaxClock));
+        }
+
+        constexpr u32 PllmToggleFrequency = 19200;
+
+        /* A step of 19.2khz will cause hangs, crashes and other weirdness. */
+        /* Why? ¯\_(ツ)_/¯ */
+        if (C.eristaEmcMaxClock - newEmcList[newEmcList.size() - 2] <= PllmToggleFrequency) {
+            newEmcList.erase(newEmcList.begin() + newEmcList.size() - 2);
+        }
+
+        newEmcList.resize(std::min(newEmcList.size(), DvfsTableEntryLimit));
+    }
+
+    /* TODO: Template this */
+    Result VerifyMtcTable(EristaMtcTable *tableStart, u32 expectedFreq) {
+        R_UNLESS(tableStart->rate_khz == expectedFreq,  ldr::ResultInvalidMtcTable());
+        R_UNLESS(tableStart->rev      == MTC_TABLE_REV, ldr::ResultInvalidMtcTable());
+
+        R_SUCCEED();
+    }
+
+    /* TODO: Template this */
+    Result MtcValidateAllTables(EristaMtcTable *tableStart, const u32 *validationList, u32 tableCount) {
+        for (u32 i = 0; i < tableCount; ++i) {
+            R_TRY(VerifyMtcTable(&tableStart[i], validationList[i]));
+        }
+
+        R_SUCCEED();
+    }
+
+    /* TODO: Put this into common. */
+    DramId GetDramId() {
+        u64 id64;
+        splGetConfig(SplConfigItem_DramId, &id64);
+        return static_cast<DramId>(id64);
+    }
+
+    MtcTableIndex GetMtcDramIndex(DramId dramId) {
+        for (u32 i = 0; i < std::size(mtcIndexTable); ++i) {
+            if (mtcIndexTable[i].dramId == dramId) {
+                return mtcIndexTable[i].index;
+            }
+        }
+
+        return MtcTableIndex_Invalid;
+    }
+
+    NORETURN void AbortInvalidMtc(const char *crashMsg) {
+        panic::SmcError(panic::Emc);
+        CRASH(crashMsg);
+    }
+
+    u32 GetMtcOffset(MtcTableIndex index) {
+        if (index < T210SdevEmcDvfsTableS6gb01) {
+            return index * erista::MtcFullTableSize;
+        }
+
+        /* Account for the weird in between mariko table. */
+        return index * erista::MtcFullTableSize + mariko::MtcFullTableSize;
+    }
+
+    void PrepareMtcMemoryRegion(u8 *firstTable, EristaMtcTable *usedTable) {
+        memmove(firstTable, usedTable, erista::MtcFullTableSize);
+
+        /* Clear all other tables. */
+        /* The used table is excluded. */
+        constexpr size_t RemainingRegionSize = (mariko::MtcFullTableSize) * (mariko::MtcFullTableCount) + (erista::MtcFullTableSize * (erista::MtcFullTableCount - 1));
+        memset(firstTable + erista::MtcFullTableSize, 0, RemainingRegionSize);
+    }
+
+    void MtcExtendTables(EristaMtcTable *table) {
+        for (u32 i = erista::MtcTableCountDefault; i < newEmcList.size(); ++i) {
+            std::memcpy(&table[i], &table[i - 1], sizeof(EristaMtcTable));
+            table[i].rate_khz = newEmcList[i];
+        }
+    }
+
+    Result MemFreqMtcTable(u32 *ptr) {
+        static const DramId dramId = [] {
+            DramId id = GetDramId();
+            return id;
+        }();
+
+        static const MtcTableIndex mtcIndex = [] {
+            MtcTableIndex idx = GetMtcDramIndex(dramId);
+            /* If for some reason this happens, there is no chance of recovering this. */
+            if (idx == MtcTableIndex_Invalid) {
+                AbortInvalidMtc("Invalid dramId");
+            }
+            return idx;
+        }();
+
+        static const u32 mtcOffset = GetMtcOffset(mtcIndex);
+
+        constexpr u32 StartAdjustment = offsetof(EristaMtcTable, rate_khz) + sizeof(EristaMtcTable) * (erista::MtcTableCountDefault - 1);
+        u8 *startPtr = reinterpret_cast<u8 *>(ptr) - StartAdjustment;
+
+        EristaMtcTable *table = reinterpret_cast<EristaMtcTable *>(startPtr + mtcOffset);
+        R_TRY(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault));
+
+        PrepareMtcMemoryRegion(startPtr, table);
+        table = reinterpret_cast<EristaMtcTable *>(startPtr);
+
+        if (R_FAILED(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault))) {
+            AbortInvalidMtc("Failed mtc validation");
+        }
+
+        if (C.eristaEmcMaxClock <= EmcClkOSLimit) {
             R_SKIP();
         }
 
-        /* If we oc ram at all, tables are always shifted by at least 1. */
-        u32 tableShifts = 1;
-        for (u32 i = 0; i < std::size(maxEmcClocks) - 1; ++i) {
-            /* Duplicated mtc tables may cause pcv to not select frequencies properly, causing issues. */
-            if (maxEmcClocks[i] != maxEmcClocks[i + 1] && maxEmcClocks[i] > EmcClkOSLimit) {
-                ++tableShifts;
-            } else {
-                maxEmcClocks[i] = 0;
-            }
+        MtcExtendTables(table);
+
+        if (R_FAILED(MtcValidateAllTables(table, newEmcList.data(), newEmcList.size()))) {
+            AbortInvalidMtc("Failed mtc validation");
         }
 
-        /* Erista has extra, useless mtc tables, such as 40.8 Mhz, overwrite them to make room for oc freqs. */
-        /* More than 3 tables can be overwritten, but 3 is plenty. */
-        std::memmove(table_list[0], table_list[tableShifts], sizeof(EristaMtcTable) * (khz_list_size - tableShifts));
-
-        /* Since we're not scaling r/w latency properly on Erista, we first overwrite the tables with the 1600 MHz table before scaling it. */
-        for (u32 i = 0; i < tableShifts; ++i) {
-            std::memcpy(table_list[khz_list_size - i - 1], table_list[khz_list_size - tableShifts - 1], sizeof(EristaMtcTable));
-        }
-
-        for (u32 i = tableShifts, j = 0; i > 0 && j < std::size(maxEmcClocks); ++j) {
-            if (!maxEmcClocks[j]) {
-                continue;
-            }
-
-            table_list[khz_list_size - i]->rate_khz = maxEmcClocks[j];
-            MemMtcTableAutoAdjust(table_list[khz_list_size - i]);
-            --i;
+        for (u32 i = erista::MtcTableCountDefault; i < newEmcList.size(); ++i) {
+            MemMtcTableAutoAdjust(&table[i]);
         }
 
         R_SUCCEED();
     }
 
     Result MemFreqMax(u32 *ptr) {
-        if (GET_MAX_OF_ARR(maxEmcClocks) <= EmcClkOSLimit) {
+        if (C.eristaEmcMaxClock <= EmcClkOSLimit) {
             R_SKIP();
         }
 
-        PATCH_OFFSET(ptr, GET_MAX_OF_ARR(maxEmcClocks));
+        PATCH_OFFSET(ptr, C.eristaEmcMaxClock);
 
         R_SUCCEED();
     }
@@ -450,7 +566,58 @@ namespace ams::ldr::hoc::pcv::erista {
     //     R_SUCCEED();
     // }
 
+
+    Result MemMtcTableAsm(u32 *ptr) {
+        /* This is a mess but the compiler made this painful to patch so we must do it this way */
+        constexpr s32 GoodAdrpOffset = -1;
+        constexpr s32 GoodMovOffset  = -7;
+        constexpr s32 GoodBlOffset       = 1;
+        constexpr u32 MtcGoodBlOpcode = 0x97fe6cfc;
+
+        constexpr u32 MtcBadBlOpcode0 = 0x97ffae64; // bl nn::pcv::GetHardwareType
+        constexpr u32 MtcBadBlOpcode1 = 0x940036d5; // bl nn::pcv::GetHardwareType
+        constexpr u32 MtcBadAdrpAsm = 0xd00000a1; // adrp x1, s_ModuleResetStatus_
+
+        constexpr s32 MtcBadBlOffset0 = 2;
+        constexpr s32 MtcBadBlOffset1 = -1;
+        constexpr s32 MtcBadAdrpOffset = 1;
+
+        /* Ensure we don't dereference memory before nso start. */
+        R_UNLESS(ptr + GoodMovOffset >= nsoStart, ldr::ResultInvalidMtcTablePattern());
+
+        /* Check for GetHardwareType asm and skip if it is found */
+        /* The pattern will match on the first time, but the location is bad, so it must be skipped */
+        if(AsmCompareAdrpNoImm(*(ptr + MtcBadAdrpOffset), MtcBadAdrpAsm) && AsmBlCompareOpcodeOnly(*(ptr + MtcBadBlOffset0), MtcBadBlOpcode0) && AsmBlCompareOpcodeOnly(*(ptr + MtcBadBlOffset1), MtcBadBlOpcode1)) {
+            R_SKIP();
+        }
+
+        /* We don't check for matching register because both registers must be x0 in order to pass the previous checks. */
+        /* The correct instructions will always be x0 since the mtcTable pointer is returned. */
+        u32 adrp = *(ptr + GoodAdrpOffset);
+        R_UNLESS(AsmCompareAdrpNoImm(adrp, MtcAdrpAsm), ldr::ResultInvalidMtcTablePattern());
+
+
+        /* Check for the branch instruction above the cbz to ensure we are patching the right location*/
+        u32 bl = *(ptr + GoodBlOffset);
+        R_UNLESS(AsmBlCompareOpcodeOnly(bl, MtcGoodBlOpcode), ldr::ResultInvalidMtcTablePattern());
+
+
+        /* Check for the mov that actually sets the mtc table count. */
+        u32 mov = *(ptr + GoodMovOffset);
+        R_UNLESS(asm_compare_no_rd(mov, MtcMovAsm), ldr::ResultInvalidMtcTablePattern());
+
+        /* Patch out the count of the mov to our custom mtc table amount*/
+        u32 movCountPatch = asm_set_rd(asm_set_imm16(MtcMovAsm, newEmcList.size()), asm_get_rd(mov));
+
+        PATCH_OFFSET(ptr + GoodMovOffset, movCountPatch);
+
+        R_SUCCEED();
+    }
+
     void Patch(uintptr_t mapped_nso, size_t nso_size) {
+        nsoStart = reinterpret_cast<u32 *>(mapped_nso);
+        MtcGenerateFreqTables();
+
         u32 CpuCvbDefaultMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(CpuCvbTableDefault)->freq);
         u32 GpuCvbDefaultMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(GpuCvbTableDefault)->freq);
 
@@ -465,10 +632,11 @@ namespace ams::ldr::hoc::pcv::erista {
             {"GPU Freq Asm",      &GpuFreqMaxAsm,          2,          &GpuMaxClockPatternFn },
             {"GPU PLL Max", &      GpuFreqPllMax,          1, nullptr,  GpuClkPllMax         },
             // {"GPU PLL Limit",  &GpuFreqPllLimit,        4, nullptr,  GpuClkPllLimit       },
-            {"MEM Freq Mtc",      &MemFreqMtcTable,        0, nullptr,  EmcClkOSLimit        },
+            {"MEM Freq Mtc",      &MemFreqMtcTable,        1, nullptr,  EmcClkOSLimit        },
             {"MEM Freq Max",      &MemFreqMax,             0, nullptr,  EmcClkOSLimit        },
             {"MEM Freq PLLM",     &MemFreqPllmLimit,       2, nullptr,  EmcClkPllmLimit      },
             {"MEM Volt",          &MemVoltHandler,         2, nullptr,  MemVoltHOS           },
+            {"MEM Table Asm",     &MemMtcTableAsm,         4,           &MemMtcGetGetTablePatternFn },
         };
 
         for (uintptr_t ptr = mapped_nso; ptr <= mapped_nso + nso_size - sizeof(EristaMtcTable); ptr += sizeof(u32)) {
@@ -480,9 +648,12 @@ namespace ams::ldr::hoc::pcv::erista {
             }
         }
 
+        // ViewLog();
+
         for (auto &entry : patches) {
-            LOGGING("%s Count: %zu", entry.description, entry.patched_count);
+            LOGGING("%s Count: %zu\n", entry.description, entry.patched_count);
             if (R_FAILED(entry.CheckResult())) {
+                // ViewLog();
                 panic::SmcError(panic::Patch);
 
                 CRASH(entry.description);

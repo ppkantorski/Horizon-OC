@@ -24,7 +24,6 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
 #include <switch.h>
 
@@ -33,7 +32,7 @@ namespace processManagement {
     void Initialize();
     void WaitForQLaunch();
     u64 GetCurrentApplicationId();
-    Result isApplicationOutOfFocus(bool* outOfFocus);
+    Result isApplicationOutOfFocus(bool *outOfFocus);
     void Exit();
 
-}
+}  // namespace processManagement

@@ -24,24 +24,26 @@
  * --------------------------------------------------------------------------
  */
 
-#include <hocclk.h>
-#include <switch.h>
-#include "../hos/apm_ext.h"
-#include <i2c.h>
-#include "../i2c/i2cDrv.h"
-#include <t210.h>
-#include <max17050.h>
-#include <tmp451.h>
-#include <ipc_server.h>
-#include <lockable_mutex.h>
-#include <cmath>
 #include <battery.h>
+#include <cmath>
+#include <hocclk.h>
+#include <i2c.h>
+#include <max17050.h>
 #include <pwm.h>
-#include "board.hpp"
-#include "../tsensor/soctherm.hpp"
+#include <switch.h>
+#include <t210.h>
+#include <tmp451.h>
+
+#include "../file/config.hpp"
+#include "../hos/apm_ext.h"
+#include "../i2c/i2cDrv.h"
 #include "../tsensor/aotag.hpp"
 #include "../tsensor/bq24193.hpp"
-#include "../file/config.hpp"
+#include "../tsensor/soctherm.hpp"
+#include "board.hpp"
+#include <ipc_server.h>
+#include <lockable_mutex.h>
+
 
 namespace board {
 
@@ -52,7 +54,7 @@ namespace board {
         tsensor::TSensorTemps temps = {};
         tsensor::ReadTSensors(temps);
 
-        switch(sensor) {
+        switch (sensor) {
             case HocClkThermalSensor_SOC: {
                 millis = tmp451TempSoc();
                 break;
@@ -127,4 +129,4 @@ namespace board {
         return 0;
     }
 
-}
+}  // namespace board

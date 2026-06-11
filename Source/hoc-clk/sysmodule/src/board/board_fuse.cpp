@@ -15,31 +15,49 @@
  *
  */
 
-#include <switch.h>
-#include <fuse.h>
-#include "board_fuse.hpp"
 #include <cstring>
+#include <fuse.h>
+#include <switch.h>
+
+#include "board.hpp"
+#include "board_fuse.hpp"
+
 
 namespace board {
 
     void SetGpuBracket(u16 speedo, u8 &gpuBracket) {
-        if (speedo <= 1624) {
-            gpuBracket = 0;
-            return;
-        }
+        switch (speedo) {
+            // Mariko
+            case 1300 ... 1624:
+                gpuBracket = 0;
+                break;
+            case 1625 ... 1689:
+                gpuBracket = 1;
+                break;
+            case 1690 ... 1753:
+                gpuBracket = 2;
+                break;
+            case 1754 ... 1849:
+                gpuBracket = 3;
+                break;
 
-        if (speedo <= 1689) {
-            gpuBracket = 1;
-            return;
+            // Erista
+            case 1850 ... 1925:
+                gpuBracket = 0;
+                break;
+            case 1926 ... 2025:
+                gpuBracket = 1;
+                break;
+            case 2026 ... 2100:
+                gpuBracket = 2;
+                break;
+            case 2101 ... 2200:
+                gpuBracket = 3;
+                break;
+            default:
+                gpuBracket = 0;
+                break;
         }
-
-        if (speedo <= 1753) {
-            gpuBracket = 2;
-            return;
-        }
-
-        /* >= 1754 */
-        gpuBracket = 3;
     }
 
     void ReadFuses(FuseData &speedo, u64 fuseVa) {
@@ -49,12 +67,12 @@ namespace board {
         speedo.cpuSpeedo = *reinterpret_cast<u16 *>(fusePtr + FUSE_CPU_SPEEDO_0_CALIB);
         speedo.gpuSpeedo = *reinterpret_cast<u16 *>(fusePtr + FUSE_CPU_SPEEDO_2_CALIB);
         speedo.socSpeedo = *reinterpret_cast<u16 *>(fusePtr + FUSE_SOC_SPEEDO_0_CALIB);
-        speedo.cpuIDDQ   = *reinterpret_cast<u16 *>(fusePtr + FUSE_CPU_IDDQ_CALIB) * 4;
-        speedo.gpuIDDQ   = *reinterpret_cast<u16 *>(fusePtr + FUSE_GPU_IDDQ_CALIB) * 5;
-        speedo.socIDDQ   = *reinterpret_cast<u16 *>(fusePtr + FUSE_SOC_IDDQ_CALIB) * 4;
-        speedo.waferX    = *reinterpret_cast<s16 *>(fusePtr + FUSE_OPT_X_COORDINATE);
-        speedo.waferY    = *reinterpret_cast<s16 *>(fusePtr + FUSE_OPT_Y_COORDINATE);
-        speedo.waferX    = (speedo.waferX & BIT(8)) ? (speedo.waferX - 512) : speedo.waferX;
+        speedo.cpuIDDQ = *reinterpret_cast<u16 *>(fusePtr + FUSE_CPU_IDDQ_CALIB) * 4;
+        speedo.gpuIDDQ = *reinterpret_cast<u16 *>(fusePtr + FUSE_GPU_IDDQ_CALIB) * 5;
+        speedo.socIDDQ = *reinterpret_cast<u16 *>(fusePtr + FUSE_SOC_IDDQ_CALIB) * 4;
+        speedo.waferX = *reinterpret_cast<s16 *>(fusePtr + FUSE_OPT_X_COORDINATE);
+        speedo.waferY = *reinterpret_cast<s16 *>(fusePtr + FUSE_OPT_Y_COORDINATE);
+        speedo.waferX = (speedo.waferX & BIT(8)) ? (speedo.waferX - 512) : speedo.waferX;
     }
 
-}
+}  // namespace board

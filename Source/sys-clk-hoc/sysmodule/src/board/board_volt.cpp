@@ -524,6 +524,51 @@ namespace board {
     }
 
     u32 GetMinimumGpuVmin(u32 freqMhz, u32 bracket) {
+        if (GetSocType() == HocClkSocType_Erista) {
+            // Erista RAM-OC GPU-voltage DVFS table - ported verbatim from
+            // hoc-clk's tested reference values. Each entry maps a RAM frequency
+            // (MHz) to the GPU vmin floor (mV) required for stability at that RAM
+            // clock. bracket 0 = weakest GPU speedo (needs the most voltage),
+            // bracket 3 = strongest (needs the least). The floor only ever raises
+            // GPU voltage (via SyncGpuVoltTable), never lowers it.
+            struct DvfsEntry {
+                u32 freq;
+                u32 volt;
+            };
+            static const DvfsEntry eristaRamTable[][19] = {
+                { { 1733, 725 }, { 1800, 730 }, { 1866, 735 }, { 1920, 740 }, { 1958, 745 },
+                  { 1996, 750 }, { 2035, 755 }, { 2073, 760 }, { 2112, 765 }, { 2131, 770 },
+                  { 2150, 775 }, { 2169, 780 }, { 2188, 785 }, { 2227, 790 }, { 2265, 795 },
+                  { 2304, 800 }, { 2342, 805 }, { 2380, 810 }, { 2400, 815 } },  // Bracket 0
+                { { 1733, 715 }, { 1800, 720 }, { 1866, 725 }, { 1920, 730 }, { 1958, 735 },
+                  { 1996, 740 }, { 2035, 745 }, { 2073, 750 }, { 2112, 755 }, { 2131, 760 },
+                  { 2150, 765 }, { 2169, 770 }, { 2188, 775 }, { 2227, 780 }, { 2265, 785 },
+                  { 2304, 790 }, { 2342, 795 }, { 2380, 800 }, { 2400, 805 } },  // Bracket 1
+                { { 1733, 705 }, { 1800, 710 }, { 1866, 715 }, { 1920, 720 }, { 1958, 725 },
+                  { 1996, 730 }, { 2035, 735 }, { 2073, 740 }, { 2112, 745 }, { 2131, 750 },
+                  { 2150, 755 }, { 2169, 760 }, { 2188, 765 }, { 2227, 770 }, { 2265, 775 },
+                  { 2304, 780 }, { 2342, 785 }, { 2380, 790 }, { 2400, 795 } },  // Bracket 2
+                { { 1733, 695 }, { 1800, 700 }, { 1866, 705 }, { 1920, 710 }, { 1958, 715 },
+                  { 1996, 720 }, { 2035, 725 }, { 2073, 730 }, { 2112, 735 }, { 2131, 740 },
+                  { 2150, 745 }, { 2169, 750 }, { 2188, 755 }, { 2227, 760 }, { 2265, 765 },
+                  { 2304, 770 }, { 2342, 775 }, { 2380, 780 }, { 2400, 785 } },  // Bracket 3
+            };
+
+            if (freqMhz <= 1600) return 0;  // DVFS only engages above stock RAM clock
+            if (bracket >= std::size(eristaRamTable)) bracket = 0;
+
+            const auto &entries = eristaRamTable[bracket];
+            u32 baseVolt = entries[std::size(entries) - 1].volt;
+            for (const auto &entry : entries) {
+                if (freqMhz <= entry.freq) {
+                    baseVolt = entry.volt;
+                    break;
+                }
+            }
+            return baseVolt;
+        }
+
+        // Mariko (unchanged)
         static const u32 ramTable[][22] = {
             { 2133, 2200, 2266, 2300, 2366, 2400, 2433, 2466, 2533, 2566, 2600, 2633, 2700, 2733, 2766, 2833, 2866, 2900, 2933, 3033, 3066, 3100, },
             { 2300, 2366, 2433, 2466, 2533, 2566, 2633, 2700, 2733, 2800, 2833, 2900, 2933, 2966, 3033, 3066, 3100, 3133, 3166, 3200, 3233, 3266, },

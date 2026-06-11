@@ -12,12 +12,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #pragma once
 #include <switch.h>
+
 #include "pcv_types.h"
+
 
 typedef struct {
     Service s;
@@ -27,12 +29,12 @@ Result rgltrInitialize(void);
 
 void rgltrExit(void);
 
-Service* rgltrGetServiceSession(void);
+Service *rgltrGetServiceSession(void);
 
-Result rgltrOpenSession(RgltrSession* session_out, PowerDomainId module_id);
-void rgltrCloseSession(RgltrSession* session);
-Result rgltrGetVoltage(RgltrSession* session, u32 *out_volt);
+Result rgltrOpenSession(RgltrSession *session_out, PowerDomainId module_id);
+void rgltrCloseSession(RgltrSession *session);
+Result rgltrGetVoltage(RgltrSession *session, u32 *out_volt);
 Result rgltrGetPowerModuleNumLimit(u32 *out);
-Result rgltrGetVoltageEnabled(RgltrSession* session, u32 *out);
-Result rgltrRequestVoltage(RgltrSession* session, u32 microvolt);
-Result rgltrCancelVoltageRequest(RgltrSession* session);
+Result rgltrGetVoltageEnabled(RgltrSession *session, u32 *out);
+Result rgltrRequestVoltage(RgltrSession *session, u32 microvolt);
+Result rgltrCancelVoltageRequest(RgltrSession *session);

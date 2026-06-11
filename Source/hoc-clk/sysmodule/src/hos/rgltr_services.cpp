@@ -12,12 +12,14 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #include <switch.h>
+
 #include "rgltr.h"
 #include "rgltr_services.h"  // for extern Service g_rgltrSrv, etc.
+
 
 // Global service handle
 Service g_rgltrSrv;
@@ -33,18 +35,12 @@ void rgltrExit(void) {
     serviceClose(&g_rgltrSrv);
 }
 
-Result rgltrOpenSession(RgltrSession* session_out, PowerDomainId module_id) {
+Result rgltrOpenSession(RgltrSession *session_out, PowerDomainId module_id) {
     const u32 in = (u32)module_id;
-    return serviceDispatchIn(
-        &g_rgltrSrv,
-        0,
-        in,
-        .out_num_objects = 1,
-        .out_objects     = &session_out->s
-    );
+    return serviceDispatchIn(&g_rgltrSrv, 0, in, .out_num_objects = 1, .out_objects = &session_out->s);
 }
 
-Result rgltrGetVoltage(RgltrSession* session, u32* out_volt) {
+Result rgltrGetVoltage(RgltrSession *session, u32 *out_volt) {
     u32 temp = 0;
     Result rc = serviceDispatchOut(&session->s, 4, temp);
     if (R_SUCCEEDED(rc)) {
@@ -53,14 +49,14 @@ Result rgltrGetVoltage(RgltrSession* session, u32* out_volt) {
     return rc;
 }
 
-Result rgltrRequestVoltage(RgltrSession* session, u32 microvolt) {
+Result rgltrRequestVoltage(RgltrSession *session, u32 microvolt) {
     return serviceDispatchIn(&session->s, 5, microvolt);
 }
 
-Result rgltrCancelVoltageRequest(RgltrSession* session) {
+Result rgltrCancelVoltageRequest(RgltrSession *session) {
     return serviceDispatch(&session->s, 6);
 }
 
-void rgltrCloseSession(RgltrSession* session) {
+void rgltrCloseSession(RgltrSession *session) {
     serviceClose(&session->s);
 }

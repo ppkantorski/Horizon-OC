@@ -46,12 +46,8 @@ typedef enum {
     HocClkConfigValue_ThermalThrottle,
     HocClkConfigValue_ThermalThrottleThreshold,
 
-    HocClkConfigValue_HandheldTDP,
-    HocClkConfigValue_HandheldTDPLimit,
-
-    HocClkConfigValue_LiteTDPLimit,
-
     HocClkConfigValue_BatteryChargeCurrent,
+    HocClkConfigValue_InputCurrentLimit,
 
     HocClkConfigValue_OverwriteRefreshRate,
     HocClkConfigValue_MaxDisplayClockH,
@@ -74,15 +70,18 @@ typedef enum {
 
     HocClkConfigValue_AulaDisplayColorPreset,
     HocClkConfigValue_MarikoMiddleFreqs,
+    
+    HocClkConfigValue_AutoRAMCPUOverclock,
+    HocClkConfigValue_AutoRamCpuCpuOCFreq,
+    HocClkConfigValue_AutoRamCpuRamOCThreshold,
 
     KipConfigValue_custRev,
+    KipConfigValue_KipVersion,
     // KipConfigValue_mtcConf,
     KipConfigValue_hpMode,
 
     KipConfigValue_commonEmcMemVolt,
     KipConfigValue_eristaEmcMaxClock,
-    KipConfigValue_eristaEmcMaxClock1,
-    KipConfigValue_eristaEmcMaxClock2,
 
     KipConfigValue_stepMode,
     KipConfigValue_marikoEmcMaxClock,
@@ -115,9 +114,6 @@ typedef enum {
     KipConfigValue_write_latency_1866,
     KipConfigValue_write_latency_2133,
 
-    KipConfigValue_mem_burst_read_latency,
-    KipConfigValue_mem_burst_write_latency,
-
     KipConfigValue_eristaCpuUV,
     KipConfigValue_eristaCpuVmin,
     KipConfigValue_eristaCpuMaxVolt,
@@ -138,10 +134,10 @@ typedef enum {
 
     KipConfigValue_marikoGpuUV,
     KipConfigValue_marikoGpuVmin,
+    KipConfigValue_marikoGpuBootVolt,
     KipConfigValue_marikoGpuVmax,
 
     KipConfigValue_commonGpuVoltOffset,
-    KipConfigValue_gpuSpeedo,
 
     KipConfigValue_g_volt_76800,
     KipConfigValue_g_volt_153600,
@@ -239,17 +235,11 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case HocClkConfigValue_ThermalThrottleThreshold:
             return pretty ? "Thermal Throttle Threshold" : "thermal_throttle_threshold";
 
-        case HocClkConfigValue_HandheldTDP:
-            return pretty ? "Handheld TDP" : "handheld_tdp";
-
-        case HocClkConfigValue_HandheldTDPLimit:
-            return pretty ? "Handheld TDP Limit" : "tdp_limit";
-
-        case HocClkConfigValue_LiteTDPLimit:
-            return pretty ? "Handheld TDP Limit" : "tdp_limit_l";
-
         case HocClkConfigValue_BatteryChargeCurrent:
             return pretty ? "Battery Charge Current" : "bat_charge_current";
+            
+        case HocClkConfigValue_InputCurrentLimit:
+            return pretty ? "Input Current Limit" : "in_curr_limit";
 
         case HocClkConfigValue_OverwriteRefreshRate:
             return pretty ? "Display Refresh Rate Changing" : "drr_changing";
@@ -292,9 +282,19 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "Aula Display Color Preset" : "aula_color_preset";
         case HocClkConfigValue_MarikoMiddleFreqs:
             return pretty ? "Mariko Middle Clocks" : "mariko_middle_freqs";
+
+        case HocClkConfigValue_AutoRAMCPUOverclock:
+            return pretty ? "Auto High RAM CPU OC" : "auto_high_ram_cpu_oc";
+        case HocClkConfigValue_AutoRamCpuCpuOCFreq:
+            return pretty ? "Auto High RAM CPU OC Freq" : "auto_ram_cpu_cpu_oc_freq";
+        case HocClkConfigValue_AutoRamCpuRamOCThreshold:
+            return pretty ? "Auto High RAM CPU OC RAM Threshold" : "auto_ram_cpu_ram_oc_threshold";
+
         // KIP config values
         case KipConfigValue_custRev:
             return pretty ? "Custom Revision" : "kip_cust_rev";
+        case KipConfigValue_KipVersion:
+            return pretty ? "KIP Version" : "kip_version";
         // case KipConfigValue_mtcConf:
         //     return pretty ? "MTC Config" : "kip_mtc_conf";
         case KipConfigValue_hpMode:
@@ -304,11 +304,7 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_commonEmcMemVolt:
             return pretty ? "Common EMC/MEM Voltage" : "common_emc_mem_volt";
         case KipConfigValue_eristaEmcMaxClock:
-            return pretty ? "Erista EMC Max Clock 1" : "erista_emc_max_clock";
-        case KipConfigValue_eristaEmcMaxClock1:
-            return pretty ? "Erista EMC Max Clock 2" : "erista_emc_max_clock1";
-        case KipConfigValue_eristaEmcMaxClock2:
-            return pretty ? "Erista EMC Max Clock 3" : "erista_emc_max_clock2";
+            return pretty ? "Erista EMC Max Clock" : "erista_emc_max_clock2";
         case KipConfigValue_stepMode:
             return pretty ? "Step Mode:" : "step_mode";
         case KipConfigValue_marikoEmcMaxClock:
@@ -365,11 +361,6 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_write_latency_2133:
             return pretty ? "2133 Write Latency" : "write_latency_2133";
 
-        case KipConfigValue_mem_burst_read_latency:
-            return pretty ? "Memory Burst Read Latency" : "mem_burst_read_latency";
-        case KipConfigValue_mem_burst_write_latency:
-            return pretty ? "Memory Burst Write Latency" : "mem_burst_write_latency";
-
         // CPU – Erista
         case KipConfigValue_eristaCpuUV:
             return pretty ? "Erista CPU Undervolt" : "erista_cpu_uv";
@@ -413,13 +404,13 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "Mariko GPU Undervolt" : "mariko_gpu_uv";
         case KipConfigValue_marikoGpuVmin:
             return pretty ? "Mariko GPU Vmin" : "mariko_gpu_vmin";
+        case KipConfigValue_marikoGpuBootVolt:
+            return pretty ? "Mariko GPU Boot Voltage" : "mariko_gpu_boot_volt";
         case KipConfigValue_marikoGpuVmax:
             return pretty ? "Mariko GPU Vmax" : "mariko_gpu_vmax";
 
         case KipConfigValue_commonGpuVoltOffset:
             return pretty ? "Common GPU Voltage Offset" : "common_gpu_volt_offset";
-        case KipConfigValue_gpuSpeedo:
-            return pretty ? "GPU Speedo" : "gpu_speedo";
 
         // Mariko GPU voltages (24)
         case KipConfigValue_g_volt_76800: return pretty ? "Mariko GPU Volt 76 MHz" : "g_volt_76800";
@@ -499,6 +490,7 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
         case HocClkConfigValue_UncappedClocks:
         case HocClkConfigValue_OverwriteBoostMode:
         case HocClkConfigValue_BatteryChargeCurrent:
+        case HocClkConfigValue_InputCurrentLimit: 
         case HocClkConfigValue_OverwriteRefreshRate:
         case HocClkConfigValue_GPUScheduling:
         case HocClkConfigValue_LiveCpuUv:
@@ -515,16 +507,16 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
             return 1963ULL;
 
         case HocClkConfigValue_ThermalThrottle:
-        case HocClkConfigValue_HandheldTDP:
         case HocClkConfigValue_IsFirstLoad:
         case HocClkConfigValue_DVFSMode:
+        case HocClkConfigValue_AutoRAMCPUOverclock:
             return 1ULL;
+        case HocClkConfigValue_AutoRamCpuCpuOCFreq:
+            return 1683000ULL;
+        case HocClkConfigValue_AutoRamCpuRamOCThreshold:
+            return 2666000ULL;
         case HocClkConfigValue_ThermalThrottleThreshold:
             return 70ULL;
-        case HocClkConfigValue_HandheldTDPLimit:
-            return 9600ULL; // 8600mW will trigger on erista stock, so raise it a bit
-        case HocClkConfigValue_LiteTDPLimit:
-            return 6400ULL; // 0.5C
         case HocClkConfigValue_CpuGovernorMinimumFreq:
             return 612000000ULL; // 612MHz
         case HocClkConfigValue_MaxDisplayClockH:
@@ -545,8 +537,6 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_EristaMaxCpuClock:
         case HocClkConfigValue_MarikoMaxCpuClock:
         case HocClkConfigValue_ThermalThrottleThreshold:
-        case HocClkConfigValue_HandheldTDPLimit:
-        case HocClkConfigValue_LiteTDPLimit:
         case HocClkConfigValue_PollingIntervalMs:
         case HocClkConfigValue_MaxDisplayClockH:
             return input > 0;
@@ -558,22 +548,21 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_UncappedClocks:
         case HocClkConfigValue_OverwriteBoostMode:
         case HocClkConfigValue_ThermalThrottle:
-        case HocClkConfigValue_HandheldTDP:
         case HocClkConfigValue_OverwriteRefreshRate:
         case HocClkConfigValue_IsFirstLoad:
         case HocClkConfigValue_EnableExperimentalSettings:
         case HocClkConfigValue_LiveCpuUv:
         case HocClkConfigValue_GPUSchedulingMethod:
         case HocClkConfigValue_MarikoMiddleFreqs:
+        case HocClkConfigValue_AutoRAMCPUOverclock:
             return (input & 0x1) == input;
-
+            
+        case KipConfigValue_KipVersion:
         case KipConfigValue_custRev:
         // case KipConfigValue_mtcConf:
         case KipConfigValue_hpMode:
         case KipConfigValue_commonEmcMemVolt:
         case KipConfigValue_eristaEmcMaxClock:
-        case KipConfigValue_eristaEmcMaxClock1:
-        case KipConfigValue_eristaEmcMaxClock2:
         case KipConfigValue_stepMode:
         case KipConfigValue_marikoEmcMaxClock:
         case KipConfigValue_marikoEmcVddqVolt:
@@ -599,8 +588,6 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_write_latency_1600:
         case KipConfigValue_write_latency_1866:
         case KipConfigValue_write_latency_2133:
-        case KipConfigValue_mem_burst_read_latency:
-        case KipConfigValue_mem_burst_write_latency:
         case KipConfigValue_eristaCpuUV:
         case KipConfigValue_eristaCpuMaxVolt:
         case KipConfigValue_marikoCpuUVLow:
@@ -616,9 +603,9 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_eristaGpuVmin:
         case KipConfigValue_marikoGpuUV:
         case KipConfigValue_marikoGpuVmin:
+        case KipConfigValue_marikoGpuBootVolt:
         case KipConfigValue_marikoGpuVmax:
         case KipConfigValue_commonGpuVoltOffset:
-        case KipConfigValue_gpuSpeedo:
         case KipConfigValue_g_volt_76800:
         case KipConfigValue_g_volt_153600:
         case KipConfigValue_g_volt_230400:
@@ -683,13 +670,19 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_MemoryFrequencyMeasurementMode:
         case HocClkConfigValue_RamDisplayUnit:
         case HocClkConfigValue_AulaDisplayColorPreset:
+        case HocClkConfigValue_AutoRamCpuCpuOCFreq:
+        case HocClkConfigValue_AutoRamCpuRamOCThreshold:
             return true;
         case HocClkConfigValue_BatteryChargeCurrent:
             return ((input >= 1024) && (input <= 3072)) || !input;
+
+        case HocClkConfigValue_InputCurrentLimit:
+            return ((input >= 100) && (input <= 3000)) || !input;
+            
         case HocClkConfigValue_DisplayVoltage:
             return ((input >= 800) && (input <= 1325));
 
         default:
-            return false;
+            return true;
     }
 }

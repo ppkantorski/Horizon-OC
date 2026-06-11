@@ -13,9 +13,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -25,50 +25,33 @@
  * --------------------------------------------------------------------------
  */
 #pragma once
+#include <string>
+
 #include "../../ipc.h"
 #include "base_menu_gui.h"
 #include "freq_choice_gui.h"
-#include <string>
 #include "value_choice_gui.h"
-class GlobalOverrideGui : public BaseMenuGui
-{
+class GlobalOverrideGui : public BaseMenuGui {
     protected:
-        std::map<HocClkModule, std::tuple<std::string, std::uint32_t, int>> customFormatModules;
-        tsl::elm::ListItem* listItems[HocClkModule_EnumMax];
-        std::uint32_t listHz[HocClkModule_EnumMax];
-        void openFreqChoiceGui(HocClkModule module);
-        void addGovernorSection();
-        void addModuleListItem(HocClkModule module);
-        void addModuleToggleItem(HocClkModule module);
-        void openValueChoiceGui(
-            tsl::elm::ListItem* listItem,
-            std::uint32_t currentValue,
-            const ValueRange& range,
-            const std::string& categoryName,
-            ValueChoiceListener listener,
-            const ValueThresholds& thresholds,
-            bool enableThresholds,
-            const std::map<std::uint32_t, std::string>& labels,
-            const std::vector<NamedValue>& namedValues,
-            bool showDefaultValue
-        );
-        void addModuleListItemValue(
-            HocClkModule module,
-            const std::string& categoryName,
-            std::uint32_t min,
-            std::uint32_t max,
-            std::uint32_t step,
-            const std::string& suffix,
-            std::uint32_t divisor,
-            int decimalPlaces,
-            ValueThresholds thresholds = {},
-            const std::vector<NamedValue>& namedValues = {},
-            bool showDefaultValue = true
-        );
+    std::map<HocClkModule, std::tuple<std::string, std::uint32_t, int>> customFormatModules;
+    tsl::elm::ListItem *listItems[HocClkModule_EnumMax];
+    std::uint32_t listHz[HocClkModule_EnumMax];
+    void openFreqChoiceGui(HocClkModule module);
+    void addGovernorSection();
+    void addModuleListItem(HocClkModule module);
+    void addModuleToggleItem(HocClkModule module);
+    void openValueChoiceGui(tsl::elm::ListItem *listItem, std::uint32_t currentValue, const ValueRange &range, const std::string &categoryName,
+                            ValueChoiceListener listener, const ValueThresholds &thresholds, bool enableThresholds,
+                            const std::map<std::uint32_t, std::string> &labels, const std::vector<NamedValue> &namedValues, bool showDefaultValue);
+    void addModuleListItemValue(HocClkModule module, const std::string &categoryName, std::uint32_t min, std::uint32_t max, std::uint32_t step,
+                                const std::string &suffix, std::uint32_t divisor, int decimalPlaces, ValueThresholds thresholds = {},
+                                const std::vector<NamedValue> &namedValues = {}, bool showDefaultValue = true);
+
     public:
-        GlobalOverrideGui();
-        ~GlobalOverrideGui() {}
-        void listUI() override;
-        void refresh() override;
-        void setModuleCustomFormat(HocClkModule module, const std::string& suffix, std::uint32_t divisor, int decimalPlaces);
+    GlobalOverrideGui();
+    ~GlobalOverrideGui() {
+    }
+    void listUI() override;
+    void refresh() override;
+    void setModuleCustomFormat(HocClkModule module, const std::string &suffix, std::uint32_t divisor, int decimalPlaces);
 };

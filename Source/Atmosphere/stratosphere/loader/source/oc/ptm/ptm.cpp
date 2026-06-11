@@ -84,7 +84,7 @@ namespace ams::ldr::hoc::ptm {
 
             switch (entry->cpu_freq_1) {
                 case cpuPtmBoost:
-                    cpuPtmBoostPatch.Apply(entry);
+                    R_DISCARD(cpuPtmBoostPatch.Apply(entry));
                     break;
                 case cpuPtmDefault:
                 case cpuPtmDevOC:
@@ -99,7 +99,7 @@ namespace ams::ldr::hoc::ptm {
                 case memPtmAlt:
                 case memPtmClamp:
                     if (isMariko) {
-                        memPtmPatch.Apply(entry);
+                        R_DISCARD(memPtmPatch.Apply(entry));
                     }
                     break;
                 default:
@@ -109,13 +109,15 @@ namespace ams::ldr::hoc::ptm {
         }
 
         LOGGING("%s Count: %zu", cpuPtmBoostPatch.description, cpuPtmBoostPatch.patched_count);
-        if (R_FAILED(cpuPtmBoostPatch.CheckResult()))
+        if (R_FAILED(cpuPtmBoostPatch.CheckResult())) {
             CRASH(cpuPtmBoostPatch.description);
+        }
 
         if (isMariko) {
             LOGGING("%s Count: %zu", memPtmPatch.description, memPtmPatch.patched_count);
-            if (R_FAILED(memPtmPatch.CheckResult()))
+            if (R_FAILED(memPtmPatch.CheckResult())) {
                 CRASH(memPtmPatch.description);
+            }
         }
     }
 

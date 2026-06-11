@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,57 +24,49 @@
  * --------------------------------------------------------------------------
  */
 
-
 #pragma once
 
 #ifdef __cplusplus
 
-#include <mutex>
-#include <switch.h>
+    #include <mutex>
+    #include <switch.h>
 
-class LockableMutex
-{
-public:
-    LockableMutex()
-    {
+class LockableMutex {
+    public:
+    LockableMutex() {
         mutexInit(&this->m);
     }
 
-    virtual ~LockableMutex() {}
+    virtual ~LockableMutex() {
+    }
 
-    void Lock()
-    {
+    void Lock() {
         mutexLock(&this->m);
     }
 
-    bool TryLock()
-    {
+    bool TryLock() {
         return mutexTryLock(&this->m);
     }
-    
-    void Unlock()
-    {
+
+    void Unlock() {
         mutexUnlock(&this->m);
     }
 
     // snake_case aliases in order to implement Lockable
 
-    void lock()
-    {
+    void lock() {
         this->Lock();
     }
 
-    bool try_lock()
-    {
+    bool try_lock() {
         return this->TryLock();
     }
 
-    void unlock()
-    {
+    void unlock() {
         this->Unlock();
     }
 
-private:
+    private:
     Mutex m;
 };
 

@@ -24,29 +24,30 @@
  * --------------------------------------------------------------------------
  */
 
-#include "config.hpp"
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <sstream>
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <ctime>
-#include <map>
-#include <string>
-#include <atomic>
-#include <initializer_list>
-#include <minIni.h>
-#include "../hos/apm_ext.h"
 #include <i2c.h>
-#include <t210.h>
+#include <map>
 #include <max17050.h>
+#include <minIni.h>
+#include <sstream>
+#include <string>
+#include <t210.h>
 #include <tmp451.h>
-#include <ipc_server.h>
-#include <lockable_mutex.h>
+#include <unistd.h>
+
 #include "../board/board.hpp"
+#include "../hos/apm_ext.h"
+#include "config.hpp"
 #include "errors.hpp"
 #include "file_utils.hpp"
+#include <initializer_list>
+#include <ipc_server.h>
+#include <lockable_mutex.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 namespace config {
 
@@ -57,7 +58,7 @@ namespace config {
         bool gLoaded = false;
         std::string gPath;
         time_t gMtime = 0;
-        std::atomic_bool gEnabled{false};
+        std::atomic_bool gEnabled{ false };
         std::uint32_t gOverrideFreqs[HocClkModule_EnumMax];
         std::map<std::tuple<std::uint64_t, HocClkProfile, HocClkModule>, std::uint32_t> gProfileMHzMap;
         std::map<std::uint64_t, std::uint8_t> gProfileCountMap;
@@ -83,11 +84,12 @@ namespace config {
             return 0;
         }
 
-        std::uint32_t FindClockHzFromProfiles(std::uint64_t tid, HocClkModule module, std::initializer_list<HocClkProfile> profiles, u32 mhzMultiplier = 1000000) {
+        std::uint32_t FindClockHzFromProfiles(std::uint64_t tid, HocClkModule module, std::initializer_list<HocClkProfile> profiles,
+                                              u32 mhzMultiplier = 1000000) {
             std::uint32_t mhz = 0;
 
             if (gLoaded) {
-                for (auto profile: profiles) {
+                for (auto profile : profiles) {
                     mhz = FindClockMHz(tid, module, profile);
                     if (mhz) {
                         break;
@@ -98,7 +100,7 @@ namespace config {
             return std::max((std::uint32_t)0, mhz * mhzMultiplier);
         }
 
-        int BrowseIniFunc(const char* section, const char* key, const char* value, void* userdata) {
+        int BrowseIniFunc(const char *section, const char *key, const char *value, void *userdata) {
             (void)userdata;
             std::uint64_t input;
             if (!strcmp(section, CONFIG_VAL_SECTION)) {
@@ -129,14 +131,14 @@ namespace config {
             HocClkModule parsedModule = HocClkModule_EnumMax;
 
             for (unsigned int profile = 0; profile < HocClkProfile_EnumMax; profile++) {
-                const char* profileCode = board::GetProfileName((HocClkProfile)profile, false);
+                const char *profileCode = board::GetProfileName((HocClkProfile)profile, false);
                 size_t profileCodeLen = strlen(profileCode);
 
                 if (!strncmp(key, profileCode, profileCodeLen) && key[profileCodeLen] == '_') {
-                    const char* subkey = key + profileCodeLen + 1;
+                    const char *subkey = key + profileCodeLen + 1;
 
                     for (unsigned int module = 0; module < HocClkModule_EnumMax; module++) {
-                        const char* moduleCode = board::GetModuleName((HocClkModule)module, false);
+                        const char *moduleCode = board::GetModuleName((HocClkModule)module, false);
                         size_t moduleCodeLen = strlen(moduleCode);
                         if (!strncmp(subkey, moduleCode, moduleCodeLen) && subkey[moduleCodeLen] == '\0') {
                             parsedProfile = (HocClkProfile)profile;
@@ -191,7 +193,7 @@ namespace config {
             gLoaded = true;
         }
 
-    }
+    }  // namespace
 
     void Initialize() {
         gPath = FILE_CONFIG_DIR "/config.ini";
@@ -209,12 +211,12 @@ namespace config {
     }
 
     void Exit() {
-        std::scoped_lock lock{gConfigMutex};
+        std::scoped_lock lock{ gConfigMutex };
         Close();
     }
 
     bool Refresh() {
-        std::scoped_lock lock{gConfigMutex};
+        std::scoped_lock lock{ gConfigMutex };
         if (!gLoaded || gMtime != CheckModificationTime()) {
             Load();
             return true;
@@ -223,30 +225,34 @@ namespace config {
     }
 
     bool HasProfilesLoaded() {
-        std::scoped_lock lock{gConfigMutex};
+        std::scoped_lock lock{ gConfigMutex };
         return gLoaded;
     }
 
     std::uint32_t GetAutoClockHz(std::uint64_t tid, HocClkModule module, HocClkProfile profile, bool returnRaw) {
-        std::scoped_lock lock{gConfigMutex};
+        std::scoped_lock lock{ gConfigMutex };
         switch (profile) {
             case HocClkProfile_Handheld:
-                return FindClockHzFromProfiles(tid, module, {HocClkProfile_Handheld}, returnRaw ? 1 : 1000000);
+                return FindClockHzFromProfiles(tid, module, { HocClkProfile_Handheld }, returnRaw ? 1 : 1000000);
             case HocClkProfile_HandheldCharging:
             case HocClkProfile_HandheldChargingUSB:
-                return FindClockHzFromProfiles(tid, module, {HocClkProfile_HandheldChargingUSB, HocClkProfile_HandheldCharging, HocClkProfile_Handheld}, returnRaw ? 1 : 1000000);
+                return FindClockHzFromProfiles(tid, module,
+                                               { HocClkProfile_HandheldChargingUSB, HocClkProfile_HandheldCharging, HocClkProfile_Handheld },
+                                               returnRaw ? 1 : 1000000);
             case HocClkProfile_HandheldChargingOfficial:
-                return FindClockHzFromProfiles(tid, module, {HocClkProfile_HandheldChargingOfficial, HocClkProfile_HandheldCharging, HocClkProfile_Handheld}, returnRaw ? 1 : 1000000);
+                return FindClockHzFromProfiles(tid, module,
+                                               { HocClkProfile_HandheldChargingOfficial, HocClkProfile_HandheldCharging, HocClkProfile_Handheld },
+                                               returnRaw ? 1 : 1000000);
             case HocClkProfile_Docked:
-                return FindClockHzFromProfiles(tid, module, {HocClkProfile_Docked}, returnRaw ? 1 : 1000000);
+                return FindClockHzFromProfiles(tid, module, { HocClkProfile_Docked }, returnRaw ? 1 : 1000000);
             default:
                 ERROR_THROW("Unhandled HocClkProfile: %u", profile);
         }
         return 0;
     }
 
-    void GetProfiles(std::uint64_t tid, HocClkTitleProfileList* out_profiles) {
-        std::scoped_lock lock{gConfigMutex};
+    void GetProfiles(std::uint64_t tid, HocClkTitleProfileList *out_profiles) {
+        std::scoped_lock lock{ gConfigMutex };
         for (unsigned int profile = 0; profile < HocClkProfile_EnumMax; profile++) {
             for (unsigned int module = 0; module < HocClkModule_EnumMax; module++) {
                 out_profiles->mhzMap[profile][module] = FindClockMHz(tid, (HocClkModule)module, (HocClkProfile)profile);
@@ -254,11 +260,11 @@ namespace config {
         }
     }
 
-    bool SetProfiles(std::uint64_t tid, HocClkTitleProfileList* profiles, bool immediate) {
-        std::scoped_lock lock{gConfigMutex};
+    bool SetProfiles(std::uint64_t tid, HocClkTitleProfileList *profiles, bool immediate) {
+        std::scoped_lock lock{ gConfigMutex };
         uint8_t numProfiles = 0;
 
-        char section[17] = {0};
+        char section[17] = { 0 };
         snprintf(section, sizeof(section), "%016lX", tid);
 
         std::vector<std::string> keys;
@@ -266,16 +272,15 @@ namespace config {
         keys.reserve(+HocClkProfile_EnumMax * +HocClkModule_EnumMax);
         values.reserve(+HocClkProfile_EnumMax * +HocClkModule_EnumMax);
 
-        std::uint32_t* mhz = &profiles->mhz[0];
+        std::uint32_t *mhz = &profiles->mhz[0];
 
         for (unsigned int profile = 0; profile < HocClkProfile_EnumMax; profile++) {
             for (unsigned int module = 0; module < HocClkModule_EnumMax; module++) {
                 if (*mhz) {
                     numProfiles++;
 
-                    std::string key = std::string(board::GetProfileName((HocClkProfile)profile, false)) +
-                                      "_" +
-                                      board::GetModuleName((HocClkModule)module, false);
+                    std::string key =
+                        std::string(board::GetProfileName((HocClkProfile)profile, false)) + "_" + board::GetModuleName((HocClkModule)module, false);
                     std::string value = std::to_string(*mhz);
 
                     keys.push_back(key);
@@ -285,8 +290,8 @@ namespace config {
             }
         }
 
-        std::vector<const char*> keyPointers;
-        std::vector<const char*> valuePointers;
+        std::vector<const char *> keyPointers;
+        std::vector<const char *> valuePointers;
         keyPointers.reserve(keys.size() + 1);
         valuePointers.reserve(values.size() + 1);
 
@@ -337,45 +342,45 @@ namespace config {
 
     void SetOverrideHz(HocClkModule module, std::uint32_t hz) {
         ASSERT_ENUM_VALID(HocClkModule, module);
-        std::scoped_lock lock{gOverrideMutex};
+        std::scoped_lock lock{ gOverrideMutex };
         gOverrideFreqs[module] = hz;
     }
 
     std::uint32_t GetOverrideHz(HocClkModule module) {
         ASSERT_ENUM_VALID(HocClkModule, module);
-        std::scoped_lock lock{gOverrideMutex};
+        std::scoped_lock lock{ gOverrideMutex };
         return gOverrideFreqs[module];
     }
 
     std::uint64_t GetConfigValue(HocClkConfigValue kval) {
         ASSERT_ENUM_VALID(HocClkConfigValue, kval);
-        std::scoped_lock lock{gConfigMutex};
+        std::scoped_lock lock{ gConfigMutex };
         return configValues[kval];
     }
 
-    const char* GetConfigValueName(HocClkConfigValue kval, bool pretty) {
+    const char *GetConfigValueName(HocClkConfigValue kval, bool pretty) {
         ASSERT_ENUM_VALID(HocClkConfigValue, kval);
         return hocclkFormatConfigValue(kval, pretty);
     }
 
-    void GetConfigValues(HocClkConfigValueList* out_configValues) {
-        std::scoped_lock lock{gConfigMutex};
+    void GetConfigValues(HocClkConfigValueList *out_configValues) {
+        std::scoped_lock lock{ gConfigMutex };
         for (unsigned int kval = 0; kval < HocClkConfigValue_EnumMax; kval++) {
             out_configValues->values[kval] = configValues[kval];
         }
     }
 
-    bool SetConfigValues(HocClkConfigValueList* configValues, bool immediate) {
-        std::scoped_lock lock{gConfigMutex};
+    bool SetConfigValues(HocClkConfigValueList *configValues, bool immediate) {
+        std::scoped_lock lock{ gConfigMutex };
 
-        std::vector<const char*> iniKeys;
+        std::vector<const char *> iniKeys;
         std::vector<std::string> iniValues;
         iniKeys.reserve(HocClkConfigValue_EnumMax + 1);
         iniValues.reserve(HocClkConfigValue_EnumMax);
 
         for (unsigned int kval = 0; kval < HocClkConfigValue_EnumMax; kval++) {
             if (!hocclkValidConfigValue((HocClkConfigValue)kval, configValues->values[kval]) ||
-               configValues->values[kval] == hocclkDefaultConfigValue((HocClkConfigValue)kval)) {
+                configValues->values[kval] == hocclkDefaultConfigValue((HocClkConfigValue)kval)) {
                 continue;
             }
             iniValues.push_back(std::to_string(configValues->values[kval]));
@@ -384,9 +389,9 @@ namespace config {
 
         iniKeys.push_back(NULL);
 
-        std::vector<const char*> valuePointers;
+        std::vector<const char *> valuePointers;
         valuePointers.reserve(iniValues.size() + 1);
-        for (const auto& val : iniValues) {
+        for (const auto &val : iniValues) {
             valuePointers.push_back(val.c_str());
         }
         valuePointers.push_back(NULL);
@@ -414,11 +419,11 @@ namespace config {
             return false;
         }
 
-        std::scoped_lock lock{gConfigMutex};
+        std::scoped_lock lock{ gConfigMutex };
 
         std::uint64_t defaultValue = hocclkDefaultConfigValue(kval);
 
-        std::vector<const char*> iniKeys;
+        std::vector<const char *> iniKeys;
         std::vector<std::string> iniValues;
         iniKeys.reserve(2);
         iniValues.reserve(1);
@@ -427,9 +432,9 @@ namespace config {
         iniValues.push_back("");
         iniKeys.push_back(NULL);
 
-        std::vector<const char*> valuePointers;
+        std::vector<const char *> valuePointers;
         valuePointers.reserve(iniValues.size() + 1);
-        for (const auto& val : iniValues) {
+        for (const auto &val : iniValues) {
             valuePointers.push_back(val.c_str());
         }
         valuePointers.push_back(NULL);
@@ -453,9 +458,9 @@ namespace config {
             return false;
         }
 
-        std::scoped_lock lock{gConfigMutex};
+        std::scoped_lock lock{ gConfigMutex };
 
-        std::vector<const char*> iniKeys;
+        std::vector<const char *> iniKeys;
         std::vector<std::string> iniValues;
         iniKeys.reserve(2);
         iniValues.reserve(1);
@@ -464,7 +469,7 @@ namespace config {
         iniValues.push_back(std::to_string(value));
         iniKeys.push_back(NULL);
 
-        std::vector<const char*> valuePointers;
+        std::vector<const char *> valuePointers;
         valuePointers.reserve(2);
         valuePointers.push_back(iniValues[0].c_str());
         valuePointers.push_back(NULL);
@@ -480,4 +485,8 @@ namespace config {
         return true;
     }
 
-}
+    void DeleteKey(const char *section, const char *key) {
+        std::scoped_lock lock{ gConfigMutex };
+        ini_puts(section, key, NULL, gPath.c_str());
+    }
+}  // namespace config

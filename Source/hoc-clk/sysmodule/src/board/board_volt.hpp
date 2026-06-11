@@ -16,8 +16,9 @@
  */
 
 #pragma once
-#include <switch.h>
 #include <hocclk.h>
+#include <switch.h>
+
 
 namespace board {
 
@@ -37,9 +38,9 @@ namespace board {
         u32 tune0High;
         u32 tune1Low;
         u32 tune1High;
-       // u32 tune_high_min_millivolts;
-       // u32 tune_high_margin_millivolts;
-       // u64 dvco_calibration_max;
+        // u32 tune_high_min_millivolts;
+        // u32 tune_high_margin_millivolts;
+        // u64 dvco_calibration_max;
     };
 
     void SetDfllTunings(u32 levelLow, u32 levelHigh, u32 tbreakPoint);
@@ -50,4 +51,4 @@ namespace board {
     void PcvHijackGpuVolts(u32 vmin);
     u32 GetMinimumGpuVmin(u32 freqMhz, u32 bracket);
 
-}
+}  // namespace board

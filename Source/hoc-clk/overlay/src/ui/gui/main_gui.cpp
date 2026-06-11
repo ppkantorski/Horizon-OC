@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -24,17 +24,23 @@
  * --------------------------------------------------------------------------
  */
 
-
-#include "main_gui.h"
-
-#include "fatal_gui.h"
-#include "app_profile_gui.h"
-#include "global_override_gui.h"
-#include "misc_gui.h"
 #include "about_gui.h"
+#include "app_profile_gui.h"
+#include "fatal_gui.h"
+#include "global_override_gui.h"
+#include "main_gui.h"
+#include "misc_gui.h"
+#include "ult_ext.h"
 
-void MainGui::listUI()
-{
+
+tsl::elm::Element *MainGui::baseUI() {
+    auto *list = new BoxClippedList();
+    this->listElement = list;
+    this->listUI();
+    return list;
+}
+
+void MainGui::listUI() {
     // this->enabledToggle = new tsl::elm::ToggleListItem("Enable", false);
     // enabledToggle->setStateChangedListener([this](bool state) {
     //     Result rc = hocclkIpcSetEnabled(state);
@@ -48,10 +54,9 @@ void MainGui::listUI()
     // });
     // this->listElement->addItem(this->enabledToggle);
 
-    tsl::elm::ListItem* appProfileItem = new tsl::elm::ListItem("Edit App Profile");
+    tsl::elm::ListItem *appProfileItem = new tsl::elm::ListItem("Edit App Profile");
     appProfileItem->setClickListener([this](u64 keys) {
-        if((keys & HidNpadButton_A) == HidNpadButton_A && this->context)
-        {
+        if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
             AppProfileGui::changeTo(this->context->applicationId);
             return true;
         }
@@ -60,11 +65,9 @@ void MainGui::listUI()
     });
     this->listElement->addItem(appProfileItem);
 
-
-    tsl::elm::ListItem* globalProfileItem = new tsl::elm::ListItem("Edit Global Profile");
+    tsl::elm::ListItem *globalProfileItem = new tsl::elm::ListItem("Edit Global Profile");
     globalProfileItem->setClickListener([this](u64 keys) {
-        if((keys & HidNpadButton_A) == HidNpadButton_A && this->context)
-        {
+        if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
             AppProfileGui::changeTo(HOCCLK_GLOBAL_PROFILE_TID);
             return true;
         }
@@ -73,10 +76,9 @@ void MainGui::listUI()
     });
     this->listElement->addItem(globalProfileItem);
 
-    tsl::elm::ListItem* globalOverrideItem = new tsl::elm::ListItem("Temporary Overrides");
+    tsl::elm::ListItem *globalOverrideItem = new tsl::elm::ListItem("Temporary Overrides");
     globalOverrideItem->setClickListener([this](u64 keys) {
-        if((keys & HidNpadButton_A) == HidNpadButton_A && this->context)
-        {
+        if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
             tsl::changeTo<GlobalOverrideGui>();
             return true;
         }
@@ -85,12 +87,11 @@ void MainGui::listUI()
     });
     this->listElement->addItem(globalOverrideItem);
 
-    //this->listElement->addItem(new tsl::elm::CategoryHeader("Misc"));
+    // this->listElement->addItem(new tsl::elm::CategoryHeader("Misc"));
 
-    tsl::elm::ListItem* miscItem = new tsl::elm::ListItem("Settings");
+    tsl::elm::ListItem *miscItem = new tsl::elm::ListItem("Settings");
     miscItem->setClickListener([this](u64 keys) {
-        if((keys & HidNpadButton_A) == HidNpadButton_A && this->context)
-        {
+        if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
             tsl::changeTo<MiscGui>();
             return true;
         }
@@ -99,10 +100,9 @@ void MainGui::listUI()
     });
     this->listElement->addItem(miscItem);
 
-    tsl::elm::ListItem* aboutItem = new tsl::elm::ListItem("About");
+    tsl::elm::ListItem *aboutItem = new tsl::elm::ListItem("About");
     aboutItem->setClickListener([this](u64 keys) {
-        if((keys & HidNpadButton_A) == HidNpadButton_A && this->context)
-        {
+        if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
             tsl::changeTo<AboutGui>();
             return true;
         }
@@ -110,14 +110,12 @@ void MainGui::listUI()
         return false;
     });
     this->listElement->addItem(aboutItem);
-
 }
 
-void MainGui::refresh()
-{
+void MainGui::refresh() {
     BaseMenuGui::refresh();
-    //if(this->context)
+    // if(this->context)
     //{
-    //    this->enabledToggle->setState(this->context->enabled);
-    //}
+    //     this->enabledToggle->setState(this->context->enabled);
+    // }
 }

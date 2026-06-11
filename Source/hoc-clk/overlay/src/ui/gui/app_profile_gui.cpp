@@ -25,6 +25,7 @@
  */
 
 
+#include "ult_ext.h"
 #include "app_profile_gui.h"
 
 #include "../format.h"
@@ -303,7 +304,7 @@ public:
         static constexpr struct { const char* label; int shift; } kAll[] = {
             {"CPU", 0}, {"GPU", 8}, {"VRR", 16}
         };
-        int count = configList.values[HocClkConfigValue_OverwriteRefreshRate] || this->context->isUsingRetroSuper ? 3 : 2;
+        int count = configList.values[HocClkConfigValue_OverwriteRefreshRate] || this->context->isUsingRetroSuper || this->context->profile == HocClkProfile_Docked ? 3 : 2;
 
         for (int i = 0; i < count; i++) {
             u8 cur = (this->profileList->mhzMap[this->profile][HocClkModule_Governor] >> kAll[i].shift) & 0xFF;

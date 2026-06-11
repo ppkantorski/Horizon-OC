@@ -26,18 +26,20 @@
 
 #pragma once
 
-#include <switch.h>
 #include <hocclk.h>
+#include <switch.h>
+
+#include "../mapping/mem_map.hpp"
+#include "board_freq.hpp"
 #include "board_fuse.hpp"
 #include "board_load.hpp"
 #include "board_name.hpp"
-#include "board_freq.hpp"
+#include "board_profile.hpp"
 #include "board_sensor.hpp"
 #include "board_volt.hpp"
-#include "board_profile.hpp"
-#include "../mapping/mem_map.hpp"
-#define HOSSVC_HAS_CLKRST (hosversionAtLeast(8,0,0))
-#define HOSSVC_HAS_TC (hosversionAtLeast(5,0,0))
+
+#define HOSSVC_HAS_CLKRST (hosversionAtLeast(8, 0, 0))
+#define HOSSVC_HAS_TC (hosversionAtLeast(5, 0, 0))
 
 namespace board {
     extern u64 clkVirtAddr, dsiVirtAddr, apbVirtAddr, fuseVirtAddr;
@@ -46,7 +48,7 @@ namespace board {
     extern HocClkConsoleType gConsoleType;
     extern FuseData fuseData;
     extern u8 speedoBracket;
-    
+
     void Initialize();
     void Exit();
     HocClkSocType GetSocType();
@@ -58,4 +60,4 @@ namespace board {
     FuseData *GetFuseData();
     bool IsUsingRetroSuperDisplay();
 
-}
+}  // namespace board

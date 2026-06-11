@@ -35,4 +35,4 @@ namespace ipcService {
     void Exit();
     void SetRunning(bool running);
 
-}
+}  // namespace ipcService
