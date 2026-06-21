@@ -4,6 +4,5 @@
 	"requires_reboot": true,
 	"version": "2.4.1",
 	"shutdown_service": "sys:clk",
-	"shutdown_cmd": 3,
-	"shutdown_timeout_ms": 1000
+	"shutdown_cmd": 3
 }
