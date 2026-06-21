@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -121,7 +121,7 @@ void AppProfileGui::addModuleListItem(HocClkProfile profile, HocClkModule module
             // Reset to "Default" (0 MHz)
             this->profileList->mhzMap[profile][module] = 0;
             listItem->setValue(module == HocClkModule_MEM ? formatListFreqMem(0, memUnit) : formatListFreqMHz(0));
-            
+
             Result rc = hocclkIpcSetProfiles(this->applicationId, this->profileList);
             if(R_FAILED(rc))
             {
@@ -139,19 +139,19 @@ void AppProfileGui::addModuleListItemToggle(HocClkProfile profile, HocClkModule 
 {
     const char* moduleName = hocclkFormatModule(module, true);
     std::uint32_t currentValue = this->profileList->mhzMap[profile][module];
-    
+
     tsl::elm::ToggleListItem* toggle = new tsl::elm::ToggleListItem(moduleName, currentValue != 0);
-    
+
     toggle->setStateChangedListener([this, profile, module](bool state) {
         this->profileList->mhzMap[profile][module] = state ? 1 : 0;
-        
+
         Result rc = hocclkIpcSetProfiles(this->applicationId, this->profileList);
         if(R_FAILED(rc))
         {
             FatalGui::openWithResultCode("hocclkIpcSetProfiles", rc);
         }
     });
-    
+
     this->listElement->addItem(toggle);
 }
 
@@ -166,7 +166,7 @@ std::string AppProfileGui::formatValueDisplay(
     if (value == 0) {
         return FREQ_DEFAULT_TEXT;
     }
-    
+
     if (!namedValues.empty()) {
         for (const auto& namedValue : namedValues) {
             if (namedValue.value == value) {
@@ -174,7 +174,7 @@ std::string AppProfileGui::formatValueDisplay(
             }
         }
     }
-    
+
     char buf[32];
     if (decimalPlaces > 0) {
         double displayValue = (double)value / divisor;
@@ -203,9 +203,9 @@ void AppProfileGui::addModuleListItemValue(
     tsl::elm::ListItem* listItem =
         new tsl::elm::ListItem(hocclkFormatModule(module, true));
     std::uint32_t storedValue = this->profileList->mhzMap[profile][module];
-    
+
     listItem->setValue(this->formatValueDisplay(storedValue, namedValues, suffix, divisor, decimalPlaces));
-    
+
     listItem->setClickListener(
         [this,
          listItem,
@@ -243,7 +243,7 @@ void AppProfileGui::addModuleListItemValue(
                     {
                         this->profileList->mhzMap[profile][module] = value / divisor;
                         listItem->setValue(this->formatValueDisplay(value / divisor, namedValues, suffix, divisor, decimalPlaces));
-                        
+
                         Result rc =
                             hocclkIpcSetProfiles(this->applicationId,
                                                  this->profileList);
@@ -341,7 +341,7 @@ void AppProfileGui::addGovernorSection(HocClkProfile profile) {
 }
 
 void AppProfileGui::addProfileUI(HocClkProfile profile)
-{    
+{
     BaseMenuGui::refresh();
     if(!this->context)
         return;
@@ -395,7 +395,7 @@ void AppProfileGui::addProfileUI(HocClkProfile profile)
                         NamedValue("230 Hz", 230),
                         NamedValue("240 Hz", 240)
                     };
-                    
+
                     this->addModuleListItemValue(profile, HocClkModule_Display, "Display", 40, 240, 1, " Hz", 1, 0, DThresholdsOLED, dockedFreqs);
                 } else if (IsAula() && !this->context->isSysDockInstalled) {
                     std::vector<NamedValue> dockedFreqsLimited = {
@@ -407,7 +407,7 @@ void AppProfileGui::addProfileUI(HocClkProfile profile)
                         NamedValue("72 Hz", 72),
                         NamedValue("75 Hz", 75)
                     };
-                    
+
                     this->addModuleListItemValue(profile, HocClkModule_Display, "Display", 50, 75, 1, " Hz", 1, 0, DThresholdsOLED, dockedFreqsLimited);
                 } else {
                     std::vector<NamedValue> dockedFreqsStandard = {

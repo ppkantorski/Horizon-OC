@@ -31,7 +31,7 @@
 #include "main_gui.h"
 #include "misc_gui.h"
 #include "ult_ext.h"
-
+#include "update_gui.h"
 
 tsl::elm::Element *MainGui::baseUI() {
     auto *list = new BoxClippedList();
@@ -110,6 +110,18 @@ void MainGui::listUI() {
         return false;
     });
     this->listElement->addItem(aboutItem);
+
+    tsl::elm::ListItem *updateItem = new tsl::elm::ListItem("Updates");
+    updateItem->setClickListener([this](u64 keys) {
+        if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
+            tsl::changeTo<UpdateGui>();
+            return true;
+        }
+
+        return false;
+    });
+    this->listElement->addItem(updateItem);
+
 }
 
 void MainGui::refresh() {

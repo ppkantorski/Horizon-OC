@@ -27,6 +27,10 @@
 
 namespace ams::ldr::hoc::pcv::erista {
 
+    std::vector<u32> newEmcList;
+    u32 *nsoStart;
+    u32 *nsoEnd;
+
     Result CpuVoltDvfs(u32 *ptr) {
         if (std::memcmp(ptr + 5, cpuVoltDvfsPattern, sizeof(cpuVoltDvfsPattern))) {
             R_THROW(ldr::ResultInvalidCpuMinVolt());
@@ -364,10 +368,103 @@ namespace ams::ldr::hoc::pcv::erista {
         table->emc_cfg_2          = 0x11083D;
         table->min_volt           = std::clamp(900 + (C.emcDvbShift * 25), 900, 1050);
     }
+    
+    /* TODO: Template this */
+    Result VerifyMtcTable(EristaMtcTable *tableStart, u32 expectedFreq) {
+        R_UNLESS(tableStart->rate_khz == expectedFreq,  ldr::ResultInvalidMtcTable());
+        R_UNLESS(tableStart->rev      == MTC_TABLE_REV, ldr::ResultInvalidMtcTable());
 
-    namespace {
-        std::vector<u32> newEmcList;
-        u32 *nsoStart;
+        R_SUCCEED();
+    }
+
+    /* TODO: Template this */
+    Result MtcValidateAllTables(EristaMtcTable *tableStart, const u32 *validationList, u32 tableCount) {
+        for (u32 i = 0; i < tableCount; ++i) {
+            R_TRY(VerifyMtcTable(&tableStart[i], validationList[i]));
+        }
+
+        R_SUCCEED();
+    }
+
+    /* TODO: Put this into common. */
+    DramId GetDramId() {
+        u64 id64;
+        splGetConfig(SplConfigItem_DramId, &id64);
+        return static_cast<DramId>(id64);
+    }
+
+    MtcTableIndex GetMtcDramIndex(DramId dramId) {
+        for (u32 i = 0; i < std::size(mtcIndexTable); ++i) {
+            if (mtcIndexTable[i].dramId == dramId) {
+                return mtcIndexTable[i].index;
+            }
+        }
+
+        return MtcTableIndex_Invalid;
+    }
+
+    NORETURN void AbortInvalidMtc(const char *crashMsg) {
+        panic::SmcError(panic::Emc);
+        CRASH(crashMsg);
+    }
+
+    u32 GetMtcOffset(MtcTableIndex index) {
+        if (index < T210SdevEmcDvfsTableS6gb01) {
+            return index * erista::MtcFullTableSize;
+        }
+
+        /* Account for the weird in between mariko table. */
+        return index * erista::MtcFullTableSize + mariko::MtcFullTableSize;
+    }
+
+    void PrepareMtcMemoryRegion(u8 *firstTable, EristaMtcTable *usedTable) {
+        /* Move the table, this is nessasary for NLE */
+        memmove(firstTable, usedTable, erista::MtcFullTableSize);
+
+        /* Clear all other tables. */
+        /* The used table is excluded. */
+        constexpr size_t RemainingRegionSize = (mariko::MtcFullTableSize) * (mariko::MtcFullTableCount) + (erista::MtcFullTableSize * (erista::MtcFullTableCount - 1));
+        memset(firstTable + erista::MtcFullTableSize, 0, RemainingRegionSize);
+    }
+
+    void MtcExtendTables(EristaMtcTable *table) {
+        for (u32 i = erista::MtcTableCountDefault; i < newEmcList.size(); ++i) {
+            std::memcpy(&table[i], &table[i - 1], sizeof(EristaMtcTable));
+            table[i].rate_khz = newEmcList[i];
+        }
+    }
+
+    /* Relocate the table */
+    /* Rescanning is simpler than trying to extract a bunch of data from the asm patch, performance impact is negligable */
+    /* Also, this is more stable :P */
+    u32 RepointEristaEmcTablePtr(uintptr_t fromSlot, uintptr_t toTable) {
+        constexpr u32 RetIns = 0xD65F03C0; /* ret */
+        u32 patched = 0;
+
+        for (u32 *p = nsoStart; p + 4 < nsoEnd; ++p) {
+            const u32 ins = *p;
+            if (!AsmIsAdrX0(ins)) {
+                continue;
+            }
+
+            const uintptr_t pc = reinterpret_cast<uintptr_t>(p);
+            if (AsmAdrTarget(ins, pc) != fromSlot) {
+                continue;
+            }
+            if (!(AsmIsLdpX(p[1]) && AsmIsLdpX(p[2]) && p[3] == RetIns)) {
+                continue;
+            }
+
+            /* adr only reaches +-1MB */
+            const s64 delta = static_cast<s64>(toTable) - static_cast<s64>(pc);
+            if (delta > 0xFFFFF || delta < -0x100000) {
+                continue;
+            }
+
+            PATCH_OFFSET(p, AsmSetAdrTarget(ins, pc, toTable));
+            ++patched;
+        }
+        return patched;
     }
 
     /* The silicon instructs; the children obey... */
@@ -418,70 +515,6 @@ namespace ams::ldr::hoc::pcv::erista {
         newEmcList.resize(std::min(newEmcList.size(), DvfsTableEntryLimit));
     }
 
-    /* TODO: Template this */
-    Result VerifyMtcTable(EristaMtcTable *tableStart, u32 expectedFreq) {
-        R_UNLESS(tableStart->rate_khz == expectedFreq,  ldr::ResultInvalidMtcTable());
-        R_UNLESS(tableStart->rev      == MTC_TABLE_REV, ldr::ResultInvalidMtcTable());
-
-        R_SUCCEED();
-    }
-
-    /* TODO: Template this */
-    Result MtcValidateAllTables(EristaMtcTable *tableStart, const u32 *validationList, u32 tableCount) {
-        for (u32 i = 0; i < tableCount; ++i) {
-            R_TRY(VerifyMtcTable(&tableStart[i], validationList[i]));
-        }
-
-        R_SUCCEED();
-    }
-
-    /* TODO: Put this into common. */
-    DramId GetDramId() {
-        u64 id64;
-        splGetConfig(SplConfigItem_DramId, &id64);
-        return static_cast<DramId>(id64);
-    }
-
-    MtcTableIndex GetMtcDramIndex(DramId dramId) {
-        for (u32 i = 0; i < std::size(mtcIndexTable); ++i) {
-            if (mtcIndexTable[i].dramId == dramId) {
-                return mtcIndexTable[i].index;
-            }
-        }
-
-        return MtcTableIndex_Invalid;
-    }
-
-    NORETURN void AbortInvalidMtc(const char *crashMsg) {
-        panic::SmcError(panic::Emc);
-        CRASH(crashMsg);
-    }
-
-    u32 GetMtcOffset(MtcTableIndex index) {
-        if (index < T210SdevEmcDvfsTableS6gb01) {
-            return index * erista::MtcFullTableSize;
-        }
-
-        /* Account for the weird in between mariko table. */
-        return index * erista::MtcFullTableSize + mariko::MtcFullTableSize;
-    }
-
-    void PrepareMtcMemoryRegion(u8 *firstTable, EristaMtcTable *usedTable) {
-        memmove(firstTable, usedTable, erista::MtcFullTableSize);
-
-        /* Clear all other tables. */
-        /* The used table is excluded. */
-        constexpr size_t RemainingRegionSize = (mariko::MtcFullTableSize) * (mariko::MtcFullTableCount) + (erista::MtcFullTableSize * (erista::MtcFullTableCount - 1));
-        memset(firstTable + erista::MtcFullTableSize, 0, RemainingRegionSize);
-    }
-
-    void MtcExtendTables(EristaMtcTable *table) {
-        for (u32 i = erista::MtcTableCountDefault; i < newEmcList.size(); ++i) {
-            std::memcpy(&table[i], &table[i - 1], sizeof(EristaMtcTable));
-            table[i].rate_khz = newEmcList[i];
-        }
-    }
-
     Result MemFreqMtcTable(u32 *ptr) {
         static const DramId dramId = [] {
             DramId id = GetDramId();
@@ -502,11 +535,19 @@ namespace ams::ldr::hoc::pcv::erista {
         constexpr u32 StartAdjustment = offsetof(EristaMtcTable, rate_khz) + sizeof(EristaMtcTable) * (erista::MtcTableCountDefault - 1);
         u8 *startPtr = reinterpret_cast<u8 *>(ptr) - StartAdjustment;
 
-        EristaMtcTable *table = reinterpret_cast<EristaMtcTable *>(startPtr + mtcOffset);
+        const uintptr_t usedSlot = reinterpret_cast<uintptr_t>(startPtr) + mtcOffset;
+        EristaMtcTable *table = reinterpret_cast<EristaMtcTable *>(usedSlot);
         R_TRY(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault));
 
         PrepareMtcMemoryRegion(startPtr, table);
         table = reinterpret_cast<EristaMtcTable *>(startPtr);
+
+        /* We must do this as the NLE tables don't have enough space past them for our extended ones */
+        if (usedSlot != reinterpret_cast<uintptr_t>(startPtr)) {
+            if (RepointEristaEmcTablePtr(usedSlot, reinterpret_cast<uintptr_t>(startPtr)) == 0) {
+                AbortInvalidMtc("Failed to repoint emc table");
+            }
+        }
 
         if (R_FAILED(MtcValidateAllTables(table, EmcListDefault, EmcListSizeDefault))) {
             AbortInvalidMtc("Failed mtc validation");
@@ -575,7 +616,7 @@ namespace ams::ldr::hoc::pcv::erista {
         constexpr u32 MtcGoodBlOpcode = 0x97fe6cfc;
 
         constexpr u32 MtcBadBlOpcode0 = 0x97ffae64; // bl nn::pcv::GetHardwareType
-        constexpr u32 MtcBadBlOpcode1 = 0x940036d5; // bl nn::pcv::GetHardwareType
+        constexpr u32 MtcBadBlOpcode1 = 0x940036d5; // bl strcmp
         constexpr u32 MtcBadAdrpAsm = 0xd00000a1; // adrp x1, s_ModuleResetStatus_
 
         constexpr s32 MtcBadBlOffset0 = 2;
@@ -616,6 +657,7 @@ namespace ams::ldr::hoc::pcv::erista {
 
     void Patch(uintptr_t mapped_nso, size_t nso_size) {
         nsoStart = reinterpret_cast<u32 *>(mapped_nso);
+        nsoEnd   = reinterpret_cast<u32 *>(mapped_nso + nso_size);
         MtcGenerateFreqTables();
 
         u32 CpuCvbDefaultMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(CpuCvbTableDefault)->freq);
@@ -632,11 +674,11 @@ namespace ams::ldr::hoc::pcv::erista {
             {"GPU Freq Asm",      &GpuFreqMaxAsm,          2,          &GpuMaxClockPatternFn },
             {"GPU PLL Max", &      GpuFreqPllMax,          1, nullptr,  GpuClkPllMax         },
             // {"GPU PLL Limit",  &GpuFreqPllLimit,        4, nullptr,  GpuClkPllLimit       },
+            {"MEM Table Asm",     &MemMtcTableAsm,         4,           &MemMtcGetGetTablePatternFn },
             {"MEM Freq Mtc",      &MemFreqMtcTable,        1, nullptr,  EmcClkOSLimit        },
             {"MEM Freq Max",      &MemFreqMax,             0, nullptr,  EmcClkOSLimit        },
             {"MEM Freq PLLM",     &MemFreqPllmLimit,       2, nullptr,  EmcClkPllmLimit      },
             {"MEM Volt",          &MemVoltHandler,         2, nullptr,  MemVoltHOS           },
-            {"MEM Table Asm",     &MemMtcTableAsm,         4,           &MemMtcGetGetTablePatternFn },
         };
 
         for (uintptr_t ptr = mapped_nso; ptr <= mapped_nso + nso_size - sizeof(EristaMtcTable); ptr += sizeof(u32)) {

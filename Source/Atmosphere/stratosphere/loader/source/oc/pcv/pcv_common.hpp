@@ -73,7 +73,7 @@ namespace ams::ldr::hoc::pcv {
         u32 unk_0;
         struct div_nmp *div_nmp;
         u32 unk_1[4];
-        void (*unk_fn)(u64* unk_struct); // set_defaults?
+        void (*unk_fn)(u64 *unk_struct); // set_defaults?
     };
 
     struct __attribute__((packed)) dvfs_rail {
@@ -90,7 +90,7 @@ namespace ams::ldr::hoc::pcv {
 
     struct __attribute__((packed)) regulator {
         u64 id;
-        const char* name;
+        const char *name;
         u32 type;
         union {
             struct {
@@ -148,7 +148,7 @@ namespace ams::ldr::hoc::pcv {
     size_t GetDvfsTableEntryCount(T *table_head) {
         using NT = std::remove_const_t<std::remove_volatile_t<T>>;
 
-        auto is_empty = [](NT* entry) {
+        auto is_empty = [](NT *entry) {
             u8 *m = reinterpret_cast<u8 *>(entry);
             for (size_t i = 0; i < sizeof(NT); i++) {
                 if (*(m + i)) {

@@ -375,6 +375,10 @@ class CreditsSubMenu : public AboutGui {
                 new tsl::elm::ListItem("MasaGratoR")
             );
 
+            this->listElement->addItem(
+                new tsl::elm::ListItem("Miki1305")
+            );
+
             // ---- Testers ----
             this->listElement->addItem(
                 new tsl::elm::CategoryHeader("Testers")
@@ -386,10 +390,6 @@ class CreditsSubMenu : public AboutGui {
 
             this->listElement->addItem(
                 new tsl::elm::ListItem("arcdelta")
-            );
-
-            this->listElement->addItem(
-                new tsl::elm::ListItem("Miki1305")
             );
 
             this->listElement->addItem(

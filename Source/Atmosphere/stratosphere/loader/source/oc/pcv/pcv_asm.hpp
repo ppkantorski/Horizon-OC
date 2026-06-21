@@ -83,6 +83,28 @@ namespace ams::ldr::hoc::pcv {
     inline auto AsmBlCompareOpcodeOnly = [](u32 ins1, u32 ins2) {
         return ((ins1 ^ ins2) >> 26) == 0;
     };
+
+    inline auto AsmIsAdrX0 = [](u32 ins) {
+        return (ins & 0x9F00001Fu) == 0x10000000u;
+    };
+
+    inline auto AsmAdrTarget = [](u32 ins, uintptr_t pc) -> uintptr_t {
+        s64 imm = static_cast<s64>((((ins >> 5) & 0x7FFFFu) << 2) | ((ins >> 29) & 0x3u));
+        imm = (imm << 43) >> 43;
+        return static_cast<uintptr_t>(static_cast<s64>(pc) + imm);
+    };
+
+    inline auto AsmSetAdrTarget = [](u32 ins, uintptr_t pc, uintptr_t target) -> u32 {
+        const s64 delta = static_cast<s64>(target) - static_cast<s64>(pc);
+        const u32 immlo = static_cast<u32>(delta & 0x3);
+        const u32 immhi = static_cast<u32>((delta >> 2) & 0x7FFFF);
+        return (ins & ~((0x3u << 29) | (0x7FFFFu << 5))) | (immlo << 29) | (immhi << 5);
+    };
+
+    inline auto AsmIsLdpX = [](u32 ins) {
+        return (ins & 0xFE400000u) == 0xA8400000u;
+    };
+
     inline bool AsmComparePrologue(u32 ins1, u32 ins2, u32 ins3, u32 cmp1, u32 cmp2, u32 cmp3) {
         constexpr u32 StpImmMask = ~((((1u << 7) - 1u) << 15));
 
