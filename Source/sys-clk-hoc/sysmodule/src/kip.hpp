@@ -57,8 +57,14 @@ namespace kip {
         u32 t2_tRP_cap;
 
         u32 timingEmcTbreak;
+        u32 low_t1_tRCD;
+        u32 low_t2_tRP;
+        u32 low_t3_tRAS;
+        u32 low_t4_tRRD;
+        u32 low_t5_tRFC;
         u32 low_t6_tRTW;
         u32 low_t7_tWTR;
+        u32 low_t8_tREFI;
 
         /* These latencies are arrays in loader, but it's easier to handle it this way in the configurator. */
         u32 readLatency1333, readLatency1600, readLatency1866, readLatency2133;
@@ -85,13 +91,13 @@ namespace kip {
 
         u32 marikoGpuUV;
         u32 marikoGpuVmin;
-        u32 marikoGpuBootVolt;
         u32 marikoGpuVmax;
 
         u32 commonGpuVoltOffset;
 
         u32 eristaGpuVoltArray[27];
         u32 marikoGpuVoltArray[24];
+        s32 marikoSocVoltArray[26];
 
         u32 t6_tRTW_fine_tune;
         u32 t7_tWTR_fine_tune;
@@ -221,8 +227,14 @@ namespace kip {
     static inline bool cust_set_tREFI(const char* p, u32 v) { CUST_WRITE_FIELD(p, t8_tREFI, v); }
     static inline bool cust_set_tRP_cap(const char* p, u32 v) { CUST_WRITE_FIELD(p, t2_tRP_cap, v); }
     static inline bool cust_set_timing_emc_tbreak(const char* p, u32 v) { CUST_WRITE_FIELD(p, timingEmcTbreak, v); }
+    static inline bool cust_set_low_tRCD(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t1_tRCD, v); }
+    static inline bool cust_set_low_tRP(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t2_tRP, v); }
+    static inline bool cust_set_low_tRAS(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t3_tRAS, v); }
+    static inline bool cust_set_low_tRRD(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t4_tRRD, v); }
+    static inline bool cust_set_low_tRFC(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t5_tRFC, v); }
     static inline bool cust_set_low_tRTW(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t6_tRTW, v); }
     static inline bool cust_set_low_tWTR(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t7_tWTR, v); }
+    static inline bool cust_set_low_tREFI(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t8_tREFI, v); }
     static inline bool cust_set_tRTW_fine_tune(const char* p, u32 v) { CUST_WRITE_FIELD(p, t6_tRTW_fine_tune, v); }
     static inline bool cust_set_tWTR_fine_tune(const char* p, u32 v) { CUST_WRITE_FIELD(p, t7_tWTR_fine_tune, v); }
 
@@ -253,7 +265,6 @@ namespace kip {
     static inline bool cust_set_erista_gpu_vmin(const char* p, u32 v) { CUST_WRITE_FIELD(p, eristaGpuVmin, v); }
     static inline bool cust_set_mariko_gpu_uv(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoGpuUV, v); }
     static inline bool cust_set_mariko_gpu_vmin(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoGpuVmin, v); }
-    static inline bool cust_set_mariko_gpu_boot_volt(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoGpuBootVolt, v); }
     static inline bool cust_set_mariko_gpu_vmax(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoGpuVmax, v); }
     static inline bool cust_set_common_gpu_offset(const char* p, u32 v) { CUST_WRITE_FIELD(p, commonGpuVoltOffset, v); }
     static inline bool cust_set_marikoCpuMaxClock(const char* p, u32 v) { CUST_WRITE_FIELD(p, marikoCpuMaxClock, v); }
@@ -273,6 +284,14 @@ namespace kip {
         CustomizeTable t;
         if (!cust_read_table(p, &t)) return false;
         t.marikoGpuVoltArray[idx] = v;
+        return cust_write_table(p, &t);
+    }
+
+    static inline bool cust_set_mariko_soc_volt(const char* p, int idx, u32 v) {
+        if (idx < 0 || idx >= 26) return false;
+        CustomizeTable t;
+        if (!cust_read_table(p, &t)) return false;
+        t.marikoSocVoltArray[idx] = v;
         return cust_write_table(p, &t);
     }
 
@@ -304,8 +323,14 @@ namespace kip {
     static inline u32 cust_get_tREFI(const CustomizeTable* t) { return CUST_GET_FIELD(t, t8_tREFI); }
     static inline u32 cust_get_tRP_cap(const CustomizeTable* t) { return CUST_GET_FIELD(t, t2_tRP_cap); }
     static inline u32 cust_get_timing_emc_tbreak(const CustomizeTable* t) { return CUST_GET_FIELD(t, timingEmcTbreak); }
+    static inline u32 cust_get_low_t1_tRCD(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t1_tRCD); }
+    static inline u32 cust_get_low_t2_tRP(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t2_tRP); }
+    static inline u32 cust_get_low_t3_tRAS(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t3_tRAS); }
+    static inline u32 cust_get_low_t4_tRRD(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t4_tRRD); }
+    static inline u32 cust_get_low_t5_tRFC(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t5_tRFC); }
     static inline u32 cust_get_low_t6_tRTW(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t6_tRTW); }
     static inline u32 cust_get_low_t7_tWTR(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t7_tWTR); }
+    static inline u32 cust_get_low_t8_tREFI(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t8_tREFI); }
     static inline u32 cust_get_tRTW_fine_tune(const CustomizeTable* t) { return CUST_GET_FIELD(t, t6_tRTW_fine_tune); }
     static inline u32 cust_get_tWTR_fine_tune(const CustomizeTable* t) { return CUST_GET_FIELD(t, t7_tWTR_fine_tune); }
 
@@ -337,7 +362,6 @@ namespace kip {
     static inline u32 cust_get_erista_gpu_vmin(const CustomizeTable* t) { return CUST_GET_FIELD(t, eristaGpuVmin); }
     static inline u32 cust_get_mariko_gpu_uv(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoGpuUV); }
     static inline u32 cust_get_mariko_gpu_vmin(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoGpuVmin); }
-    static inline u32 cust_get_mariko_gpu_boot_volt(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoGpuBootVolt); }
     static inline u32 cust_get_mariko_gpu_vmax(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoGpuVmax); }
     static inline u32 cust_get_common_gpu_offset(const CustomizeTable* t) { return CUST_GET_FIELD(t, commonGpuVoltOffset); }
     static inline u32 cust_get_marikoCpuMaxClock(const CustomizeTable* t) { return CUST_GET_FIELD(t, marikoCpuMaxClock); }
@@ -351,6 +375,11 @@ namespace kip {
     static inline u32 cust_get_mariko_gpu_volt(const CustomizeTable* t, int idx) {
         if (!t || idx < 0 || idx >= 24) return 0;
         return t->marikoGpuVoltArray[idx];
+    }
+
+    static inline u32 cust_get_mariko_soc_volt(const CustomizeTable* t, int idx) {
+        if (!t || idx < 0 || idx >= 26) return 0;
+        return (u32)t->marikoSocVoltArray[idx];
     }
 
     #define DECL_ERISTA_GPU_VOLT_HELPER(freq, idx)                 \
