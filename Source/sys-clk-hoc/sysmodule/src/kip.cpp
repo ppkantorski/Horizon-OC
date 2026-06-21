@@ -71,7 +71,7 @@ namespace kip {
      */
     void GetKipData()
     {
-        fileUtils::LogLine("[kip] GetKipData start (read-only, build: v7 / 2.4.0 layout)");
+        fileUtils::LogLine("[kip] GetKipData start (read-only, build: v8 / 2.4.2 layout)");
 
         // Refresh() returns false if the file mtime is unchanged AND
         // config is already loaded. That's normal on subsequent calls.
@@ -125,8 +125,14 @@ namespace kip {
         configValues.values[KipConfigValue_stepMode]               = cust_get_step_mode(&table);
 
         configValues.values[KipConfigValue_timingEmcTbreak]        = cust_get_timing_emc_tbreak(&table);
+        configValues.values[KipConfigValue_low_t1_tRCD]            = cust_get_low_t1_tRCD(&table);
+        configValues.values[KipConfigValue_low_t2_tRP]             = cust_get_low_t2_tRP(&table);
+        configValues.values[KipConfigValue_low_t3_tRAS]            = cust_get_low_t3_tRAS(&table);
+        configValues.values[KipConfigValue_low_t4_tRRD]            = cust_get_low_t4_tRRD(&table);
+        configValues.values[KipConfigValue_low_t5_tRFC]            = cust_get_low_t5_tRFC(&table);
         configValues.values[KipConfigValue_low_t6_tRTW]            = cust_get_low_t6_tRTW(&table);
         configValues.values[KipConfigValue_low_t7_tWTR]            = cust_get_low_t7_tWTR(&table);
+        configValues.values[KipConfigValue_low_t8_tREFI]           = cust_get_low_t8_tREFI(&table);
         configValues.values[KipConfigValue_t2_tRP_cap]             = cust_get_tRP_cap(&table);
 
         configValues.values[KipConfigValue_read_latency_1333]      = cust_get_read_latency_1333(&table);
@@ -159,7 +165,6 @@ namespace kip {
         configValues.values[KipConfigValue_eristaGpuVmin]          = cust_get_erista_gpu_vmin(&table);
         configValues.values[KipConfigValue_marikoGpuUV]            = cust_get_mariko_gpu_uv(&table);
         configValues.values[KipConfigValue_marikoGpuVmin]          = cust_get_mariko_gpu_vmin(&table);
-        configValues.values[KipConfigValue_marikoGpuBootVolt]      = cust_get_mariko_gpu_boot_volt(&table);
         configValues.values[KipConfigValue_marikoGpuVmax]          = cust_get_mariko_gpu_vmax(&table);
         configValues.values[KipConfigValue_commonGpuVoltOffset]    = cust_get_common_gpu_offset(&table);
 
@@ -169,6 +174,10 @@ namespace kip {
 
         for (int i = 0; i < 27; i++) {
             configValues.values[KipConfigValue_g_volt_e_76800 + i] = cust_get_erista_gpu_volt(&table, i);
+        }
+
+        for (int i = 0; i < 26; i++) {
+            configValues.values[KipConfigValue_g_soc_volt_1866000 + i] = cust_get_mariko_soc_volt(&table, i);
         }
 
         configValues.values[KipConfigValue_t7_tWTR_fine_tune]      = cust_get_tWTR_fine_tune(&table);
