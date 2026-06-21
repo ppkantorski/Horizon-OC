@@ -105,8 +105,14 @@ typedef enum {
     KipConfigValue_t7_tWTR,
     KipConfigValue_t8_tREFI,
     KipConfigValue_timingEmcTbreak,
+    KipConfigValue_low_t1_tRCD,
+    KipConfigValue_low_t2_tRP,
+    KipConfigValue_low_t3_tRAS,
+    KipConfigValue_low_t4_tRRD,
+    KipConfigValue_low_t5_tRFC,
     KipConfigValue_low_t6_tRTW,
     KipConfigValue_low_t7_tWTR,
+    KipConfigValue_low_t8_tREFI,
     KipConfigValue_t2_tRP_cap,
     KipConfigValue_t6_tRTW_fine_tune,
     KipConfigValue_t7_tWTR_fine_tune,
@@ -171,7 +177,6 @@ typedef enum {
     // --- GPU (Mariko) ---
     KipConfigValue_marikoGpuUV,
     KipConfigValue_marikoGpuVmin,
-    KipConfigValue_marikoGpuBootVolt,
     KipConfigValue_marikoGpuVmax,
     KipConfigValue_commonGpuVoltOffset,
     KipConfigValue_g_volt_76800,        // contiguous block — arithmetic: g_volt_76800 + i (24 entries)
@@ -198,6 +203,34 @@ typedef enum {
     KipConfigValue_g_volt_1459200,
     KipConfigValue_g_volt_1497600,
     KipConfigValue_g_volt_1536000,
+
+    // --- SOC Volt (Mariko) ---
+    KipConfigValue_g_soc_volt_1866000,  // contiguous block - arithmetic: g_soc_volt_1866000 + i (26 entries)
+    KipConfigValue_g_soc_volt_2000000,
+    KipConfigValue_g_soc_volt_2133000,
+    KipConfigValue_g_soc_volt_2200000,
+    KipConfigValue_g_soc_volt_2266000,
+    KipConfigValue_g_soc_volt_2333000,
+    KipConfigValue_g_soc_volt_2400000,
+    KipConfigValue_g_soc_volt_2433000,
+    KipConfigValue_g_soc_volt_2466000,
+    KipConfigValue_g_soc_volt_2533000,
+    KipConfigValue_g_soc_volt_2566000,
+    KipConfigValue_g_soc_volt_2600000,
+    KipConfigValue_g_soc_volt_2666000,
+    KipConfigValue_g_soc_volt_2700000,
+    KipConfigValue_g_soc_volt_2733000,
+    KipConfigValue_g_soc_volt_2766000,
+    KipConfigValue_g_soc_volt_2800000,
+    KipConfigValue_g_soc_volt_2833000,
+    KipConfigValue_g_soc_volt_2900000,
+    KipConfigValue_g_soc_volt_2933000,
+    KipConfigValue_g_soc_volt_3000000,
+    KipConfigValue_g_soc_volt_3033000,
+    KipConfigValue_g_soc_volt_3100000,
+    KipConfigValue_g_soc_volt_3133000,
+    KipConfigValue_g_soc_volt_3166000,
+    KipConfigValue_g_soc_volt_3200000,
 
     KipCrc32,
 
@@ -337,10 +370,22 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
 
         case KipConfigValue_timingEmcTbreak:
             return pretty ? "Timing Emc Tbreak" : "timingEmcTbreak";
+        case KipConfigValue_low_t1_tRCD:
+            return pretty ? "Low T1 - tRCD" : "low_t1_tRCD";
+        case KipConfigValue_low_t2_tRP:
+            return pretty ? "Low T2 - tRP" : "low_t2_tRP";
+        case KipConfigValue_low_t3_tRAS:
+            return pretty ? "Low T3 - tRAS" : "low_t3_tRAS";
+        case KipConfigValue_low_t4_tRRD:
+            return pretty ? "Low T4 - tRRD" : "low_t4_tRRD";
+        case KipConfigValue_low_t5_tRFC:
+            return pretty ? "Low T5 - tRFC" : "low_t5_tRFC";
         case KipConfigValue_low_t6_tRTW:
             return pretty ? "Low T6 - tRTW" : "low_t6_tRTW";
         case KipConfigValue_low_t7_tWTR:
             return pretty ? "Low T7 - tWTR" : "low_t7_tWTR";
+        case KipConfigValue_low_t8_tREFI:
+            return pretty ? "Low T8 - tREFI" : "low_t8_tREFI";
 
         case KipConfigValue_t2_tRP_cap:
             return pretty ? "t2 - trp 1333WL Cap" : "t2_tRP_cap";
@@ -409,9 +454,6 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_marikoGpuVmax:
             return pretty ? "Mariko GPU Vmax" : "mariko_gpu_vmax";
 
-        case KipConfigValue_marikoGpuBootVolt:
-            return pretty ? "Mariko GPU Boot Voltage" : "mariko_gpu_boot_volt";
-
         case KipConfigValue_commonGpuVoltOffset:
             return pretty ? "Common GPU Voltage Offset" : "common_gpu_volt_offset";
 
@@ -469,6 +511,35 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_g_volt_e_998400: return pretty ? "Erista GPU Volt 998 MHz" : "g_volt_e_998400";
         case KipConfigValue_g_volt_e_1036800: return pretty ? "Erista GPU Volt 1036 MHz" : "g_volt_e_1036800";
         case KipConfigValue_g_volt_e_1075200: return pretty ? "Erista GPU Volt 1075 MHz" : "g_volt_e_1075200";
+
+        // Mariko SOC voltages (26)
+        case KipConfigValue_g_soc_volt_1866000: return pretty ? "Mariko SOC Volt 1866 MHz" : "g_soc_volt_1866000";
+        case KipConfigValue_g_soc_volt_2000000: return pretty ? "Mariko SOC Volt 2000 MHz" : "g_soc_volt_2000000";
+        case KipConfigValue_g_soc_volt_2133000: return pretty ? "Mariko SOC Volt 2133 MHz" : "g_soc_volt_2133000";
+        case KipConfigValue_g_soc_volt_2200000: return pretty ? "Mariko SOC Volt 2200 MHz" : "g_soc_volt_2200000";
+        case KipConfigValue_g_soc_volt_2266000: return pretty ? "Mariko SOC Volt 2266 MHz" : "g_soc_volt_2266000";
+        case KipConfigValue_g_soc_volt_2333000: return pretty ? "Mariko SOC Volt 2333 MHz" : "g_soc_volt_2333000";
+        case KipConfigValue_g_soc_volt_2400000: return pretty ? "Mariko SOC Volt 2400 MHz" : "g_soc_volt_2400000";
+        case KipConfigValue_g_soc_volt_2433000: return pretty ? "Mariko SOC Volt 2433 MHz" : "g_soc_volt_2433000";
+        case KipConfigValue_g_soc_volt_2466000: return pretty ? "Mariko SOC Volt 2466 MHz" : "g_soc_volt_2466000";
+        case KipConfigValue_g_soc_volt_2533000: return pretty ? "Mariko SOC Volt 2533 MHz" : "g_soc_volt_2533000";
+        case KipConfigValue_g_soc_volt_2566000: return pretty ? "Mariko SOC Volt 2566 MHz" : "g_soc_volt_2566000";
+        case KipConfigValue_g_soc_volt_2600000: return pretty ? "Mariko SOC Volt 2600 MHz" : "g_soc_volt_2600000";
+        case KipConfigValue_g_soc_volt_2666000: return pretty ? "Mariko SOC Volt 2666 MHz" : "g_soc_volt_2666000";
+        case KipConfigValue_g_soc_volt_2700000: return pretty ? "Mariko SOC Volt 2700 MHz" : "g_soc_volt_2700000";
+        case KipConfigValue_g_soc_volt_2733000: return pretty ? "Mariko SOC Volt 2733 MHz" : "g_soc_volt_2733000";
+        case KipConfigValue_g_soc_volt_2766000: return pretty ? "Mariko SOC Volt 2766 MHz" : "g_soc_volt_2766000";
+        case KipConfigValue_g_soc_volt_2800000: return pretty ? "Mariko SOC Volt 2800 MHz" : "g_soc_volt_2800000";
+        case KipConfigValue_g_soc_volt_2833000: return pretty ? "Mariko SOC Volt 2833 MHz" : "g_soc_volt_2833000";
+        case KipConfigValue_g_soc_volt_2900000: return pretty ? "Mariko SOC Volt 2900 MHz" : "g_soc_volt_2900000";
+        case KipConfigValue_g_soc_volt_2933000: return pretty ? "Mariko SOC Volt 2933 MHz" : "g_soc_volt_2933000";
+        case KipConfigValue_g_soc_volt_3000000: return pretty ? "Mariko SOC Volt 3000 MHz" : "g_soc_volt_3000000";
+        case KipConfigValue_g_soc_volt_3033000: return pretty ? "Mariko SOC Volt 3033 MHz" : "g_soc_volt_3033000";
+        case KipConfigValue_g_soc_volt_3100000: return pretty ? "Mariko SOC Volt 3100 MHz" : "g_soc_volt_3100000";
+        case KipConfigValue_g_soc_volt_3133000: return pretty ? "Mariko SOC Volt 3133 MHz" : "g_soc_volt_3133000";
+        case KipConfigValue_g_soc_volt_3166000: return pretty ? "Mariko SOC Volt 3166 MHz" : "g_soc_volt_3166000";
+        case KipConfigValue_g_soc_volt_3200000: return pretty ? "Mariko SOC Volt 3200 MHz" : "g_soc_volt_3200000";
+
         case KipConfigValue_t6_tRTW_fine_tune: return pretty ? "t6 - tRTW Fine Tune" : "t6_tRTW_fine_tune";
         case KipConfigValue_t7_tWTR_fine_tune: return pretty ? "t7 - tWTR Fine Tune" : "t7_tWTR_fine_tune";
         case KipCrc32:
@@ -580,8 +651,14 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_t7_tWTR:
         case KipConfigValue_t8_tREFI:
         case KipConfigValue_timingEmcTbreak:
+        case KipConfigValue_low_t1_tRCD:
+        case KipConfigValue_low_t2_tRP:
+        case KipConfigValue_low_t3_tRAS:
+        case KipConfigValue_low_t4_tRRD:
+        case KipConfigValue_low_t5_tRFC:
         case KipConfigValue_low_t6_tRTW:
         case KipConfigValue_low_t7_tWTR:
+        case KipConfigValue_low_t8_tREFI:
         case KipConfigValue_t2_tRP_cap:
         case KipConfigValue_read_latency_1333:
         case KipConfigValue_read_latency_1600:
@@ -606,7 +683,6 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_eristaGpuVmin:
         case KipConfigValue_marikoGpuUV:
         case KipConfigValue_marikoGpuVmin:
-        case KipConfigValue_marikoGpuBootVolt:
         case KipConfigValue_marikoGpuVmax:
         case KipConfigValue_commonGpuVoltOffset:
         case KipConfigValue_g_volt_76800:
@@ -660,6 +736,32 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_g_volt_e_998400:
         case KipConfigValue_g_volt_e_1036800:
         case KipConfigValue_g_volt_e_1075200:
+        case KipConfigValue_g_soc_volt_1866000:
+        case KipConfigValue_g_soc_volt_2000000:
+        case KipConfigValue_g_soc_volt_2133000:
+        case KipConfigValue_g_soc_volt_2200000:
+        case KipConfigValue_g_soc_volt_2266000:
+        case KipConfigValue_g_soc_volt_2333000:
+        case KipConfigValue_g_soc_volt_2400000:
+        case KipConfigValue_g_soc_volt_2433000:
+        case KipConfigValue_g_soc_volt_2466000:
+        case KipConfigValue_g_soc_volt_2533000:
+        case KipConfigValue_g_soc_volt_2566000:
+        case KipConfigValue_g_soc_volt_2600000:
+        case KipConfigValue_g_soc_volt_2666000:
+        case KipConfigValue_g_soc_volt_2700000:
+        case KipConfigValue_g_soc_volt_2733000:
+        case KipConfigValue_g_soc_volt_2766000:
+        case KipConfigValue_g_soc_volt_2800000:
+        case KipConfigValue_g_soc_volt_2833000:
+        case KipConfigValue_g_soc_volt_2900000:
+        case KipConfigValue_g_soc_volt_2933000:
+        case KipConfigValue_g_soc_volt_3000000:
+        case KipConfigValue_g_soc_volt_3033000:
+        case KipConfigValue_g_soc_volt_3100000:
+        case KipConfigValue_g_soc_volt_3133000:
+        case KipConfigValue_g_soc_volt_3166000:
+        case KipConfigValue_g_soc_volt_3200000:
         case KipConfigValue_eristaCpuVmin:
         case KipConfigValue_eristaCpuUnlock:
         case KipConfigValue_t6_tRTW_fine_tune:
