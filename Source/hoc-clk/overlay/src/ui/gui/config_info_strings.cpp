@@ -94,7 +94,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
         case HocClkConfigValue_InputCurrentLimit:
             return {
                 "Overrides the maximum input current from the charger.",
-                isHoag ? "Default: 900 mA" : "1200 mA" 
+                isHoag ? "Default: 900 mA" : "1200 mA"
             };
 
         case HocClkConfigValue_AulaDisplayColorPreset:
@@ -494,7 +494,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Maximum GPU voltage",
                 "Default: 800 mV"
             };
-        
+
         case HocClkConfigValue_DVFSMode:
             return {
                 "The mode used for GPU DVFS",
@@ -541,12 +541,6 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "- Disabled: Disables GPU scheduling, 99.7% GPU max load",
                 "- Enabled: Enables GPU scheduling, 96.5% GPU max load",
                 "Default: Do not override"
-            };
-        case KipConfigValue_marikoGpuBootVolt:
-            return {
-                "The voltage supplied to the GPU during boot and when the temperature is below 20°C (in mV).",
-                "Warning: Changing this value may cause instability.",
-                "Default: 800mV"
             };
         default:
             return {};

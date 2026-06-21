@@ -52,9 +52,9 @@ namespace ams::ldr::hoc::pcv::mariko {
             R_THROW(ldr::ResultInvalidGpuDvfs());
         }
 
-        if (C.marikoGpuBootVolt) {
-            PATCH_OFFSET(ptr - 3, C.marikoGpuBootVolt);
-        }
+        // if (C.marikoGpuBootVolt) {
+        //     PATCH_OFFSET(ptr - 3, C.marikoGpuBootVolt);
+        // }
 
         if (C.marikoGpuVmin) {
             PATCH_OFFSET(ptr,      C.marikoGpuVmin);
@@ -373,12 +373,6 @@ namespace ams::ldr::hoc::pcv::mariko {
             WRITE_PARAM_ALL_REG(table, emc_cfg, 0x13200000);
         } else {
             WRITE_PARAM_ALL_REG(table, emc_cfg, 0xF3200000);
-        }
-
-        u32 refresh_raw = 0xFFFF;
-        if (C.t8_tREFI != 6) {
-            refresh_raw = CEIL(tREFpb_values[C.t8_tREFI] / tCK_avg) - 0x40;
-            refresh_raw = MIN(refresh_raw, static_cast<u32>(0xFFFF));
         }
 
         u32 trefbw = refresh_raw + 0x40;
@@ -815,7 +809,6 @@ namespace ams::ldr::hoc::pcv::mariko {
         s32 max0    = 1050;
         s32 max1    = 1025;
         s32 max2    = 1000;
-        s32 voltAdd = 25 * C.emcDvbShift;
 
         if (C.marikoSocVmax && C.marikoSocVmax > 1000) {
             max0 = C.marikoSocVmax;
@@ -825,15 +818,23 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         constexpr s32 MinVolt = 637;
 
-        auto ClampVolt = [&](s32 value, s32 max) {
+        auto ClampVolt = [&](s32 value, s32 max, s32 voltAdd) {
             return std::clamp(value + voltAdd, MinVolt, max);
         };
 
-        auto DvbVolt = [&](s32 zero, s32 one, s32 two) {
+        auto DvbVolt = [&](s32 zero, s32 one, s32 two, u32 index) {
+            const s32 overrideVoltage = C.marikoSocVoltArray[index];
+            s32 voltAdd = 25 * C.emcDvbShift;
+
+            if (overrideVoltage) {
+                zero = one = two = overrideVoltage;
+                voltAdd = 0;
+            }
+
             return std::array<s32, 3>{
-                ClampVolt(zero, max0),
-                ClampVolt(one,  max1),
-                ClampVolt(two,  max2)
+                ClampVolt(zero, max0, voltAdd),
+                ClampVolt(one,  max1, voltAdd),
+                ClampVolt(two,  max2, voltAdd)
             };
         };
 
@@ -841,39 +842,45 @@ namespace ams::ldr::hoc::pcv::mariko {
             static_cast<u32>((v)[0]), \
             static_cast<u32>((v)[1]), \
             static_cast<u32>((v)[2])
+
+        #define DVB_OC(one, zero, two, idx) \
+            DVB(DvbVolt(one, zero, two, idx))
+
         DvbEntry emcDvbOcTableBrackets[] = {
-            {  204000, {              637,  637,  637,  }, },
-            { 1331200, {              650,  637,  637,  }, },
-            { 1600000, {              675,  650,  637,  }, },
-            { 1866000, { DVB(DvbVolt( 700,  675,  650)) }, },
-            { 2000000, { DVB(DvbVolt( 712,  687,  662)) }, },
-            { 2133000, { DVB(DvbVolt( 725,  700,  675)) }, },
-            { 2200000, { DVB(DvbVolt( 737,  712,  687)) }, },
-            { 2266000, { DVB(DvbVolt( 750,  725,  700)) }, },
-            { 2333000, { DVB(DvbVolt( 762,  737,  712)) }, },
-            { 2400000, { DVB(DvbVolt( 775,  750,  725)) }, },
-            { 2433000, { DVB(DvbVolt( 787,  762,  737)) }, },
-            { 2466000, { DVB(DvbVolt( 800,  775,  750)) }, },
-            { 2533000, { DVB(DvbVolt( 812,  787,  762)) }, },
-            { 2566000, { DVB(DvbVolt( 825,  800,  775)) }, },
-            { 2600000, { DVB(DvbVolt( 837,  812,  787)) }, },
-            { 2666000, { DVB(DvbVolt( 850,  825,  800)) }, },
-            { 2700000, { DVB(DvbVolt( 875,  850,  825)) }, },
-            { 2733000, { DVB(DvbVolt( 887,  862,  837)) }, },
-            { 2766000, { DVB(DvbVolt( 912,  887,  862)) }, },
-            { 2800000, { DVB(DvbVolt( 925,  900,  875)) }, },
-            { 2833000, { DVB(DvbVolt( 937,  912,  887)) }, },
-            { 2900000, { DVB(DvbVolt( 950,  925,  900)) }, },
-            { 2933000, { DVB(DvbVolt( 962,  937,  912)) }, },
-            { 3000000, { DVB(DvbVolt( 975,  950,  925)) }, },
-            { 3033000, { DVB(DvbVolt( 987,  962,  937)) }, },
-            { 3100000, { DVB(DvbVolt(1000,  975,  950)) }, },
-            { 3133000, { DVB(DvbVolt(1025, 1000,  975)) }, },
-            { 3166000, { DVB(DvbVolt(1037, 1012,  987)) }, },
-            { 3200000, { DVB(DvbVolt(1050, 1025, 1000)) }, },
-            {     ~0u, {                                }, },
+            {  204000, {         637,  637,  637,     }, },
+            { 1331200, {         650,  637,  637,     }, },
+            { 1600000, {         675,  650,  637,     }, },
+            { 1866000, { DVB_OC( 700,  675,  650,  0) }, },
+            { 2000000, { DVB_OC( 712,  687,  662,  1) }, },
+            { 2133000, { DVB_OC( 725,  700,  675,  2) }, },
+            { 2200000, { DVB_OC( 737,  712,  687,  3) }, },
+            { 2266000, { DVB_OC( 750,  725,  700,  4) }, },
+            { 2333000, { DVB_OC( 762,  737,  712,  5) }, },
+            { 2400000, { DVB_OC( 775,  750,  725,  6) }, },
+            { 2433000, { DVB_OC( 787,  762,  737,  7) }, },
+            { 2466000, { DVB_OC( 800,  775,  750,  8) }, },
+            { 2533000, { DVB_OC( 812,  787,  762,  9) }, },
+            { 2566000, { DVB_OC( 825,  800,  775, 10) }, },
+            { 2600000, { DVB_OC( 837,  812,  787, 11) }, },
+            { 2666000, { DVB_OC( 850,  825,  800, 12) }, },
+            { 2700000, { DVB_OC( 875,  850,  825, 13) }, },
+            { 2733000, { DVB_OC( 887,  862,  837, 14) }, },
+            { 2766000, { DVB_OC( 912,  887,  862, 15) }, },
+            { 2800000, { DVB_OC( 925,  900,  875, 16) }, },
+            { 2833000, { DVB_OC( 937,  912,  887, 17) }, },
+            { 2900000, { DVB_OC( 950,  925,  900, 18) }, },
+            { 2933000, { DVB_OC( 962,  937,  912, 19) }, },
+            { 3000000, { DVB_OC( 975,  950,  925, 20) }, },
+            { 3033000, { DVB_OC( 987,  962,  937, 21) }, },
+            { 3100000, { DVB_OC(1000,  975,  950, 22) }, },
+            { 3133000, { DVB_OC(1025, 1000,  975, 23) }, },
+            { 3166000, { DVB_OC(1037, 1012,  987, 24) }, },
+            { 3200000, { DVB_OC(1050, 1025, 1000, 25) }, },
+            {     ~0u, {                              }, },
         };
         #undef DVB
+        #undef DVB_OC
+
         DvbEntry emcDvbTableOc[newEmcList.size()];
 
         u32 bracketIndex = 0;

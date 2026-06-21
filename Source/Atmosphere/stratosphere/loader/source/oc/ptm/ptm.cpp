@@ -20,7 +20,7 @@
 
 namespace ams::ldr::hoc::ptm {
 
-    Result CpuPtmBoost(perf_conf_entry* entry) {
+    Result CpuPtmBoost(perf_conf_entry *entry) {
         bool isMariko = (spl::GetSocType() == spl::SocType_Mariko);
 
         if (!C.eristaCpuBoostClock || !C.marikoCpuBoostClock) {
@@ -35,19 +35,19 @@ namespace ams::ldr::hoc::ptm {
         R_SUCCEED();
     }
 
-    Result MemPtm(perf_conf_entry* entry) {
+    Result MemPtm(perf_conf_entry *entry) {
         PATCH_OFFSET(&(entry->emc_freq_1), memPtmLimit);
         PATCH_OFFSET(&(entry->emc_freq_2), memPtmLimit);
 
         R_SUCCEED();
     }
 
-    bool PtmEntryIsValid(perf_conf_entry* entry) {
+    bool PtmEntryIsValid(perf_conf_entry *entry) {
         return (entry->cpu_freq_1 == entry->cpu_freq_2 && entry->gpu_freq_1 == entry->gpu_freq_2 && entry->emc_freq_1 == entry->emc_freq_2);
     }
 
-    bool PtmTablePatternFn(u32* ptr) {
-        perf_conf_entry* entry = reinterpret_cast<perf_conf_entry *>(ptr);
+    bool PtmTablePatternFn(u32 *ptr) {
+        perf_conf_entry *entry = reinterpret_cast<perf_conf_entry *>(ptr);
         if (!PtmEntryIsValid(entry)) {
             return false;
         }
@@ -56,9 +56,9 @@ namespace ams::ldr::hoc::ptm {
     }
 
     void Patch(uintptr_t mapped_nso, size_t nso_size) {
-        perf_conf_entry* confTable = nullptr;
+        perf_conf_entry *confTable = nullptr;
         for (uintptr_t ptr = mapped_nso; ptr <= mapped_nso + nso_size - sizeof(perf_conf_entry) * entryCnt; ptr += sizeof(u32)) {
-            u32* ptr32 = reinterpret_cast<u32 *>(ptr);
+            u32 *ptr32 = reinterpret_cast<u32 *>(ptr);
             if (PtmTablePatternFn(ptr32)) {
                 confTable = reinterpret_cast<perf_conf_entry *>(ptr);
                 break;

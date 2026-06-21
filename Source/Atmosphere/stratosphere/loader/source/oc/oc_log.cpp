@@ -126,7 +126,7 @@ namespace ams::ldr::hoc {
 
         SmcRebootToIramPayload();
 
-        while(true){}
+        while(true) { }
     }
     #endif
 }

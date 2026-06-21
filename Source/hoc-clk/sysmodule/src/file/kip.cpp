@@ -87,8 +87,14 @@ namespace kip {
         CUST_WRITE_FIELD_BATCH(&table, stepMode, config::GetConfigValue(KipConfigValue_stepMode));
 
         CUST_WRITE_FIELD_BATCH(&table, timingEmcTbreak, config::GetConfigValue(KipConfigValue_timingEmcTbreak));
+        CUST_WRITE_FIELD_BATCH(&table, low_t1_tRCD, config::GetConfigValue(KipConfigValue_low_t1_tRCD));
+        CUST_WRITE_FIELD_BATCH(&table, low_t2_tRP, config::GetConfigValue(KipConfigValue_low_t2_tRP));
+        CUST_WRITE_FIELD_BATCH(&table, low_t3_tRAS, config::GetConfigValue(KipConfigValue_low_t3_tRAS));
+        CUST_WRITE_FIELD_BATCH(&table, low_t4_tRRD, config::GetConfigValue(KipConfigValue_low_t4_tRRD));
+        CUST_WRITE_FIELD_BATCH(&table, low_t5_tRFC, config::GetConfigValue(KipConfigValue_low_t5_tRFC));
         CUST_WRITE_FIELD_BATCH(&table, low_t6_tRTW, config::GetConfigValue(KipConfigValue_low_t6_tRTW));
         CUST_WRITE_FIELD_BATCH(&table, low_t7_tWTR, config::GetConfigValue(KipConfigValue_low_t7_tWTR));
+        CUST_WRITE_FIELD_BATCH(&table, low_t8_tREFI, config::GetConfigValue(KipConfigValue_low_t8_tREFI));
         CUST_WRITE_FIELD_BATCH(&table, t2_tRP_cap, config::GetConfigValue(KipConfigValue_t2_tRP_cap));
 
         CUST_WRITE_FIELD_BATCH(&table, readLatency1333, config::GetConfigValue(KipConfigValue_read_latency_1333));
@@ -122,7 +128,6 @@ namespace kip {
 
         CUST_WRITE_FIELD_BATCH(&table, marikoGpuUV, config::GetConfigValue(KipConfigValue_marikoGpuUV));
         CUST_WRITE_FIELD_BATCH(&table, marikoGpuVmin, config::GetConfigValue(KipConfigValue_marikoGpuVmin));
-        CUST_WRITE_FIELD_BATCH(&table, marikoGpuBootVolt, config::GetConfigValue(KipConfigValue_marikoGpuBootVolt));
         CUST_WRITE_FIELD_BATCH(&table, marikoGpuVmax, config::GetConfigValue(KipConfigValue_marikoGpuVmax));
 
         CUST_WRITE_FIELD_BATCH(&table, commonGpuVoltOffset, config::GetConfigValue(KipConfigValue_commonGpuVoltOffset));
@@ -133,6 +138,10 @@ namespace kip {
 
         for (int i = 0; i < 27; i++) {
             table.eristaGpuVoltArray[i] = config::GetConfigValue((HocClkConfigValue)(KipConfigValue_g_volt_e_76800 + i));
+        }
+
+        for (size_t i = 0; i < 26; ++i) {
+            table.marikoSocVoltArray[i] = config::GetConfigValue((HocClkConfigValue) (KipConfigValue_g_soc_volt_1866000 + i));
         }
 
         CUST_WRITE_FIELD_BATCH(&table, t6_tRTW_fine_tune, config::GetConfigValue(KipConfigValue_t6_tRTW_fine_tune));
@@ -245,8 +254,14 @@ namespace kip {
         configValues.values[KipConfigValue_stepMode] = cust_get_step_mode(&table);
 
         configValues.values[KipConfigValue_timingEmcTbreak] = cust_get_timing_emc_tbreak(&table);
-        configValues.values[KipConfigValue_low_t6_tRTW] = cust_get_low_t6_tRTW(&table);
-        configValues.values[KipConfigValue_low_t7_tWTR] = cust_get_low_t7_tWTR(&table);
+        configValues.values[KipConfigValue_low_t1_tRCD] = cust_get_low_tRCD(&table);
+        configValues.values[KipConfigValue_low_t2_tRP] = cust_get_low_tRP(&table);
+        configValues.values[KipConfigValue_low_t3_tRAS] = cust_get_low_tRAS(&table);
+        configValues.values[KipConfigValue_low_t4_tRRD] = cust_get_low_tRRD(&table);
+        configValues.values[KipConfigValue_low_t5_tRFC] = cust_get_low_tRFC(&table);
+        configValues.values[KipConfigValue_low_t6_tRTW] = cust_get_low_tRTW(&table);
+        configValues.values[KipConfigValue_low_t7_tWTR] = cust_get_low_tWTR(&table);
+        configValues.values[KipConfigValue_low_t8_tREFI] = cust_get_low_tREFI(&table);
         configValues.values[KipConfigValue_t2_tRP_cap] = cust_get_tRP_cap(&table);
 
         configValues.values[KipConfigValue_read_latency_1333] = cust_get_read_latency_1333(&table);
@@ -278,7 +293,6 @@ namespace kip {
         configValues.values[KipConfigValue_eristaGpuVmin] = cust_get_erista_gpu_vmin(&table);
         configValues.values[KipConfigValue_marikoGpuUV] = cust_get_mariko_gpu_uv(&table);
         configValues.values[KipConfigValue_marikoGpuVmin] = cust_get_mariko_gpu_vmin(&table);
-        configValues.values[KipConfigValue_marikoGpuBootVolt] = cust_get_mariko_gpu_boot_volt(&table);
         configValues.values[KipConfigValue_marikoGpuVmax] = cust_get_mariko_gpu_vmax(&table);
         configValues.values[KipConfigValue_commonGpuVoltOffset] = cust_get_common_gpu_offset(&table);
 
@@ -288,6 +302,10 @@ namespace kip {
 
         for (int i = 0; i < 27; i++) {
             configValues.values[KipConfigValue_g_volt_e_76800 + i] = cust_get_erista_gpu_volt(&table, i);
+        }
+
+        for (size_t i = 0; i < 26; ++i) {
+            configValues.values[KipConfigValue_g_soc_volt_1866000 + i] = cust_get_mariko_soc_volt(&table, i);
         }
 
         configValues.values[KipConfigValue_t7_tWTR_fine_tune] = cust_get_tWTR_fine_tune(&table);
@@ -316,9 +334,6 @@ namespace kip {
         u32 previousVersion = configValues.values[KipConfigValue_KipVersion];
         if (previousVersion < 240 && version >= 240) {
             // <2.4.0 -> 2.4.0 migration
-
-            // add marikoGpuBootVolt with default value of 800mV
-            configValues.values[KipConfigValue_marikoGpuBootVolt] = 800;
 
             configValues.values[KipConfigValue_marikoGpuUV] += 2;  // Raise UV levels
             configValues.values[KipConfigValue_commonGpuVoltOffset] =

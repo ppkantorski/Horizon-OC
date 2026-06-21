@@ -12,7 +12,7 @@ jobs:
 
     # Minimal devkitA64 container
     container:
-      image: devkitpro/devkita64:20251231
+      image: devkitpro/devkita64:20260219
 
     steps:
       - name: Checkout repository and submodules # needed for hoc-clk
@@ -55,7 +55,7 @@ jobs:
           echo $GITHUB_SHA >> dist/.commit
 
       - name: Clone Libnx
-        run: git clone https://github.com/switchbrew/libnx.git
+        run: git clone https://github.com/switchbrew/libnx.git --depth=1 --single-branch -b v4.12.0
 
       - name: Clone Atmosphere
         run: git clone --depth=1 --single-branch https://github.com/Atmosphere-NX/Atmosphere.git atmosphere -b $(cat ams_ver.txt)
@@ -70,20 +70,27 @@ jobs:
           cp -rf Source/Atmosphere/stratosphere/loader/source/* build/stratosphere/loader/source/
 
       - name: Cache ccache
-        uses: actions/cache@v5.0.3
+        uses: actions/cache@v5.0.5
         with:
-          path: /root/.cache/ccache
-          key: ccache-${{ runner.os }}-devkitpro-ams-${{ hashFiles('ams_ver.txt') }} # last key was utter garbage, stick to ams versions, 
+          path: .ccache
+          key: ccache-${{ runner.os }}-devkitpro-ams-${{ hashFiles('ams_ver.txt') }}
           restore-keys: |
             ccache-${{ runner.os }}-devkitpro-
 
       - name: Configure ccache
         run: |
-          export CCACHE_DIR=/root/.cache/ccache
-          echo "CCACHE_DIR=/root/.cache/ccache" >> $GITHUB_ENV
+          export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
+          export CCACHE_COMPILERCHECK=content
+          export CCACHE_NOHASHDIR=true
+          echo "CCACHE_DIR=$GITHUB_WORKSPACE/.ccache" >> $GITHUB_ENV
+          echo "CCACHE_BASEDIR=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+          echo "CCACHE_COMPILERCHECK=content" >> $GITHUB_ENV
+          echo "CCACHE_NOHASHDIR=true" >> $GITHUB_ENV
           ccache --set-config=max_size=10G
           ccache --set-config=compiler_check=content
-          ccache --zero-stats
+          ccache --set-config=hash_dir=false
+          ccache -s
+          ls -lah "$GITHUB_WORKSPACE/.ccache"
 
       - name: Build Libnx
         shell: bash
@@ -102,6 +109,7 @@ jobs:
 
           ROOT_DIR="$GITHUB_WORKSPACE/Source/hoc-clk"
           DIST_DIR="$ROOT_DIR/dist"
+          echo "DIST_DIR="$ROOT_DIR/dist"" >> $GITHUB_ENV
           
           mkdir -p "$DIST_DIR"
 
@@ -162,8 +170,11 @@ jobs:
           hactool -t kip1 out/nintendo_nx_arm64_armv8a/release/loader.kip --uncompress=hoc.kip
           cp hoc.kip ../../../dist/atmosphere/kips/hoc.kip
           
-      - name: ccache stats
-        run: ccache --show-stats
+      - name: ccache stat
+        run: |
+             ccache --show-stats
+             ccache -s
+             ccache --show-config
 
       # -------------------------------------------------
       # Upload ZIP artifact
@@ -172,5 +183,5 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: horizon-oc-zeus-dist
-          path: dist/
-          compression-level: 3
+          path: $DIST_DIR
+          compression-level: 6

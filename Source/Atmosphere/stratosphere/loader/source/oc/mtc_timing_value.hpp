@@ -130,6 +130,8 @@ namespace ams::ldr::hoc {
         inline u32 tFAW;
         inline double tRPab;
 
+        inline u32 refresh_raw;
+
         inline u32 RL;
         inline u32 WL;
 

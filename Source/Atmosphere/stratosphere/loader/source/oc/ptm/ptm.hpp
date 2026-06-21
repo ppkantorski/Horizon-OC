@@ -22,7 +22,7 @@
 
 namespace ams::ldr::hoc::ptm {
 
-    typedef struct {
+    struct perf_conf_entry {
         u32 conf_id;
         u32 cpu_freq_1; // min-max pair?
         u32 cpu_freq_2;
@@ -31,7 +31,7 @@ namespace ams::ldr::hoc::ptm {
         u32 emc_freq_1;
         u32 emc_freq_2;
         u32 padding;
-    } perf_conf_entry;
+    };
 
     constexpr u32 entryCnt      = 16;
     constexpr u32 cpuPtmDefault = 1020'000'000;

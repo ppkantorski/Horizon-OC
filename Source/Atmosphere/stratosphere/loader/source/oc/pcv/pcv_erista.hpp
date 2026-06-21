@@ -140,10 +140,12 @@ namespace ams::ldr::hoc::pcv::erista {
         MtcTableIndex index;
     };
 
+   /* TODO: Test 6gb and 8gb. */
     const inline MtcDramIndex mtcIndexTable[] = {
         { ICOSA_4GB_SAMSUNG_K4F6E304HB_MGCH,        T210SdevEmcDvfsTableS4gb01, },
         { ICOSA_4GB_MICRON_MT53B512M32D2NP_062_WTC, T210SdevEmcDvfsTableS4gb01, },
         { ICOSA_6GB_SAMSUNG_K4FHE3D4HM_MGCH,        T210SdevEmcDvfsTableS6gb01, },
+        { ICOSA_8GB_SAMSUNG_K4FBE3D4HM_MGXX,        T210SdevEmcDvfsTableS6gb01, },
         { ICOSA_4GB_HYNIX_H9HCNNNBPUMLHR_NLE,       T210SdevEmcDvfsTableH4gb01, },
     };
 
@@ -151,8 +153,8 @@ namespace ams::ldr::hoc::pcv::erista {
     constexpr u32 MtcMovAsm  = 0x52800148;
     constexpr u32 MtcAdrpAsm = 0xD0000081;
     constexpr u32 MtcBlIns = 0x97ffae64;
-    constexpr u32 MtcAddAsm  = 0x91131821;
-    
+    constexpr u32 MtcAddAsm = 0x91131821;
+
     ALWAYS_INLINE bool MemMtcGetGetTablePatternFn(u32 *ptr) {
         /* This builds an address that gets returned, so the register must be x0 by convention. */
         return AsmCompareAddNoImm12(*ptr, MtcAddAsm);

@@ -134,26 +134,31 @@ namespace ams::ldr::hoc::pcv::mariko {
 
         /* At 1333WL, for some reason (incorrect ram timing config in mtc table?), tRP causes crashes at high reductions - 2 seems to be the most common limit. */
         /* This is a lazy workaround until I find the issue... */
-        u32 tRPpbIndex = C.t2_tRP;
+        const bool lowFreq = freq < C.timingEmcTbreak;
+        volatile u32 tRPpbIndex = lowFreq ? C.low_t2_tRP : C.t2_tRP;
+
         if (WL == WL_1331) {
-            tRPpbIndex = MIN(C.t2_tRP_cap, C.t2_tRP);
+            tRPpbIndex = MIN(C.t2_tRP_cap, tRPpbIndex);
         }
 
-        tRCD     = tRCD_values[C.t1_tRCD];
-        tRPpb    = tRP_values[tRPpbIndex];
-        tRAS     = tRAS_values[C.t3_tRAS];
-        tRRD     = tRRD_values[C.t4_tRRD];
-        tRFCpb   = tRFC_values[C.t5_tRFC];
-        u32 tRTW = C.t6_tRTW;
-        u32 tWTR = 10 - tWTR_values[C.t7_tWTR];
+        tRCD   = tRCD_values[lowFreq ? C.low_t1_tRCD : C.t1_tRCD];
+        tRPpb  = tRP_values[tRPpbIndex];
+        tRAS   = tRAS_values[lowFreq ? C.low_t3_tRAS : C.t3_tRAS];
+        tRRD   = tRRD_values[lowFreq ? C.low_t4_tRRD : C.t4_tRRD];
+        tRFCpb = tRFC_values[lowFreq ? C.low_t5_tRFC : C.t5_tRFC];
 
-        if (freq < C.timingEmcTbreak) {
-            tRTW = C.low_t6_tRTW;
-            tWTR = 10 - tWTR_values[C.low_t7_tWTR];
-        }
+        u32 tRTW = lowFreq ? C.low_t6_tRTW : C.t6_tRTW;
+        u32 tWTR = 10 - tWTR_values[lowFreq ? C.low_t7_tWTR : C.t7_tWTR];
 
         s32 finetRTW = C.fineTune_t6_tRTW;
         s32 finetWTR = C.fineTune_t7_tWTR;
+
+        u32 tREFI = lowFreq ? C.low_t8_tREFI : C.t8_tREFI;
+        refresh_raw = 0xFFFF;
+        if (tREFI != 6) {
+            refresh_raw = CEIL(tREFpb_values[tREFI] / tCK_avg) - 0x40;
+            refresh_raw = MIN(refresh_raw, static_cast<u32>(0xFFFF));
+        }
 
         tRC    = tRAS + tRPpb;
         tRFCab = tRFCpb * 2;

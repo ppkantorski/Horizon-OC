@@ -20,8 +20,8 @@
 
 #pragma once
 
-#define CUST_REV 4
-#define KIP_VERSION 240
+#define CUST_REV 5
+#define KIP_VERSION 242
 
 #include "oc_common.hpp"
 #include "pcv/pcv_common.hpp"
@@ -89,8 +89,14 @@ struct CustomizeTable {
     u32 t2_tRP_cap;
 
     u32 timingEmcTbreak;
+    u32 low_t1_tRCD;
+    u32 low_t2_tRP;
+    u32 low_t3_tRAS;
+    u32 low_t4_tRRD;
+    u32 low_t5_tRFC;
     u32 low_t6_tRTW;
     u32 low_t7_tWTR;
+    u32 low_t8_tREFI;
 
     u32 readLatency[4];
     u32 writeLatency[4];
@@ -116,13 +122,13 @@ struct CustomizeTable {
 
     u32 marikoGpuUV;
     u32 marikoGpuVmin;
-    u32 marikoGpuBootVolt;
     u32 marikoGpuVmax;
 
     s32 commonGpuVoltOffset;
 
     u32 eristaGpuVoltArray[27];
     u32 marikoGpuVoltArray[24];
+    s32 marikoSocVoltArray[26];
 
     u32 fineTune_t6_tRTW;
     u32 fineTune_t7_tWTR;

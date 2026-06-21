@@ -61,6 +61,7 @@ class SafetySubMenuGui;
 class RamSubmenuGui;
 class RamTimingsSubmenuGui;
 class RamLatenciesSubmenuGui;
+class SocCustomTableSubmenuGui;
 class CpuSubmenuGui;
 class GpuSubmenuGui;
 class GpuCustomTableSubmenuGui;
@@ -668,9 +669,6 @@ class ExperimentalSettingsSubMenuGui : public MiscGui {
         addConfigButton(HocClkConfigValue_GPUSchedulingMethod, "GPU Scheduling Override Method", ValueRange(0, 0, 1, "", 0),
                         "GPU Scheduling Override Method", &thresholdsDisabled, {}, gpuSchedMethodValues, false);
 
-        addConfigButton(KipConfigValue_marikoGpuBootVolt, "GPU Boot Volt", ValueRange(700, 800, 5, "mV", 1), "GPU Boot Voltage", &thresholdsDisabled,
-                        {}, {}, false, true);
-
         std::vector<NamedValue> ramRFMeasurementMethods = {
             NamedValue("PLL", MemoryFrequencyMeasurementMode_PLL),
             NamedValue("Actmon", MemoryFrequencyMeasurementMode_Actmon),
@@ -681,7 +679,7 @@ class ExperimentalSettingsSubMenuGui : public MiscGui {
         tsl::elm::CustomDrawer *chargeWarningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150 Overriding the charge current", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
             renderer->drawString("can be dangerous and may cause", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
-            renderer->drawString("damage to your battery or orcodeus!", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
+            renderer->drawString("damage to your battery or charger!", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
         });
         chargeWarningText->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 90);
         this->listElement->addItem(chargeWarningText);
@@ -713,8 +711,8 @@ class ExperimentalSettingsSubMenuGui : public MiscGui {
         tsl::elm::CustomDrawer *inputLimitWarningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150 Overriding the input current", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
             renderer->drawString("limit increases power draw from", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
-            renderer->drawString("your charger. Use only with the", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
-            renderer->drawString("official Nintendo charger!", false, x + 20, y + 90, 18, tsl::style::color::ColorText);
+            renderer->drawString("your charger. And board stress ", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
+            renderer->drawString("use 1500mA max.", false, x + 20, y + 90, 18, tsl::style::color::ColorText);
         });
         inputLimitWarningText->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 110);
         this->listElement->addItem(inputLimitWarningText);
@@ -732,7 +730,7 @@ class ExperimentalSettingsSubMenuGui : public MiscGui {
             NamedValue("3000mA", 3000),
         };
 
-        ValueThresholds inputLimitThresholds(2000, 2001);
+        ValueThresholds inputLimitThresholds(1500, 1501);
 
         addConfigButton(HocClkConfigValue_InputCurrentLimit, "Input Current Limit Override", ValueRange(0, 0, 1, "", 0),
                         "Input Current Limit Override", &inputLimitThresholds, {}, inputCurrentLimits, false);
@@ -1074,6 +1072,19 @@ class RamSubmenuGui : public MiscGui {
         });
         timingsSubmenu->setValue(R_ARROW);
         this->listElement->addItem(timingsSubmenu);
+
+        if (IsMariko()) {
+            tsl::elm::ListItem *socVoltageTable = new tsl::elm::ListItem("SOC Voltage Table");
+            socVoltageTable->setClickListener([](u64 keys) {
+                if (keys & HidNpadButton_A) {
+                    tsl::changeTo<SocCustomTableSubmenuGui>();
+                    return true;
+                }
+                return false;
+            });
+            socVoltageTable->setValue(R_ARROW);
+            this->listElement->addItem(socVoltageTable);
+        }
     }
 };
 
@@ -1302,8 +1313,14 @@ class RamTimingsSubmenuGui : public MiscGui {
 
             addConfigButton(KipConfigValue_timingEmcTbreak, "RAM-Timing tBreak", ValueRange(0, 1, 1, "", 1), "tBreak", &thresholdsDisabled, {},
                             timingTbreakFreqs, false, true);
+            addConfigTrackbar(KipConfigValue_low_t1_tRCD, "Low t1 tRCD", ValueRange(0, 7, 1));
+            addConfigTrackbar(KipConfigValue_low_t2_tRP, "Low t2 tRP", ValueRange(0, 7, 1));
+            addConfigTrackbar(KipConfigValue_low_t3_tRAS, "Low t3 tRAS", ValueRange(0, 9, 1));
+            addConfigTrackbar(KipConfigValue_low_t4_tRRD, "Low t4 tRRD", ValueRange(0, 6, 1));
+            addConfigTrackbar(KipConfigValue_low_t5_tRFC, "Low t5 tRFC", ValueRange(0, 10, 1));
             addConfigTrackbar(KipConfigValue_low_t6_tRTW, "Low t6 tRTW", ValueRange(0, 9, 1));
             addConfigTrackbar(KipConfigValue_low_t7_tWTR, "Low t7 tWTR", ValueRange(0, 9, 1));
+            addConfigTrackbar(KipConfigValue_low_t8_tREFI, "Low t8 tREFI", ValueRange(0, 6, 1));
             {
                 auto *spacer = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *, s32, s32, s32, s32) {});
                 spacer->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 8);
@@ -2355,6 +2372,66 @@ class GpuCustomTableSubmenuGui : public MiscGui {
                                 eGpuVolts_noAuto, false, true);
             }
         }
+    }
+};
+
+class SocCustomTableSubmenuGui : public MiscGui {
+    public:
+    SocCustomTableSubmenuGui() {}
+
+    protected:
+    void listUI() override {
+
+        Result rc = hocclkIpcGetConfigValues(this->configList);  // populate config list early otherwise wont work
+        if (R_FAILED(rc)) [[unlikely]] {
+            FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc);
+            return;
+        }
+
+        this->listElement->addItem(new CompactCategoryHeader("SOC Custom Voltages"));
+
+        ValueThresholds voltageThresholds(1075, 1150);
+
+        std::vector<NamedValue> socVolts = {
+            NamedValue("No Override", 0),
+
+            NamedValue("637mV", 637),   NamedValue("650mV", 650),   NamedValue("662mV", 662),   NamedValue("675mV", 675),   NamedValue("687mV", 687),
+            NamedValue("700mV", 700),   NamedValue("712mV", 712),   NamedValue("725mV", 725),   NamedValue("737mV", 737),   NamedValue("750mV", 750),
+            NamedValue("762mV", 762),   NamedValue("775mV", 775),   NamedValue("787mV", 787),   NamedValue("800mV", 800),   NamedValue("812mV", 812),
+            NamedValue("825mV", 825),   NamedValue("837mV", 837),   NamedValue("850mV", 850),   NamedValue("862mV", 862),   NamedValue("875mV", 875),
+            NamedValue("887mV", 887),   NamedValue("900mV", 900),   NamedValue("912mV", 912),   NamedValue("925mV", 925),   NamedValue("937mV", 937),
+            NamedValue("950mV", 950),   NamedValue("962mV", 962),   NamedValue("975mV", 975),   NamedValue("987mV", 987),   NamedValue("1000mV", 1000),
+            NamedValue("1012mV", 1012), NamedValue("1025mV", 1025), NamedValue("1037mV", 1037), NamedValue("1050mV", 1050), NamedValue("1062mV", 1062),
+            NamedValue("1075mV", 1075), NamedValue("1087mV", 1087), NamedValue("1100mV", 1100), NamedValue("1112mV", 1112), NamedValue("1125mV", 1125),
+            NamedValue("1137mV", 1137), NamedValue("1150mV", 1150),
+        };
+
+        addConfigButton(KipConfigValue_g_soc_volt_1866000, "1866MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2000000, "2000MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2133000, "2133MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2200000, "2200MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2266000, "2266MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2333000, "2333MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2400000, "2400MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2433000, "2433MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2466000, "2466MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2533000, "2533MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2566000, "2566MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2600000, "2600MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2666000, "2666MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2700000, "2700MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2733000, "2733MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2766000, "2766MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2800000, "2800MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2833000, "2833MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2900000, "2900MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_2933000, "2933MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_3000000, "3000MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_3033000, "3033MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_3100000, "3100MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_3133000, "3133MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_3166000, "3166MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
+        addConfigButton(KipConfigValue_g_soc_volt_3200000, "3200MHz", ValueRange(0, 0, 0, "0", 1), "Voltage", &voltageThresholds, {}, socVolts, false, true);
     }
 };
 
