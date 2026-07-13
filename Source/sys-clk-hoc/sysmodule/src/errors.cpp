@@ -29,6 +29,7 @@
 #include <cstdarg>
 #include <cstring>
 
+#ifdef ENABLE_LOGGING
 namespace errors {
     void ThrowException(const char* format, ...) {
         va_list args;
@@ -39,3 +40,5 @@ namespace errors {
         // throw std::runtime_error(msg);
     }
 }
+#endif // ENABLE_LOGGING — non-logging builds use the inline no-arg
+       // ThrowException in errors.hpp (same abort, no message formatting).

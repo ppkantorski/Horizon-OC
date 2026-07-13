@@ -43,6 +43,21 @@
 
 namespace errors {
 
+#ifdef ENABLE_LOGGING
     void ThrowException(const char* format, ...);
+#else
+    // Logging compiled out: the exception message had nowhere to go anyway
+    // (ThrowException only prints via fileUtils::LogLine before aborting), so
+    // drop the entire formatting path.  The variadic-template no-op ignores
+    // all arguments — the 60 ASSERT_/ERROR_THROW format strings and their
+    // __FILE__ path literals become unreferenced and vanish from .rodata —
+    // while the abort itself (same Result code) is preserved exactly.  The
+    // R_FAILED checks at every ASSERT site still run; only the diagnostics
+    // text is gone.
+    template <typename... Args>
+    [[noreturn]] static inline void ThrowException(Args&&...) {
+        diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_ShouldNotHappen));
+    }
+#endif
 
 }

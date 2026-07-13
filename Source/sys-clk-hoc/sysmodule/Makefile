@@ -25,10 +25,22 @@ TARGET_VERSION	:= 2.4.2-hoc
 
 DEFINES	:=	-DDISABLE_IPC -DTARGET="\"$(TARGET)\"" -DTARGET_VERSION="\"$(TARGET_VERSION)\"" -DCONFIG_DIR="\"$(CONFIG_DIR)\""
 
+# Logging support — off by default.  Build a debug/logging version with:
+#   make ENABLE_LOGGING=1
+# When off, every fileUtils::LogLine call (and its format strings) compiles
+# out entirely (see file_utils.hpp), shrinking .text/.rodata.  log.flag has
+# no effect on non-logging builds.
+ENABLE_LOGGING ?= 0
+ifeq ($(ENABLE_LOGGING),1)
+DEFINES	+=	-DENABLE_LOGGING
+endif
+
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
 CFLAGS	:=	-g -Wall -Os \
             -ffast-math -ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -fno-unwind-tables \
+            -flto -fuse-linker-plugin \
+            -fvisibility=hidden -fmerge-all-constants \
             $(ARCH) $(DEFINES)
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__
@@ -36,7 +48,7 @@ CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 CXXFLAGS    := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++23
 
 ASFLAGS	:=	-g $(ARCH)
-LDFLAGS    =    -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,-wrap,__cxa_throw -Wl,-wrap,_Unwind_Resume -Wl,-wrap,__gxx_personality_v0
+LDFLAGS    =    -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,-wrap,__cxa_throw -Wl,-wrap,_Unwind_Resume -Wl,-wrap,__gxx_personality_v0 -flto -fuse-linker-plugin
 
 LIBS	:= $(foreach lib,$(LIBNAMES),-l$(lib)) -lnx
 

@@ -45,9 +45,23 @@ namespace fileUtils {
     void Exit();
     Result Initialize();
     bool IsInitialized();
-    bool IsLogEnabled();
     void InitializeAsync();
-    void LogLine(const char* format, ...);
     void WriteContextToCsv(const HocClkContext* context);
+
+#ifdef ENABLE_LOGGING
+    bool IsLogEnabled();
+    void LogLine(const char* format, ...);
+#else
+    // Logging compiled out (build with `make ENABLE_LOGGING=1` to enable).
+    //
+    // LogLine becomes a variadic-template no-op: every call site still
+    // type-checks, but the empty inline body means the calls — and their
+    // format-string literals, which become unreferenced — are removed by
+    // -Os/LTO.  This strips both the logging code and its strings from
+    // .text/.rodata without touching any of the ~100 call sites.
+    static inline bool IsLogEnabled() { return false; }
+    template <typename... Args>
+    static inline void LogLine(Args&&...) {}
+#endif
 
 }

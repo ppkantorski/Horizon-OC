@@ -38,6 +38,13 @@
 #include "ipc_service.hpp"
 #include "config.hpp"
 
+// Heap budget.  Everything dynamic lives here: all threadCreate(NULL,...)
+// stacks (~60 KB total), the NV transfer memory (__nx_nv_transfermem_size,
+// 32 KB), config maps/strings, and transient stdio buffers.
+// The "[heap]" log line after "Ready" prints live usage — run once, read the
+// used= number from the log, then set this to used + ~48 KB margin (rounded
+// up to 0x1000).  Trimming blind risks a boot-time malloc failure, which
+// kills the module instantly.
 #define INNER_HEAP_SIZE 0x3A000
 
 extern "C"
@@ -145,6 +152,18 @@ int main(int argc, char** argv)
     ipcService::Initialize();
 
     fileUtils::LogLine("Ready");
+
+#ifdef ENABLE_LOGGING
+    // Heap watermark — everything (thread stacks, NV transfermem, config) is
+    // allocated by this point, so uordblks here is very close to the steady-
+    // state peak.  Use this to validate INNER_HEAP_SIZE before trimming it.
+    {
+        struct mallinfo mi = mallinfo();
+        fileUtils::LogLine("[heap] used=%u free=%u of %u",
+                           (unsigned)mi.uordblks, (unsigned)mi.fordblks,
+                           (unsigned)INNER_HEAP_SIZE);
+    }
+#endif
 
     clockManager::SetRunning(true);
     config::SetEnabled(true);

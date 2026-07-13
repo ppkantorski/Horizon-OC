@@ -34,9 +34,10 @@ namespace fileUtils {
     namespace {
 
         u64 bootTimeS;
-        LockableMutex g_log_mutex;
         LockableMutex g_csv_mutex;
         std::atomic_bool g_has_initialized = false;
+#ifdef ENABLE_LOGGING
+        LockableMutex g_log_mutex;
         bool g_log_enabled = false;
         std::uint64_t g_last_flag_check = 0;
 
@@ -56,6 +57,7 @@ namespace fileUtils {
 
             g_last_flag_check = now;
         }
+#endif
 
         void InitializeThreadFunc(void* args) {
             Initialize();
@@ -67,6 +69,7 @@ namespace fileUtils {
         return g_has_initialized;
     }
 
+#ifdef ENABLE_LOGGING
     bool IsLogEnabled() {
         return g_log_enabled;
     }
@@ -95,6 +98,7 @@ namespace fileUtils {
         }
         va_end(args);
     }
+#endif
 
     void WriteContextToCsv(const HocClkContext* context) {
         std::scoped_lock lock{g_csv_mutex};
@@ -183,7 +187,9 @@ namespace fileUtils {
         }
 
         if (R_SUCCEEDED(rc)) {
+#ifdef ENABLE_LOGGING
             RefreshFlags(true);
+#endif
             g_has_initialized = true;
             LogLine("=== sys-clk " TARGET_VERSION " ===");
             LogLine("by m4xw, natinusala, p-sam, Souldbminer, Lightos_ and Dominatorul");
@@ -198,7 +204,9 @@ namespace fileUtils {
         }
 
         g_has_initialized = false;
+#ifdef ENABLE_LOGGING
         g_log_enabled = false;
+#endif
 
         fsdevUnmountAll();
         fsExit();
