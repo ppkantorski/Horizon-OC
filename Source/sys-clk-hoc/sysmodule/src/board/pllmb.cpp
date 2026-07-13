@@ -49,12 +49,12 @@ namespace pllmb {
 
         if (presel_reg) {
             val = REG(board::clkVirtAddr + presel_reg);
-            usleep(10);
+            svcSleepThread(10'000);
             presel_val = val & presel_mask;
             val &= ~presel_mask;
             val |= presel_mask;
             REG(board::clkVirtAddr + presel_reg) = val;
-            usleep(10);
+            svcSleepThread(10'000);
         }
 
         constexpr u32 cycle_count = 16;
@@ -63,13 +63,13 @@ namespace pllmb {
         val |= pto_id << 14;
 
         REG(board::clkVirtAddr + 0x60) = val;
-        usleep(10);
+        svcSleepThread(10'000);
         REG(board::clkVirtAddr + 0x60) = val | BIT(10);
-        usleep(10);
+        svcSleepThread(10'000);
         REG(board::clkVirtAddr + 0x60) = val;
-        usleep(10);
+        svcSleepThread(10'000);
         REG(board::clkVirtAddr + 0x60) = val | BIT(9);
-        usleep(500);
+        svcSleepThread(500'000);
 
         while(REG(board::clkVirtAddr + 0x64) & BIT(31))
             ;
@@ -79,17 +79,17 @@ namespace pllmb {
         val *= divider;
 
         double rate_hz = (u64)val * 32768. / cycle_count;
-        usleep(10);
+        svcSleepThread(10'000);
         REG(board::clkVirtAddr + 0x60) = pre_val;
-        usleep(10);
+        svcSleepThread(10'000);
 
         if (presel_reg) {
             val = REG(board::clkVirtAddr + presel_reg);
-            usleep(10);
+            svcSleepThread(10'000);
             val &= ~presel_mask;
             val |= presel_val;
             REG(board::clkVirtAddr + presel_reg) = val;
-            usleep(10);
+            svcSleepThread(10'000);
         }
 
         return rate_hz;
