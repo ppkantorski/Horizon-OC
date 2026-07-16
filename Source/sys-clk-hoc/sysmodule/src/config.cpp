@@ -103,11 +103,11 @@ namespace config {
             unsigned int kval_start = 0, kval_end = 0;
             if (!strcmp(section, CONFIG_VAL_SECTION)) {
                 kval_start = 0;
-                kval_end = KipConfigValue_hpMode;
-            } else if (!strcmp(section, CONFIG_KIP_SECTION)) {
-                kval_start = KipConfigValue_hpMode;
-                kval_end = HocClkConfigValue_EnumMax;
+                kval_end = KipConfigValue_FIRST;
             }
+            // KIP-derived values (>= KipConfigValue_FIRST) are memory-only: read
+            // straight from hoc.kip at boot, never persisted to config.ini, so
+            // there is no [system] section to parse here.
             if (kval_end > kval_start) {
                 for (unsigned int kval = kval_start; kval < kval_end; kval++) {
                     if (!strcmp(key, hocclkFormatConfigValue((HocClkConfigValue)kval, false))) {
@@ -180,7 +180,12 @@ namespace config {
             gLoaded = false;
             gProfileMHzMap.clear();
             gProfileCountMap.clear();
-            for (unsigned int i = 0; i < HocClkConfigValue_EnumMax; i++) {
+            // Only reset the overlay-managed range. KIP-derived values
+            // (>= KipConfigValue_FIRST) are memory-only, populated once from
+            // hoc.kip by kip::GetKipData(); preserve them across reloads so a
+            // config.ini refresh doesn't zero them (which would mis-cap the GPU
+            // and zero the DFLL tunings).
+            for (unsigned int i = 0; i < KipConfigValue_FIRST; i++) {
                 configValues[i] = hocclkDefaultConfigValue((HocClkConfigValue)i);
             }
         }
@@ -590,10 +595,9 @@ namespace config {
             return ini_putsection(section, iniKeys.data(), valuePointers.data(), gPath.c_str()) != 0;
         };
 
-        if (!writeSection(CONFIG_VAL_SECTION, 0, KipConfigValue_hpMode)) {
-            return false;
-        }
-        if (!writeSection(CONFIG_KIP_SECTION, KipConfigValue_hpMode, HocClkConfigValue_EnumMax)) {
+        // Only the overlay-managed range is persisted; KIP-derived values
+        // (>= KipConfigValue_FIRST) are memory-only and never written to disk.
+        if (!writeSection(CONFIG_VAL_SECTION, 0, KipConfigValue_FIRST)) {
             return false;
         }
 
@@ -639,10 +643,12 @@ namespace config {
         }
         valuePointers.push_back(NULL);
 
-        const char* section = (kval >= KipConfigValue_hpMode) ? CONFIG_KIP_SECTION : CONFIG_VAL_SECTION;
-        if (!ini_putsection(section, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
-            fileUtils::LogLine("[cfg] Failed to reset config value %u in INI", kval);
-            return false;
+        // KIP-derived values are memory-only; only overlay-managed values touch disk.
+        if (kval < KipConfigValue_FIRST) {
+            if (!ini_putsection(CONFIG_VAL_SECTION, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
+                fileUtils::LogLine("[cfg] Failed to reset config value %u in INI", kval);
+                return false;
+            }
         }
 
         configValues[kval] = defaultValue;
@@ -675,12 +681,15 @@ namespace config {
         valuePointers.push_back(iniValues[0].c_str());
         valuePointers.push_back(NULL);
 
-        const char* section = (kval >= KipConfigValue_hpMode) ? CONFIG_KIP_SECTION : CONFIG_VAL_SECTION;
-        if (!ini_putsection(section, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
-            return false;
+        // KIP-derived values are memory-only: update the in-memory cache and skip
+        // config.ini. Only overlay-managed values are persisted to disk.
+        if (kval < KipConfigValue_FIRST) {
+            if (!ini_putsection(CONFIG_VAL_SECTION, iniKeys.data(), valuePointers.data(), gPath.c_str())) {
+                return false;
+            }
         }
 
-        if (immediate) {
+        if (immediate || kval >= KipConfigValue_FIRST) {
             configValues[kval] = value;
         }
 

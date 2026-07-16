@@ -30,7 +30,7 @@
 #include <switch.h>
 
 #define CONFIG_VAL_SECTION "values"
-#define CONFIG_KIP_SECTION "system"
+// [system] (KIP-mirror) section removed: KIP-derived values are now memory-only.
 
 namespace config {
 
