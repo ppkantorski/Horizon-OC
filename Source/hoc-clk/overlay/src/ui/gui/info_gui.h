@@ -26,6 +26,10 @@ class InfoGui : public BaseMenuGui {
     InfoGui(std::string title, std::vector<std::string> strings);
     ~InfoGui() = default;
     void listUI() override;
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override {
+        return false;
+    }
 
     private:
     std::string m_title;

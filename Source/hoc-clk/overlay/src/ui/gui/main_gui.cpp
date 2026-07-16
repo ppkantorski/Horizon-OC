@@ -24,6 +24,7 @@
  * --------------------------------------------------------------------------
  */
 
+#include <string>
 #include "about_gui.h"
 #include "app_profile_gui.h"
 #include "fatal_gui.h"
@@ -39,6 +40,8 @@ tsl::elm::Element *MainGui::baseUI() {
     this->listUI();
     return list;
 }
+
+std::string lastItemName;
 
 void MainGui::listUI() {
     // this->enabledToggle = new tsl::elm::ToggleListItem("Enable", false);
@@ -79,7 +82,7 @@ void MainGui::listUI() {
     tsl::elm::ListItem *globalOverrideItem = new tsl::elm::ListItem("Temporary Overrides");
     globalOverrideItem->setClickListener([this](u64 keys) {
         if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
-            tsl::changeTo<GlobalOverrideGui>();
+            tsl::swapTo<GlobalOverrideGui>();
             return true;
         }
 
@@ -92,7 +95,7 @@ void MainGui::listUI() {
     tsl::elm::ListItem *miscItem = new tsl::elm::ListItem("Settings");
     miscItem->setClickListener([this](u64 keys) {
         if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
-            tsl::changeTo<MiscGui>();
+            tsl::swapTo<MiscGui>();
             return true;
         }
 
@@ -103,7 +106,7 @@ void MainGui::listUI() {
     tsl::elm::ListItem *aboutItem = new tsl::elm::ListItem("About");
     aboutItem->setClickListener([this](u64 keys) {
         if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
-            tsl::changeTo<AboutGui>();
+            tsl::swapTo<AboutGui>();
             return true;
         }
 
@@ -114,7 +117,7 @@ void MainGui::listUI() {
     tsl::elm::ListItem *updateItem = new tsl::elm::ListItem("Updates");
     updateItem->setClickListener([this](u64 keys) {
         if ((keys & HidNpadButton_A) == HidNpadButton_A && this->context) {
-            tsl::changeTo<UpdateGui>();
+            tsl::swapTo<UpdateGui>();
             return true;
         }
 
@@ -122,6 +125,11 @@ void MainGui::listUI() {
     });
     this->listElement->addItem(updateItem);
 
+    if (!lastItemName.empty()) {
+        this->listElement->jumpToItem(lastItemName);
+    }
+
+    lastItemName = "";
 }
 
 void MainGui::refresh() {
@@ -131,3 +139,4 @@ void MainGui::refresh() {
     //     this->enabledToggle->setState(this->context->enabled);
     // }
 }
+

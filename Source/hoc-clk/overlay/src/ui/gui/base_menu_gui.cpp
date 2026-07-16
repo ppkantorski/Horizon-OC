@@ -27,7 +27,7 @@
 #include "../format.h"
 #include "base_menu_gui.h"
 #include "fatal_gui.h"
-
+#include "main_gui.h"
 
 #define TOP_Y_OFFSET 15
 
@@ -361,4 +361,19 @@ tsl::elm::Element *BaseMenuGui::baseUI() {
     this->listUI();
 
     return list;
+}
+
+std::string BaseMenuGui::getJumpToItemName() {
+    return "";
+}
+
+bool BaseMenuGui::handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                               HidAnalogStickState rightJoyStick) {
+    if (keysDown & KEY_B) {
+        triggerExitFeedback();
+        lastItemName = this->getJumpToItemName();
+        tsl::swapTo<MainGui>();
+        return true;
+    }
+    return false;
 }

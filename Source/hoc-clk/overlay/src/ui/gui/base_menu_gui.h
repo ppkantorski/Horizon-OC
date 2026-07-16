@@ -31,6 +31,7 @@
 
 class BaseMenuGui : public BaseGui {
     protected:
+        virtual std::string getJumpToItemName();
     public:
     // u8 dockedHighestAllowedRefreshRate = 60;
     HocClkContext *context;
@@ -79,6 +80,8 @@ class BaseMenuGui : public BaseGui {
     tsl::elm::Element *baseUI() override;
     void refresh() override;
     virtual void listUI() = 0;
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override;
     u16 headerHeight() const override {
         return HOC_BOX_BOTTOM + 9;
     }

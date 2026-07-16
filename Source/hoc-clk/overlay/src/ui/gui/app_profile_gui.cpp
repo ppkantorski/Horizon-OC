@@ -290,6 +290,11 @@ public:
     GovernorProfileSubMenuGui(uint64_t appId, HocClkTitleProfileList* pList, HocClkProfile prof)
         : applicationId(appId), profileList(pList), profile(prof) {}
 
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override {
+        return false;
+    }
+
     void listUI() override {
         BaseMenuGui::refresh(); // get latest context
         if(!this->context)
@@ -445,8 +450,14 @@ void AppProfileGui::listUI()
     this->addProfileUI(HocClkProfile_HandheldChargingUSB);
 }
 
+std::string jumpItemString = "Edit App Profile";
+
 void AppProfileGui::changeTo(std::uint64_t applicationId)
 {
+    if (applicationId == HOCCLK_GLOBAL_PROFILE_TID) {
+        jumpItemString = "Edit Global Profile";
+    }
+
     HocClkTitleProfileList* profileList = new HocClkTitleProfileList;
     Result rc = hocclkIpcGetProfiles(applicationId, profileList);
     if(R_FAILED(rc))
@@ -456,7 +467,7 @@ void AppProfileGui::changeTo(std::uint64_t applicationId)
         return;
     }
 
-    tsl::changeTo<AppProfileGui>(applicationId, profileList);
+    tsl::swapTo<AppProfileGui>(applicationId, profileList);
 }
 
 void AppProfileGui::update()
@@ -473,4 +484,8 @@ void AppProfileGui::update()
             ""
         );
     }
+}
+
+std::string AppProfileGui::getJumpToItemName() {
+    return jumpItemString;
 }

@@ -51,6 +51,14 @@ if [ ! -d "$ATMOSPHERE_DIR" ]; then
     echo
     echo "*** Cloning atmosphere ***"
     git clone "$ATMOSPHERE_URL" "$ATMOSPHERE_DIR"
+
+    cd "$ATMOSPHERE_DIR"
+
+    git fetch --tags --quiet
+    LATEST_TAG=$(git tag --sort=-version:refname | head -n1)
+    git checkout -q -b build "$LATEST_TAG"
+
+    cd "$ROOT_DIR"
 fi
 
 DEST="build/atmosphere/stratosphere/loader/"
@@ -75,7 +83,6 @@ if [ "$NO_EXO" -eq 0 ]; then
     cp -v "$EXO_SRC/secmon_smc_register_access.cpp"         "$EXO_DEST/"
     cp -v "$EXO_SRC/secmon_smc_handler.cpp"                 "$EXO_DEST/"
     cp -v "$EXO_SRC/secmon_memory_layout.hpp"               "$LIBEXO_DEST/"
-    echo
 fi
 
 echo
@@ -142,10 +149,13 @@ echo "*** Packaging dist.zip ***"
 cd "$DIST_DIR" || exit 1
 
 rm -f dist.zip
+rm .gitignore
 
 zip -r dist.zip . >/dev/null
 
 echo "*** dist.zip created ***"
 echo
+
+touch .gitignore
 
 cd "$ROOT_DIR" || exit 1

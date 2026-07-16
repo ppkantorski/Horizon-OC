@@ -20,8 +20,8 @@
 
 #pragma once
 
-#define CUST_REV 5
-#define KIP_VERSION 242
+#define CUST_REV 6
+#define KIP_VERSION 250
 
 #include "oc_common.hpp"
 #include "pcv/pcv_common.hpp"
@@ -86,8 +86,6 @@ struct CustomizeTable {
     u32 t7_tWTR;
     u32 t8_tREFI;
 
-    u32 t2_tRP_cap;
-
     u32 timingEmcTbreak;
     u32 low_t1_tRCD;
     u32 low_t2_tRP;
@@ -128,7 +126,7 @@ struct CustomizeTable {
 
     u32 eristaGpuVoltArray[27];
     u32 marikoGpuVoltArray[24];
-    s32 marikoSocVoltArray[26];
+    s32 marikoSocVoltArray[28];
 
     u32 fineTune_t6_tRTW;
     u32 fineTune_t7_tWTR;

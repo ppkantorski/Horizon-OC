@@ -28,6 +28,8 @@
 
 #include "base_menu_gui.h"
 
+extern std::string lastItemName;
+
 class MainGui : public BaseMenuGui {
     public:
     MainGui() {
@@ -39,5 +41,10 @@ class MainGui : public BaseMenuGui {
     void refresh() override;
     u16 headerHeight() const override {
         return HOC_HEADER_HEIGHT - 25;
+    }
+
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override {
+        return false;
     }
 };

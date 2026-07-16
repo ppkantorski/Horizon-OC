@@ -33,6 +33,7 @@
 #include "value_choice_gui.h"
 class GlobalOverrideGui : public BaseMenuGui {
     protected:
+    std::string getJumpToItemName() override;
     std::map<HocClkModule, std::tuple<std::string, std::uint32_t, int>> customFormatModules;
     tsl::elm::ListItem *listItems[HocClkModule_EnumMax];
     std::uint32_t listHz[HocClkModule_EnumMax];

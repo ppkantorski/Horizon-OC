@@ -22,11 +22,19 @@
 
 namespace board {
 
+    constexpr u32 GpuVoltTableTempCount = 6;
+    constexpr u32 GpuVoltFreqTempCount  = 32;
+    constexpr size_t GpuVoltTableSize   = GpuVoltTableTempCount * GpuVoltFreqTempCount;
+
     struct GpuVoltData {
-        u32 voltTable[6][32] = {};
+        u32 voltTableStock[GpuVoltTableTempCount][GpuVoltFreqTempCount] = {};
+        u32 voltTableRamOc[GpuVoltTableTempCount][GpuVoltFreqTempCount] = {};
+        u32 voltTableLive[GpuVoltTableTempCount][GpuVoltFreqTempCount]  = {};
+
         u64 voltTableAddress;
         u32 ramVmin;
     };
+
     struct UnkRegulator {
         u32 voltageMin;
         u32 voltageStep;
@@ -49,6 +57,7 @@ namespace board {
     u32 GetVoltage(HocClkVoltage voltage);
     void CacheGpuVoltTable();
     void PcvHijackGpuVolts(u32 vmin);
+    void PcvHijackGpuFrequency(u32 voltage, u32 hz);
     u32 GetMinimumGpuVmin(u32 freqMhz, u32 bracket);
 
 }  // namespace board

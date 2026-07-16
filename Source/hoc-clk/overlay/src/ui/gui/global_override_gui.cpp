@@ -41,7 +41,7 @@ void GlobalOverrideGui::openFreqChoiceGui(HocClkModule module)
         FatalGui::openWithResultCode("hocclkIpcGetFreqList", rc);
         return;
     }
-    
+
     std::map<uint32_t, std::string> labels = {};
 
     if (module == HocClkModule_CPU) {
@@ -103,7 +103,7 @@ void GlobalOverrideGui::addModuleListItemValue(
     std::uint32_t step,
     const std::string& suffix,
     std::uint32_t divisor,
-    int decimalPlaces, 
+    int decimalPlaces,
     ValueThresholds thresholds,
     const std::vector<NamedValue>& namedValues,
     bool showDefaultValue
@@ -117,9 +117,9 @@ void GlobalOverrideGui::addModuleListItemValue(
 
     tsl::elm::ListItem* listItem =
         new tsl::elm::ListItem(hocclkFormatModule(module, true));
-    
+
     listItem->setValue(FREQ_DEFAULT_TEXT);
-    
+
     listItem->setClickListener(
         [this,
          listItem,
@@ -141,10 +141,10 @@ void GlobalOverrideGui::addModuleListItemValue(
                 if (!this->context) {
                     return false;
                 }
-                
+
                 std::uint32_t currentValue =
                     this->context->overrideFreqs[module] * divisor;
-                
+
                 ValueRange range(
                     min,
                     max,
@@ -153,22 +153,22 @@ void GlobalOverrideGui::addModuleListItemValue(
                     divisor,
                     decimalPlaces
                 );
-                
+
                 this->openValueChoiceGui(
                     listItem,
                     currentValue,
                     range,
                     categoryName,
-                    
+
                     [this, listItem, module, divisor, suffix, decimalPlaces, thresholds, namedValues, hasNamedValues, showDefaultValue](std::uint32_t value) -> bool
                     {
                         if (!this->context) {
                             return false;
                         }
-                        
+
                         this->context->overrideFreqs[module] = value / divisor;
                         this->listHz[module] = value / divisor;
-                        
+
                         if (value == 0) {
                             listItem->setValue(FREQ_DEFAULT_TEXT);
                         } else if (hasNamedValues) {
@@ -182,36 +182,36 @@ void GlobalOverrideGui::addModuleListItemValue(
                             char buf[32];
                             if (decimalPlaces > 0) {
                                 double displayValue = (double)value / divisor;
-                                snprintf(buf, sizeof(buf), "%.*f%s", 
+                                snprintf(buf, sizeof(buf), "%.*f%s",
                                         decimalPlaces, displayValue, suffix.c_str());
                             } else {
-                                snprintf(buf, sizeof(buf), "%u%s", 
+                                snprintf(buf, sizeof(buf), "%u%s",
                                         value / divisor, suffix.c_str());
                             }
                             listItem->setValue(buf);
                         }
-                        
+
                         Result rc =
                             hocclkIpcSetOverride(module, this->context->overrideFreqs[module]);
-                        
+
                         if (R_FAILED(rc))
                         {
                             FatalGui::openWithResultCode(
                                 "hocclkIpcSetOverride", rc);
                             return false;
                         }
-                        
+
                         this->lastContextUpdate = armGetSystemTick();
                         return true;
                     },
-                    
+
                     thresholds,
                     false,
                     std::map<std::uint32_t, std::string>(),
                     namedValues,
                     showDefaultValue
                 );
-                
+
                 return true;
             }
             else if ((keys & HidNpadButton_Y) == HidNpadButton_Y)
@@ -219,26 +219,26 @@ void GlobalOverrideGui::addModuleListItemValue(
                 if (!this->context) {
                     return false;
                 }
-                
+
                 this->context->overrideFreqs[module] = 0;
                 this->listHz[module] = 0;
                 listItem->setValue(FREQ_DEFAULT_TEXT);
-                
+
                 Result rc = hocclkIpcSetOverride(module, 0);
-                
+
                 if (R_FAILED(rc))
                 {
                     FatalGui::openWithResultCode("hocclkIpcSetOverride", rc);
                     return false;
                 }
-                
+
                 this->lastContextUpdate = armGetSystemTick();
                 return true;
             }
-            
+
             return false;
         });
-    
+
     this->listElement->addItem(listItem);
     this->listItems[module] = listItem;
 }
@@ -300,6 +300,11 @@ class GovernorOverrideSubMenuGui : public BaseMenuGui {
     u32 packed;
 public:
     GovernorOverrideSubMenuGui(u32 initialPacked) : packed(initialPacked) {}
+
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override {
+        return false;
+    }
 
     void listUI() override {
         BaseMenuGui::refresh(); // get latest context
@@ -391,23 +396,23 @@ void GlobalOverrideGui::refresh()
 
         if (this->listItems[m] != nullptr &&
             this->listHz[m] != this->context->overrideFreqs[m]) {
-            
+
             auto it = this->customFormatModules.find((HocClkModule)m);
             if (it != this->customFormatModules.end()) {
                 std::string suffix = std::get<0>(it->second);
                 std::uint32_t divisor = std::get<1>(it->second);
                 int decimalPlaces = std::get<2>(it->second);
-                
+
                 if (this->context->overrideFreqs[m] == 0) {
                     this->listItems[m]->setValue(FREQ_DEFAULT_TEXT);
                 } else {
                     char buf[32];
                     if (decimalPlaces > 0) {
                         double displayValue = (double)this->context->overrideFreqs[m] / divisor;
-                        snprintf(buf, sizeof(buf), "%.*f%s", 
+                        snprintf(buf, sizeof(buf), "%.*f%s",
                                 decimalPlaces, displayValue, suffix.c_str());
                     } else {
-                        snprintf(buf, sizeof(buf), "%u%s", 
+                        snprintf(buf, sizeof(buf), "%u%s",
                                 this->context->overrideFreqs[m] / divisor, suffix.c_str());
                     }
                     this->listItems[m]->setValue(buf);
@@ -418,8 +423,12 @@ void GlobalOverrideGui::refresh()
                         ? formatListFreqHzMem(this->context->overrideFreqs[m], (RamDisplayUnit)configList.values[HocClkConfigValue_RamDisplayUnit])
                         : formatListFreqHz(this->context->overrideFreqs[m]));
             }
-            
+
             this->listHz[m] = this->context->overrideFreqs[m];
         }
     }
+}
+
+std::string GlobalOverrideGui::getJumpToItemName() {
+    return "Temporary Overrides";
 }

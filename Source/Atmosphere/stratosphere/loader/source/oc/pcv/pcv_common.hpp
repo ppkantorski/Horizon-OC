@@ -48,6 +48,35 @@ namespace ams::ldr::hoc::pcv {
         u64 dvco_calibration_max;
     };
 
+    /*
+    struct CvbCpuDfllData {
+        u32 tune0_low;
+        u32 tune0_high;
+        u32 tune1_low;
+        u32 tune1_high;
+        u64 padding;
+        u64 dvco_calibration_max;
+    };
+
+    struct CpuCvbTable {
+        u64 socType;
+        CvbCpuDfllData dfllData;
+        u64 padding[3];
+        u64 unk;
+        u32 tune_high_min_millivolts;
+        u32 tune_high_margin_millivolts;
+        u32 vmin;
+        u32 padding_1[3];
+        u32 pll_min_millivolts;
+        u32 vmax;
+        u32 unkScale;
+        u32 speedoScale;
+        u32 voltageScale;
+        u32 zero;
+        cvb_entry_t cvb_entry[32];
+    };
+    */
+
     struct __attribute__((packed)) div_nmp {
         u8 divn_shift;
         u8 divn_width;

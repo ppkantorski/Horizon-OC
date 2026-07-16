@@ -24,10 +24,7 @@
 #define CRASH(msg, ...) { ams::diag::AbortImpl(msg, __PRETTY_FUNCTION__, "", 0); __builtin_unreachable(); }
 
 #include "customize.hpp"
-
-#if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
-    #include "oc_log.hpp"
-#endif
+#include "oc_log.hpp"
 
 #define PATCH_OFFSET(offset, value) \
     static_assert(sizeof(__typeof__(offset)) <= sizeof(u64)); \

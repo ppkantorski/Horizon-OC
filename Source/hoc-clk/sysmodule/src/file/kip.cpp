@@ -19,8 +19,8 @@
 #include "../i2c/i2cDrv.h"
 #include "../mgr/clock_manager.hpp"
 #include "file_utils.hpp"
+#include "../mapping/mem_map.hpp"
 #include "kip.hpp"
-
 
 namespace kip {
 
@@ -95,7 +95,6 @@ namespace kip {
         CUST_WRITE_FIELD_BATCH(&table, low_t6_tRTW, config::GetConfigValue(KipConfigValue_low_t6_tRTW));
         CUST_WRITE_FIELD_BATCH(&table, low_t7_tWTR, config::GetConfigValue(KipConfigValue_low_t7_tWTR));
         CUST_WRITE_FIELD_BATCH(&table, low_t8_tREFI, config::GetConfigValue(KipConfigValue_low_t8_tREFI));
-        CUST_WRITE_FIELD_BATCH(&table, t2_tRP_cap, config::GetConfigValue(KipConfigValue_t2_tRP_cap));
 
         CUST_WRITE_FIELD_BATCH(&table, readLatency1333, config::GetConfigValue(KipConfigValue_read_latency_1333));
         CUST_WRITE_FIELD_BATCH(&table, readLatency1600, config::GetConfigValue(KipConfigValue_read_latency_1600));
@@ -140,7 +139,7 @@ namespace kip {
             table.eristaGpuVoltArray[i] = config::GetConfigValue((HocClkConfigValue)(KipConfigValue_g_volt_e_76800 + i));
         }
 
-        for (size_t i = 0; i < 26; ++i) {
+        for (size_t i = 0; i < 28; ++i) {
             table.marikoSocVoltArray[i] = config::GetConfigValue((HocClkConfigValue) (KipConfigValue_g_soc_volt_1866000 + i));
         }
 
@@ -170,6 +169,24 @@ namespace kip {
             fileUtils::LogLine("[kip] Warning: Failed to set config values from KIP");
             notification::writeNotification("Horizon OC\nKip config set failed");
         }
+    }
+
+    bool IsKipLoaded() {
+        constexpr u32 ExpectedMagic = 0x686F634D;
+        constexpr uintptr_t LoadMagicAddress = 0x4003DC00;
+        u32 iramValue = {};
+
+        SmcCopyFromIram(&iramValue, LoadMagicAddress, sizeof(iramValue));
+
+        if (iramValue == ExpectedMagic) {
+            iramValue = 0;
+            SmcCopyToIram(LoadMagicAddress, &iramValue, sizeof(iramValue));
+            return true;
+        }
+
+        notification::writeNotification("Kip is not loaded!");
+        fileUtils::LogLine("Kip was not loaded!");
+        return false;
     }
 
     // I know this is very hacky, but the config system in the sysmodule doesn't really support writing
@@ -231,6 +248,7 @@ namespace kip {
             return;
         }
 
+        clockManager::gContext.isKipLoaded = IsKipLoaded();
         clockManager::gContext.kipVersion = kipVersion;
         configValues.values[KipConfigValue_custRev] = cust_get_cust_rev(&table);
         configValues.values[KipConfigValue_KipVersion] = cust_get_kip_version(&table);  // Run this after the check so we can do migration process
@@ -262,7 +280,6 @@ namespace kip {
         configValues.values[KipConfigValue_low_t6_tRTW] = cust_get_low_tRTW(&table);
         configValues.values[KipConfigValue_low_t7_tWTR] = cust_get_low_tWTR(&table);
         configValues.values[KipConfigValue_low_t8_tREFI] = cust_get_low_tREFI(&table);
-        configValues.values[KipConfigValue_t2_tRP_cap] = cust_get_tRP_cap(&table);
 
         configValues.values[KipConfigValue_read_latency_1333] = cust_get_read_latency_1333(&table);
         configValues.values[KipConfigValue_read_latency_1600] = cust_get_read_latency_1600(&table);
@@ -350,4 +367,5 @@ namespace kip {
         }
         config::SetConfigValues(&configValues, true);
     }
+
 }  // namespace kip

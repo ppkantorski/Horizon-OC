@@ -146,9 +146,9 @@ void FreqChoiceGui::listUI() {
 
         if (IsMariko()) {
             unsafe_cpu = this->configList->values[KipConfigValue_marikoCpuUVHigh] ? 2398 : 1964;
-            unsafe_gpu = 1229;
+            unsafe_gpu = 1383;
             danger_cpu = this->configList->values[KipConfigValue_marikoCpuUVHigh] ? 2500 : 2398;
-            danger_gpu = 1306;
+            danger_gpu = 1460;
         } else {
             unsafe_cpu = this->configList->values[KipConfigValue_eristaCpuUV] ? 2092 : 1786;
             if (this->configList->values[KipConfigValue_eristaGpuUV] == GPUUVLevel_NoUV) {

@@ -267,5 +267,10 @@ bool UpdateGui::handleInput(u64 keysDown, u64 keysHeld,
         requestCancel();
         return true;
     }
-    return false;
+
+    return BaseMenuGui::handleInput(keysDown, keysHeld, touchPos, leftJoy, rightJoy);
+}
+
+std::string UpdateGui::getJumpToItemName() {
+    return "Updates";
 }

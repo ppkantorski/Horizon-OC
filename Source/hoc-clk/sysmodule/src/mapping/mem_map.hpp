@@ -20,3 +20,5 @@
 
 Result QueryMemoryMapping(u64 *virtaddr, u64 physaddr, u64 size);
 Result MapAddress(u64 &va, const u64 &physAddr, const char *name);
+Result SmcCopyFromIram(void *dest, uintptr_t src, u32 size);
+Result SmcCopyToIram(uintptr_t dest, const void *src, u32 size);

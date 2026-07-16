@@ -21,6 +21,7 @@
 
 namespace ams::ldr::hoc {
 
+    Result SmcCopyToIram(uintptr_t dest, const void *src, u32 size);
     void Log(const char *data, ...);
     void ViewLog();
 

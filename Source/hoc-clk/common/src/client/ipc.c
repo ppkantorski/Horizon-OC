@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -166,4 +166,13 @@ Result hocClkIpcGetKipData()
 {
     u32 temp = 0;
     return serviceDispatchIn(&g_hocclkSrv, HocClkIpcCmd_GetKipData, temp);
+}
+
+Result hocClkIpcRequestGpuVoltage(u32 voltage, u32 hz) {
+    const HocClkIpc_RequestGpuVoltage_Args args = {
+        .voltage = voltage,
+        .hz = hz,
+    };
+
+    return serviceDispatchIn(&g_hocclkSrv, HocClkIpcCmd_RequestGpuVoltage, args);
 }

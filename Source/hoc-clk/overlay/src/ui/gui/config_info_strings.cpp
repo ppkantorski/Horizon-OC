@@ -320,13 +320,6 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Write To Read (Low bracket)",
                 "Default: 0"
             };
-        case KipConfigValue_t2_tRP_cap:
-            return {
-                "Cap for t2 when 1333WL is used.",
-                "The default value is sufficient for most RAMs but some may need a lower value",
-                "Default: 2"
-            };
-
         case KipConfigValue_t6_tRTW_fine_tune:
             return {
                 "Fine-tunes the raw calculation of t6",
@@ -541,6 +534,15 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "- Disabled: Disables GPU scheduling, 99.7% GPU max load",
                 "- Enabled: Enables GPU scheduling, 96.5% GPU max load",
                 "Default: Do not override"
+            };
+        case HocClkConfigValue_LiveGpuVoltage:
+            return {
+                "Adjust GPU voltage on the fly.",
+                "Warning: unstable settings allowed.",
+                "Exception: while RAM OC is active, voltage cannot drop below stability minimum.",
+                "RAM frequency changes overwrite requested voltage.",
+                "Voltage applies globally across all frequencies.",
+                "\"Reset\" restores default or RAM-stable minimum."
             };
         default:
             return {};

@@ -101,4 +101,9 @@ class ValueChoiceGui : public BaseMenuGui {
     }
 
     void listUI() override;
+
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override {
+        return false;
+    }
 };

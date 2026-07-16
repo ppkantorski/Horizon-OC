@@ -135,14 +135,9 @@ namespace ams::ldr::hoc::pcv::mariko {
         /* At 1333WL, for some reason (incorrect ram timing config in mtc table?), tRP causes crashes at high reductions - 2 seems to be the most common limit. */
         /* This is a lazy workaround until I find the issue... */
         const bool lowFreq = freq < C.timingEmcTbreak;
-        volatile u32 tRPpbIndex = lowFreq ? C.low_t2_tRP : C.t2_tRP;
-
-        if (WL == WL_1331) {
-            tRPpbIndex = MIN(C.t2_tRP_cap, tRPpbIndex);
-        }
 
         tRCD   = tRCD_values[lowFreq ? C.low_t1_tRCD : C.t1_tRCD];
-        tRPpb  = tRP_values[tRPpbIndex];
+        tRPpb  = tRP_values[lowFreq  ? C.low_t2_tRP  : C.t2_tRP];
         tRAS   = tRAS_values[lowFreq ? C.low_t3_tRAS : C.t3_tRAS];
         tRRD   = tRRD_values[lowFreq ? C.low_t4_tRRD : C.t4_tRRD];
         tRFCpb = tRFC_values[lowFreq ? C.low_t5_tRFC : C.t5_tRFC];

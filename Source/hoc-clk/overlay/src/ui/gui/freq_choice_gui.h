@@ -55,4 +55,8 @@ class FreqChoiceGui : public BaseMenuGui {
     ~FreqChoiceGui();
 
     void listUI() override;
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override {
+        return false;
+    }
 };

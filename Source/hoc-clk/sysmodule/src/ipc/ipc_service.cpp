@@ -141,6 +141,11 @@ namespace ipcService {
             return 0;
         }
 
+        Result RequestGpuVoltage(HocClkIpc_RequestGpuVoltage_Args *args) {
+            clockManager::ApplyGpuFreqVoltRequest(args->voltage, args->hz);
+            return 0;
+        }
+
         Result ServiceHandlerFunc(void *arg, const IpcServerRequest *r, u8 *out_data, size_t *out_dataSize) {
             (void)arg;
             switch (r->data.cmdId) {
@@ -233,6 +238,12 @@ namespace ipcService {
                     if (r->data.size >= 0) {
                         kip::SetKipData();
                         return 0;
+                    }
+                    break;
+
+                case HocClkIpcCmd_RequestGpuVoltage:
+                    if (r->data.size >= sizeof(HocClkIpc_RequestGpuVoltage_Args)) {
+                        return RequestGpuVoltage((HocClkIpc_RequestGpuVoltage_Args *)r->data.ptr);
                     }
                     break;
             }

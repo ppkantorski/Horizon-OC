@@ -27,6 +27,7 @@ class AboutGui : public BaseMenuGui
 {
 protected:
     char strings[32][32];
+    std::string getJumpToItemName() override;
 
 public:
     AboutGui();

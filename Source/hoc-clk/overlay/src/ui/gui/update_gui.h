@@ -77,4 +77,7 @@ private:
 
     tsl::elm::ListItem *m_items[2] = {nullptr, nullptr};
     UpdateStatusPanel *m_status = nullptr;
+
+protected:
+    std::string getJumpToItemName() override;
 };

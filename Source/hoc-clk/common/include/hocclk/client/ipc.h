@@ -12,9 +12,9 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
- 
+
 /* --------------------------------------------------------------------------
  * "THE BEER-WARE LICENSE" (Revision 42):
  * <p-sam@d3vs.net>, <natinusala@gmail.com>, <m4x@m4xw.net>
@@ -50,6 +50,7 @@ Result hocclkIpcSetConfigValues(HocClkConfigValueList* configValues);
 Result hocclkIpcGetFreqList(HocClkModule module, u32* list, u32 maxCount, u32* outCount);
 Result hocClkIpcSetKipData();
 Result hocClkIpcGetKipData();
+Result hocClkIpcRequestGpuVoltage(u32 voltage, u32 hz);
 
 static inline Result hocclkIpcRemoveOverride(HocClkModule module)
 {

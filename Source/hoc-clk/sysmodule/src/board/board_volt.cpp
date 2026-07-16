@@ -281,6 +281,16 @@ namespace board {
         return INVALID_HANDLE;
     }
 
+    bool ValidateHandle(Handle handle) {
+        if (handle == INVALID_HANDLE) {
+            fileUtils::LogLine("Invalid handle!");
+            return false;
+        }
+
+        return true;
+    }
+
+
     void CacheGpuVoltTable() {
         // Likely CPU regulator?
         UnkRegulator reg = {
@@ -290,8 +300,7 @@ namespace board {
         };
 
         Handle handle = GetPcvHandle();
-        if (handle == INVALID_HANDLE) {
-            fileUtils::LogLine("[dvfs] Invalid handle!");
+        if (!ValidateHandle(handle)) {
             return;
         }
 
@@ -335,16 +344,16 @@ namespace board {
                 }
 
                 /* 800mV on Mariko, 950mV on Erista. */
-                u32 vmax = GetSocType() == HocClkSocType_Mariko ? 800 : 950;
+                u32 bootVoltage = GetSocType() == HocClkSocType_Mariko ? 800 : 950;
                 constexpr u32 GpuVoltageTableOffset = 312;
-                if (!std::memcmp(&buffer[index + GpuVoltageTableOffset], &vmax, sizeof(vmax))) {
-                    std::memcpy(voltData.voltTable, &buffer[index + GpuVoltageTableOffset], sizeof(voltData.voltTable));
+                if (!std::memcmp(&buffer[index + GpuVoltageTableOffset], &bootVoltage, sizeof(bootVoltage))) {
+                    std::memcpy(voltData.voltTableStock, &buffer[index + GpuVoltageTableOffset], sizeof(voltData.voltTableStock));
+                    std::memcpy(voltData.voltTableLive, voltData.voltTableStock, sizeof(voltData.voltTableStock));
                     voltData.voltTableAddress = base + memoryInfo.addr + GpuVoltageTableOffset + index;
                 }
 
                 constexpr u32 CpuVoltageTableOffset = 0xB8;
                 std::memcpy(cpuVoltTable, &buffer[index + CpuVoltageTableOffset], sizeof(cpuVoltTable));  // TODO: verify the CPU table
-
                 svcCloseHandle(handle);
                 handle = INVALID_HANDLE;
 
@@ -353,8 +362,8 @@ namespace board {
                     fileUtils::LogLine("[dvfs] cpu volt %d: %u mV", i, cpuVoltTable[i]);
                 }
 
-                for (int i = 0; i < (int)std::size(voltData.voltTable); ++i) {
-                    fileUtils::LogLine("[dvfs] gpu volt %d: %u mV", i, voltData.voltTable[0][i]);
+                for (int i = 0; i < (int)std::size(voltData.voltTableStock); ++i) {
+                    fileUtils::LogLine("[dvfs] gpu volt %d: %u mV", i, voltData.voltTableStock[0][i]);
                 }
                 return;
             }
@@ -365,10 +374,31 @@ namespace board {
         return;
     }
 
+    // Result ReadGpuVoltTable(u32 *table) {
+    //     Handle handle = GetPcvHandle();
+    //     if (!ValidateHandle(handle)) {
+    //         return 1;
+    //     }
+    //
+    //     Result rc = svcReadDebugProcessMemory(table, handle, voltData.voltTableAddress, sizeof(voltData.voltTableStock));
+    //     svcCloseHandle(handle);
+    //     return rc;
+    // }
+
+    Result WriteGpuVoltTable(u32 *table) {
+        Handle handle = GetPcvHandle();
+        if (!ValidateHandle(handle)) {
+            return 1;
+        }
+
+        Result rc = svcWriteDebugProcessMemory(handle, table, voltData.voltTableAddress, sizeof(voltData.voltTableStock));
+        svcCloseHandle(handle);
+        return rc;
+    }
+
     void PcvHijackGpuVolts(u32 vmin) {
-        u32 table[192];
-        static_assert(sizeof(table) == sizeof(voltData.voltTable), "Invalid gpu voltage table size!");
-        std::memcpy(table, voltData.voltTable, sizeof(voltData.voltTable));
+        u32 table[GpuVoltTableSize];
+        std::memcpy(table, voltData.voltTableLive, sizeof(voltData.voltTableLive));
 
         if (voltData.ramVmin == vmin) {
             return;
@@ -380,20 +410,50 @@ namespace board {
             }
         }
 
-        Handle handle = GetPcvHandle();
-        if (handle == INVALID_HANDLE) {
-            fileUtils::LogLine("Invalid handle!");
+        ASSERT_RESULT_OK(WriteGpuVoltTable(table), "WriteGpuVoltTable");
+        voltData.ramVmin = vmin;
+        fileUtils::LogLine("[dvfs] voltage set to %u mV", vmin);
+    }
+
+    u32 GetGpuFreqIndex(u32 hz) {
+        u32 list[HOCCLK_FREQ_LIST_MAX];
+        u32 count;
+
+        GetFreqList(HocClkModule_GPU, list, HOCCLK_FREQ_LIST_MAX, &count);
+
+        for (u32 i = 0; i < count; ++i) {
+            if (list[i] == hz) {
+                return i;
+            }
+        }
+
+        return HOCCLK_FREQ_LIST_MAX;
+    }
+
+    void PcvHijackGpuFrequency(u32 voltage, u32 hz) {
+        u32 freqIndex = GetGpuFreqIndex(hz);
+        if (freqIndex == HOCCLK_FREQ_LIST_MAX) {
             return;
         }
 
-        Result rc = svcWriteDebugProcessMemory(handle, table, voltData.voltTableAddress, sizeof(table));
+        bool voltageReset = (voltage == 0);
 
-        if (R_SUCCEEDED(rc)) {
-            voltData.ramVmin = vmin;
+        for (u32 i = 0; i < GpuVoltTableTempCount; ++i) {
+            if (voltageReset) {
+                voltage = voltData.voltTableStock[i][freqIndex];
+            }
+
+            voltData.voltTableLive[i][freqIndex] = voltage;
         }
 
-        svcCloseHandle(handle);
-        fileUtils::LogLine("[dvfs] voltage set to %u mV", vmin);
+        if (voltageReset) {
+            voltage = voltData.voltTableStock[GpuVoltTableTempCount - 2 /* 70C */][freqIndex];
+        }
+
+        if (voltage >= voltData.ramVmin) {
+            /* Only update the table if it's safe to do so. */
+            ASSERT_RESULT_OK(WriteGpuVoltTable(reinterpret_cast<u32 *>(voltData.voltTableLive)), "WriteGpuVoltTable");
+        }
     }
 
     u32 GetMinimumGpuVmin(u32 freqMhz, u32 bracket) {

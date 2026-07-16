@@ -70,6 +70,7 @@ typedef enum {
 
     HocClkConfigValue_AulaDisplayColorPreset,
     HocClkConfigValue_MarikoMiddleFreqs,
+    HocClkConfigValue_LiveGpuVoltage,
 
     HocClkConfigValue_AutoRAMCPUOverclock,
     HocClkConfigValue_AutoRamCpuCpuOCFreq,
@@ -107,8 +108,6 @@ typedef enum {
     KipConfigValue_low_t6_tRTW,
     KipConfigValue_low_t7_tWTR,
     KipConfigValue_low_t8_tREFI,
-
-    KipConfigValue_t2_tRP_cap,
 
     KipConfigValue_read_latency_1333,
     KipConfigValue_read_latency_1600,
@@ -223,6 +222,8 @@ typedef enum {
     KipConfigValue_g_soc_volt_3133000,
     KipConfigValue_g_soc_volt_3166000,
     KipConfigValue_g_soc_volt_3200000,
+    KipConfigValue_g_soc_volt_3266000,
+    KipConfigValue_g_soc_volt_3333000,
 
     KipConfigValue_t6_tRTW_fine_tune,
     KipConfigValue_t7_tWTR_fine_tune,
@@ -315,6 +316,9 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case HocClkConfigValue_MarikoMiddleFreqs:
             return pretty ? "Mariko Middle Clocks" : "mariko_middle_freqs";
 
+        case HocClkConfigValue_LiveGpuVoltage:
+            return pretty ? "GPU Voltage Request" : "gpu_voltage_request";
+
         case HocClkConfigValue_AutoRAMCPUOverclock:
             return pretty ? "Auto High RAM CPU OC" : "auto_high_ram_cpu_oc";
         case HocClkConfigValue_AutoRamCpuCpuOCFreq:
@@ -384,9 +388,6 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "Low T7 - tWTR" : "low_t7_tWTR";
         case KipConfigValue_low_t8_tREFI:
             return pretty ? "Low T8 - tREFI" : "low_t7_tREFI";
-
-        case KipConfigValue_t2_tRP_cap:
-            return pretty ? "t2 - trp 1333WL Cap" : "t2_tRP_cap";
 
         case KipConfigValue_read_latency_1333:
             return pretty ? "1333 Read Latency" : "read_latency_1333";
@@ -538,6 +539,8 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_g_soc_volt_3133000: return pretty ? "Mariko SOC Volt 3133 MHz" : "g_soc_volt_3133000";
         case KipConfigValue_g_soc_volt_3166000: return pretty ? "Mariko SOC Volt 3166 MHz" : "g_soc_volt_3166000";
         case KipConfigValue_g_soc_volt_3200000: return pretty ? "Mariko SOC Volt 3200 MHz" : "g_soc_volt_3200000";
+        case KipConfigValue_g_soc_volt_3266000: return pretty ? "Mariko SOC Volt 3266 MHz" : "g_soc_volt_3266000";
+        case KipConfigValue_g_soc_volt_3333000: return pretty ? "Mariko SOC Volt 3333 MHz" : "g_soc_volt_3333000";
 
         case KipCrc32:
             return pretty ? "CRC32" : "crc32";
@@ -568,6 +571,7 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
         case HocClkConfigValue_GPUSchedulingMethod:
         case HocClkConfigValue_MemoryFrequencyMeasurementMode:
         case HocClkConfigValue_MarikoMiddleFreqs:
+        case HocClkConfigValue_LiveGpuVoltage:
             return 0ULL;
         case HocClkConfigValue_RamDisplayUnit:
             return (uint64_t)RamDisplayUnit_MHz;
@@ -625,6 +629,7 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_LiveCpuUv:
         case HocClkConfigValue_GPUSchedulingMethod:
         case HocClkConfigValue_MarikoMiddleFreqs:
+        case HocClkConfigValue_LiveGpuVoltage:
         case HocClkConfigValue_AutoRAMCPUOverclock:
             return (input & 0x1) == input;
 
@@ -656,7 +661,6 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_low_t6_tRTW:
         case KipConfigValue_low_t7_tWTR:
         case KipConfigValue_low_t8_tREFI:
-        case KipConfigValue_t2_tRP_cap:
         case KipConfigValue_read_latency_1333:
         case KipConfigValue_read_latency_1600:
         case KipConfigValue_read_latency_1866:
@@ -759,6 +763,8 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_g_soc_volt_3133000:
         case KipConfigValue_g_soc_volt_3166000:
         case KipConfigValue_g_soc_volt_3200000:
+        case KipConfigValue_g_soc_volt_3266000:
+        case KipConfigValue_g_soc_volt_3333000:
         case KipConfigValue_eristaCpuVmin:
         case KipConfigValue_eristaCpuUnlock:
         case KipConfigValue_t6_tRTW_fine_tune:

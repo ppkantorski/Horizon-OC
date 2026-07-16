@@ -30,6 +30,26 @@
 #include "ui/gui/fatal_gui.h"
 #include "ui/gui/main_gui.h"
 
+extern "C" {
+    // Ty to MasaGratoR for this!
+    // This is done to save some space as they have no practical use in our case
+    void *__real___cxa_throw(void *thrown_exception, void *pvar, void (*dest)(void *));
+    void *__real__Unwind_Resume();
+    void *__real___gxx_personality_v0();
+
+    void __wrap___cxa_throw(void *thrown_exception, void *pvar, void (*dest)(void *)) {
+        abort();
+    }
+
+    void __wrap__Unwind_Resume() {
+        return;
+    }
+
+    void __wrap___gxx_personality_v0() {
+        return;
+    }
+}
+
 class AppOverlay : public tsl::Overlay {
     public:
     AppOverlay() {

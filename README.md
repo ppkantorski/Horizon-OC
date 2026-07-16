@@ -21,7 +21,7 @@
 
 > **THIS TOOL CAN BE DANGEROUS IF MISUSED. PROCEED WITH CAUTION.**
 > Due to the design of Horizon OS, **overclocking RAM can cause NAND OR SD CORRUPTION.**
-> Ensure you have a **full NAND, PROINFO, EMUMMC and SD backup** before proceeding.
+> Ensure you have a **full NAND, PRODINFO, EMUMMC and SD backup** before proceeding.
 
 ---
 
@@ -69,6 +69,12 @@ It enables advanced CPU, GPU, and RAM tuning with user-friendly configuration to
 2. Open the settings menu
 3. Adjust your overclocking settings as desired. A helpful guide can be found [here.](https://rentry.co/mariko#oc-settings-for-horizon-oc)
 4. Click **Save KIP Settings** to apply your configuration.
+
+---
+
+## Donating
+
+We don't accept donations. Put your spare cash into a charity instead :)
 
 ---
 
@@ -160,9 +166,9 @@ Refer to COMPILATION.md
 * 612 → sleep mode
 
 ### GPU clocks (mhz)
-* 1536 → absolute max clock on mariko. very dangerous
-* 1459
-* 1382
+* 1536 → absolute max clock on mariko. Dangerous
+* 1497 → max mariko unsafe clock 
+* 1382 → Max mariko "safe" clock
 * 1305
 * 1267 → NVIDIA T214(mariko) rating
 * 1228 → mariko High UV safe clock

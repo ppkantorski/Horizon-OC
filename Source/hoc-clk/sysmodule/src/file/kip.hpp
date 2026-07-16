@@ -54,8 +54,6 @@ namespace kip {
         u32 t7_tWTR;
         u32 t8_tREFI;
 
-        u32 t2_tRP_cap;
-
         u32 timingEmcTbreak;
         u32 low_t1_tRCD;
         u32 low_t2_tRP;
@@ -97,7 +95,7 @@ namespace kip {
 
         u32 eristaGpuVoltArray[27];
         u32 marikoGpuVoltArray[24];
-        s32 marikoSocVoltArray[26];
+        s32 marikoSocVoltArray[28];
 
         u32 t6_tRTW_fine_tune;
         u32 t7_tWTR_fine_tune;
@@ -268,9 +266,6 @@ namespace kip {
     }
     static inline bool cust_set_tREFI(const char *p, u32 v) {
         CUST_WRITE_FIELD(p, t8_tREFI, v);
-    }
-    static inline bool cust_set_tRP_cap(const char *p, u32 v) {
-        CUST_WRITE_FIELD(p, t2_tRP_cap, v);
     }
     static inline bool cust_set_timing_emc_tbreak(const char *p, u32 v) {
         CUST_WRITE_FIELD(p, timingEmcTbreak, v);
@@ -483,9 +478,6 @@ namespace kip {
     }
     static inline u32 cust_get_tREFI(const CustomizeTable *t) {
         return CUST_GET_FIELD(t, t8_tREFI);
-    }
-    static inline u32 cust_get_tRP_cap(const CustomizeTable *t) {
-        return CUST_GET_FIELD(t, t2_tRP_cap);
     }
     static inline u32 cust_get_timing_emc_tbreak(const CustomizeTable *t) {
         return CUST_GET_FIELD(t, timingEmcTbreak);
@@ -714,6 +706,8 @@ namespace kip {
     DECL_MARIKO_SOC_VOLT_HELPER(3133000, 23)
     DECL_MARIKO_SOC_VOLT_HELPER(3166000, 24)
     DECL_MARIKO_SOC_VOLT_HELPER(3200000, 25)
+    DECL_MARIKO_SOC_VOLT_HELPER(3266000, 26)
+    DECL_MARIKO_SOC_VOLT_HELPER(3333000, 27)
 
 #define DECL_ERISTA_GPU_VOLT_GET(freq, idx)                                  \
     static inline u32 cust_get_erista_gpu_volt_##freq##_val(const char *p) { \
@@ -817,6 +811,8 @@ namespace kip {
     DECL_MARIKO_SOC_VOLT_GET(3133000, 23)
     DECL_MARIKO_SOC_VOLT_GET(3166000, 24)
     DECL_MARIKO_SOC_VOLT_GET(3200000, 25)
+    DECL_MARIKO_SOC_VOLT_GET(3266000, 26)
+    DECL_MARIKO_SOC_VOLT_GET(3333000, 27)
 
     void MigrateKipData(u32 custRev, u32 version);
     void SetKipData();

@@ -40,5 +40,6 @@ cp -vf  "$ROOT_DIR/assets/hoc.rgba" "$DIST_DIR/config/ultrahand/assets/notificat
 
 echo
 echo "*** Copying lang ***"
-cp -vr "$ROOT_DIR/overlay/lang/" "$DIST_DIR/config/horizon-oc/lang/"
+mkdir -p "$DIST_DIR/config/horizon-oc/lang"
+cp -vr "$ROOT_DIR/overlay/lang/." "$DIST_DIR/config/horizon-oc/lang/"
 echo

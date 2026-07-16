@@ -322,7 +322,16 @@ namespace ams::ldr::hoc::pcv::erista {
         da_covers |= (w_cover << 16);
         table->burst_mc_regs.mc_emem_arb_da_covers = da_covers;
 
-        table->burst_mc_regs.mc_emem_arb_misc0 = (table->burst_mc_regs.mc_emem_arb_misc0 & 0xFFE08000) | (table->burst_mc_regs.mc_emem_arb_timing_rc + 1);
+        constexpr u32 AtomsPerDvfsPulse             = 0x7;
+        constexpr u32 McEmcSameFreq                 = 0x0;
+        constexpr u32 ExpiringSoonSlackThreshold    = 0xC;
+        const     u32 priorityInversionIsoThreshold = GET_CYCLE_CEIL(7.5);
+        constexpr u32 EmcReqB2bXfer                 = 0x0;
+        const     u32 priorityInversionThreshold    = GET_CYCLE_CEIL(22.5);
+        const     u32 bc2aaHoldoffThreshold         = table->burst_mc_regs.mc_emem_arb_timing_rc + 1;
+
+        const u32 mc_emem_arb_misc0 = (AtomsPerDvfsPulse << 28) | (McEmcSameFreq << 27) | (ExpiringSoonSlackThreshold << 21) | (priorityInversionIsoThreshold << 16) | (EmcReqB2bXfer << 15) | (priorityInversionThreshold << 8) | (bc2aaHoldoffThreshold << 0);
+        table->burst_mc_regs.mc_emem_arb_misc0 = mc_emem_arb_misc0;
 
         u32 mpcorer_ptsa_rate = MIN(static_cast<u32>(227), (table->rate_khz / 1600000) * 208);
         table->la_scale_regs.mc_mll_mpcorer_ptsa_rate = mpcorer_ptsa_rate;
@@ -363,12 +372,16 @@ namespace ams::ldr::hoc::pcv::erista {
         table->la_scale_regs.mc_latency_allowance_hc_1      =              (table->la_scale_regs.mc_latency_allowance_hc_1      & Mask2)    |  allowance1;
         table->la_scale_regs.mc_latency_allowance_vi2_0     =              (table->la_scale_regs.mc_latency_allowance_vi2_0     & Mask2)    |  allowance1;
 
-        table->dram_timings.t_rp  = tRFCpb;
-        table->dram_timings.t_rfc = tRFCab;
-        table->emc_cfg_2          = 0x11083D;
-        table->min_volt           = std::clamp(900 + (C.emcDvbShift * 25), 900, 1050);
+        table->dram_timings.t_rp  = tRP_values[0];
+        const u32 tRFCabStock     = tRFC_values[0] * 2;
+        table->dram_timings.t_rfc = tRFCabStock;
+
+        table->emc_mrw2        = (table->emc_mrw2 & ~0xFFu) | static_cast<u32>(mrw2);
+        table->emc_mrw         = (table->emc_mrw  & ~0x70u) | 0x40; /* nWR */
+        table->emc_cfg_2       = 0x11083D;
+        table->min_volt        = std::clamp(900 + (C.emcDvbShift * 25), 900, 1050);
     }
-    
+
     /* TODO: Template this */
     Result VerifyMtcTable(EristaMtcTable *tableStart, u32 expectedFreq) {
         R_UNLESS(tableStart->rate_khz == expectedFreq,  ldr::ResultInvalidMtcTable());
@@ -689,8 +702,6 @@ namespace ams::ldr::hoc::pcv::erista {
                 }
             }
         }
-
-        // ViewLog();
 
         for (auto &entry : patches) {
             LOGGING("%s Count: %zu\n", entry.description, entry.patched_count);

@@ -32,6 +32,7 @@ class AppProfileGui : public BaseMenuGui {
     protected:
     std::uint64_t applicationId;
     HocClkTitleProfileList *profileList;
+    std::string getJumpToItemName() override;
     void openFreqChoiceGui(tsl::elm::ListItem *listItem, HocClkProfile profile, HocClkModule module);
     void addModuleListItem(HocClkProfile profile, HocClkModule module);
     void addModuleListItemToggle(HocClkProfile profile, HocClkModule module);

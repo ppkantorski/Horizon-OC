@@ -19,7 +19,6 @@
 
 #include "../file/file_utils.hpp"
 
-
 Result QueryMemoryMapping(u64 *virtaddr, u64 physaddr, u64 size) {
     if (hosversionAtLeast(10, 0, 0)) {
         u64 out_size;
@@ -36,4 +35,34 @@ Result MapAddress(u64 &va, const u64 &physAddr, const char *name) {
     }
 
     return mapResult;
+}
+
+Result SmcCopyFromIram(void *dest, uintptr_t src, u32 size) {
+    SecmonArgs args;
+    args.X[0] = 0xF0000201;
+    args.X[1] = (u64)dest;
+    args.X[2] = (u64)src;
+    args.X[3] = size;
+    args.X[4] = 0;
+    svcCallSecureMonitor(&args);
+    Result rc = 0;
+    if (args.X[0] != 0) {
+        rc = (26u | ((u32)args.X[0] << 9u));
+    }
+    return rc;
+}
+
+Result SmcCopyToIram(uintptr_t dest, const void *src, u32 size) {
+    SecmonArgs args;
+    args.X[0] = 0xF0000201;
+    args.X[1] = (u64)src;
+    args.X[2] = (u64)dest;
+    args.X[3] = size;
+    args.X[4] = 1;
+    svcCallSecureMonitor(&args);
+    Result rc = 0;
+    if (args.X[0] != 0) {
+        rc = (26u | ((u32)args.X[0] << 9u));
+    }
+    return rc;
 }

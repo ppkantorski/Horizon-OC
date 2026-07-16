@@ -140,7 +140,7 @@ namespace ams::ldr::hoc::pcv::erista {
         MtcTableIndex index;
     };
 
-   /* TODO: Test 6gb and 8gb. */
+    /* TODO: Test 6gb and 8gb. */
     const inline MtcDramIndex mtcIndexTable[] = {
         { ICOSA_4GB_SAMSUNG_K4F6E304HB_MGCH,        T210SdevEmcDvfsTableS4gb01, },
         { ICOSA_4GB_MICRON_MT53B512M32D2NP_062_WTC, T210SdevEmcDvfsTableS4gb01, },

@@ -58,9 +58,14 @@ class MiscGui : public BaseMenuGui {
                           const std::vector<NamedValue> &namedValues = {}, bool showDefaultValue = true, const char *subText = nullptr,
                           bool kip = false);
     void addFreqButton(HocClkConfigValue configVal, const char *altName, HocClkModule module, const std::map<uint32_t, std::string> &labels = {});
+    void addGpuFreqVoltageButton(HocClkConfigValue configVal, const char *altName, uint32_t freqHz, const ValueRange &range,
+                              const std::string &categoryName, const ValueThresholds *thresholds,
+                              const std::map<uint32_t, std::string> &labels, const std::vector<NamedValue> &namedValues,
+                              bool showDefaultValue, bool kip);
     void updateConfigToggles();
 
     tsl::elm::ToggleListItem *enabledToggle;
     u8 frameCounter = 60;
     bool shouldSaveKip = false;
+    std::string getJumpToItemName() override;
 };

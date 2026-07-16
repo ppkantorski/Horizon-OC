@@ -81,9 +81,10 @@ typedef struct {
     u16 resolutionHeight;
     u8 custRev;
     u16 kipVersion;
+    bool isKipLoaded;
 
     // Reserved for future use
-    u8 reserved[0x35B];
+    u8 reserved[0x35A];
 } HocClkContext;
 
 typedef struct

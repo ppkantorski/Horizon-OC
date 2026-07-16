@@ -20,10 +20,12 @@
 #include <tesla.hpp>
 #include <string>
 #include "cat.h"
+#include "main_gui.h"
 #include "ult_ext.h"
 
 // tsl::elm::ListItem* custRevItem = NULL;
 tsl::elm::ListItem* kipVersionItem = NULL;
+tsl::elm::ListItem* kipLoadedItem = NULL;
 tsl::elm::ListItem* SpeedoItem = NULL;
 tsl::elm::ListItem* IddqItem = NULL;
 tsl::elm::ListItem* DramModule = NULL;
@@ -155,6 +157,9 @@ void AboutGui::listUI()
     kipVersionItem = new tsl::elm::ListItem("KIP version:");
     this->listElement->addItem(kipVersionItem);
 
+    kipLoadedItem = new tsl::elm::ListItem("KIP status:");
+    this->listElement->addItem(kipLoadedItem);
+
     if(!IsHoag()) {
         sysdockStatusItem =
             new tsl::elm::ListItem("sys-dock status:");
@@ -172,13 +177,18 @@ void AboutGui::listUI()
     creditsItem = new tsl::elm::ListItem("Credits");
     creditsItem->setClickListener([](u64 keys) {
         if (keys & HidNpadButton_A) {
-            tsl::changeTo<CreditsSubMenu>();
+            tsl::swapTo<CreditsSubMenu>();
             return true;
         }
         return false;
     });
     creditsItem->setValue(R_ARROW);
     this->listElement->addItem(creditsItem);
+
+    if (!lastItemName.empty()) {
+        this->listElement->jumpToItem(lastItemName);
+    }
+    lastItemName = "";
 }
 
 std::string AboutGui::formatRamModule() {
@@ -229,6 +239,10 @@ void AboutGui::update()
     BaseMenuGui::update();
 }
 
+std::string AboutGui::getJumpToItemName() {
+    return "About";
+}
+
 void AboutGui::refresh()
 {
     BaseMenuGui::refresh();
@@ -246,6 +260,8 @@ void AboutGui::refresh()
     // custRevItem->setValue(std::to_string(this->context->custRev));
 
     kipVersionItem->setValue(std::to_string((this->context->kipVersion / 100) % 10) + "." + std::to_string((this->context->kipVersion / 10) % 10) + "." + std::to_string( this->context->kipVersion % 10) + " (Cust Rev " + std::to_string(this->context->custRev) + ")");
+    kipLoadedItem->setValue(this->context->isKipLoaded ? "Loaded" : "Not Loaded");
+
     if(!IsHoag())
         sysdockStatusItem->setValue(this->context->isSysDockInstalled ? "Installed" : "Not Installed");
 
@@ -314,6 +330,22 @@ void AboutGui::refresh()
 class CreditsSubMenu : public AboutGui {
     public:
         CreditsSubMenu() { }
+
+        bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                          HidAnalogStickState rightJoyStick) override {
+            if (keysDown & KEY_B) {
+                triggerExitFeedback();
+                lastItemName = "Credits";
+                tsl::swapTo<AboutGui>();
+                return true;
+            }
+            return false;
+        }
+
+        /* This is needed because AboutGui::Refresh() dereferences pointers that get freed after swapTo is called. */
+        void refresh() override {
+            BaseMenuGui::refresh();
+        }
 
     protected:
         ImageElement* CatImage = NULL;
