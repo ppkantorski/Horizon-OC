@@ -67,6 +67,7 @@ typedef enum {
 
     HocClkConfigValue_RAMVoltDisplayMode,
     HocClkConfigValue_CpuGovernorMinimumFreq,
+    HocClkConfigValue_GpuGovernorMinimumFreq,
     HocClkConfigValue_DisplayVoltage,
 
     HocClkConfigValue_MemoryFrequencyMeasurementMode,
@@ -179,6 +180,8 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "RAM Voltage / Usage Display Mode" : "ram_volt_usage_display_mode";
         case HocClkConfigValue_CpuGovernorMinimumFreq:
             return pretty ? "CPU Governor Minimum Frequency" : "cpu_gov_min_freq";
+        case HocClkConfigValue_GpuGovernorMinimumFreq:
+            return pretty ? "GPU Governor Minimum Frequency" : "gpu_gov_min_freq";
 
         case HocClkConfigValue_DisplayVoltage:
             return pretty ? "Display Voltage" : "display_voltage";
@@ -249,6 +252,8 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
             return 6400ULL; // 0.5C
         case HocClkConfigValue_CpuGovernorMinimumFreq:
             return 612000000ULL; // 612MHz
+        case HocClkConfigValue_GpuGovernorMinimumFreq:
+            return 76800000ULL; // 76.8 MHz (lowest allowed)
         case HocClkConfigValue_MaxDisplayClockH:
             return 60ULL;
         case HocClkConfigValue_DisplayVoltage:
@@ -298,6 +303,7 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_GPUScheduling:
         case HocClkConfigValue_RAMVoltDisplayMode:
         case HocClkConfigValue_CpuGovernorMinimumFreq:
+        case HocClkConfigValue_GpuGovernorMinimumFreq:
         case HocClkConfigValue_MemoryFrequencyMeasurementMode:
         case HocClkConfigValue_RamDisplayUnit:
             return true;
