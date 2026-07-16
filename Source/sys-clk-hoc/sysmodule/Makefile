@@ -21,7 +21,7 @@ EXEFS_SRC	:=	exefs_src
 LIBNAMES	:=	minIni nxExt
 
 # Append "-hoc" so the sys-clk overlay detects HOC mode correctly via version string
-TARGET_VERSION	:= 2.4.2-hoc
+TARGET_VERSION	:= 2.5.0-hoc
 
 DEFINES	:=	-DDISABLE_IPC -DTARGET="\"$(TARGET)\"" -DTARGET_VERSION="\"$(TARGET_VERSION)\"" -DCONFIG_DIR="\"$(CONFIG_DIR)\""
 

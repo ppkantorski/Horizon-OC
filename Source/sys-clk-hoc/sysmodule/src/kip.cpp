@@ -71,7 +71,7 @@ namespace kip {
      */
     void GetKipData()
     {
-        fileUtils::LogLine("[kip] GetKipData start (read-only, build: v8 / 2.4.2 layout)");
+        fileUtils::LogLine("[kip] GetKipData start (read-only, build: v9 / 2.5.0 layout)");
 
         // Refresh() returns false if the file mtime is unchanged AND
         // config is already loaded. That's normal on subsequent calls.
@@ -133,7 +133,6 @@ namespace kip {
         configValues.values[KipConfigValue_low_t6_tRTW]            = cust_get_low_t6_tRTW(&table);
         configValues.values[KipConfigValue_low_t7_tWTR]            = cust_get_low_t7_tWTR(&table);
         configValues.values[KipConfigValue_low_t8_tREFI]           = cust_get_low_t8_tREFI(&table);
-        configValues.values[KipConfigValue_t2_tRP_cap]             = cust_get_tRP_cap(&table);
 
         configValues.values[KipConfigValue_read_latency_1333]      = cust_get_read_latency_1333(&table);
         configValues.values[KipConfigValue_read_latency_1600]      = cust_get_read_latency_1600(&table);
@@ -176,7 +175,7 @@ namespace kip {
             configValues.values[KipConfigValue_g_volt_e_76800 + i] = cust_get_erista_gpu_volt(&table, i);
         }
 
-        for (int i = 0; i < 26; i++) {
+        for (int i = 0; i < 28; i++) {
             configValues.values[KipConfigValue_g_soc_volt_1866000 + i] = cust_get_mariko_soc_volt(&table, i);
         }
 

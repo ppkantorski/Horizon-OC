@@ -54,8 +54,6 @@ namespace kip {
         u32 t7_tWTR;
         u32 t8_tREFI;
 
-        u32 t2_tRP_cap;
-
         u32 timingEmcTbreak;
         u32 low_t1_tRCD;
         u32 low_t2_tRP;
@@ -97,7 +95,7 @@ namespace kip {
 
         u32 eristaGpuVoltArray[27];
         u32 marikoGpuVoltArray[24];
-        s32 marikoSocVoltArray[26];
+        s32 marikoSocVoltArray[28];
 
         u32 t6_tRTW_fine_tune;
         u32 t7_tWTR_fine_tune;
@@ -225,7 +223,6 @@ namespace kip {
     static inline bool cust_set_tRTW(const char* p, u32 v) { CUST_WRITE_FIELD(p, t6_tRTW, v); }
     static inline bool cust_set_tWTR(const char* p, u32 v) { CUST_WRITE_FIELD(p, t7_tWTR, v); }
     static inline bool cust_set_tREFI(const char* p, u32 v) { CUST_WRITE_FIELD(p, t8_tREFI, v); }
-    static inline bool cust_set_tRP_cap(const char* p, u32 v) { CUST_WRITE_FIELD(p, t2_tRP_cap, v); }
     static inline bool cust_set_timing_emc_tbreak(const char* p, u32 v) { CUST_WRITE_FIELD(p, timingEmcTbreak, v); }
     static inline bool cust_set_low_tRCD(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t1_tRCD, v); }
     static inline bool cust_set_low_tRP(const char* p, u32 v) { CUST_WRITE_FIELD(p, low_t2_tRP, v); }
@@ -288,7 +285,7 @@ namespace kip {
     }
 
     static inline bool cust_set_mariko_soc_volt(const char* p, int idx, u32 v) {
-        if (idx < 0 || idx >= 26) return false;
+        if (idx < 0 || idx >= 28) return false;
         CustomizeTable t;
         if (!cust_read_table(p, &t)) return false;
         t.marikoSocVoltArray[idx] = v;
@@ -321,7 +318,6 @@ namespace kip {
     static inline u32 cust_get_tRTW(const CustomizeTable* t) { return CUST_GET_FIELD(t, t6_tRTW); }
     static inline u32 cust_get_tWTR(const CustomizeTable* t) { return CUST_GET_FIELD(t, t7_tWTR); }
     static inline u32 cust_get_tREFI(const CustomizeTable* t) { return CUST_GET_FIELD(t, t8_tREFI); }
-    static inline u32 cust_get_tRP_cap(const CustomizeTable* t) { return CUST_GET_FIELD(t, t2_tRP_cap); }
     static inline u32 cust_get_timing_emc_tbreak(const CustomizeTable* t) { return CUST_GET_FIELD(t, timingEmcTbreak); }
     static inline u32 cust_get_low_t1_tRCD(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t1_tRCD); }
     static inline u32 cust_get_low_t2_tRP(const CustomizeTable* t) { return CUST_GET_FIELD(t, low_t2_tRP); }
@@ -378,7 +374,7 @@ namespace kip {
     }
 
     static inline u32 cust_get_mariko_soc_volt(const CustomizeTable* t, int idx) {
-        if (!t || idx < 0 || idx >= 26) return 0;
+        if (!t || idx < 0 || idx >= 28) return 0;
         return (u32)t->marikoSocVoltArray[idx];
     }
 
