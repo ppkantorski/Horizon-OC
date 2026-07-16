@@ -64,6 +64,11 @@ namespace clockManager {
     // rapid APM pulse gaps.  Cleared to 0 the tick it expires, which also forces
     // one final SetClocks() call so the non-boost profile is applied cleanly.
     u64  s_boostExitDeadlineNs = 0;
+    // Last stock EMC clock derived from the live APM performance configuration.
+    // A change here (independent of the coarse dock state) re-applies MEM so a
+    // dock/undock that completes during sleep can't leave EMC stuck at the
+    // previous mode's clock when MEM is on "do not override".
+    u32  s_lastApmStockMemHz = 0;
     LockableMutex gContextMutex;                                             // guards gContext (tick + governor threads)
     LockableMutex gSnapshotMutex;                                            // guards gContextSnapshot (tick + IPC thread only)
     HocClkContext gContext = {};
@@ -682,6 +687,23 @@ namespace clockManager {
                 outNeedsDvfsSleep = true;
             }
             fileUtils::LogLine("[mgr] hasChanged: done");
+        }
+
+        // Re-apply MEM when the stock EMC clock for the live APM performance
+        // configuration changes, even if the coarse dock state (profile) did not.
+        // On wake-from-sleep after a dock change, apmExtGetPerformanceMode can
+        // report Docked a tick before apmExtGetCurrentPerformanceConfiguration
+        // updates the stock mem clock. Because MEM on "do not override" is only
+        // re-applied when SetClocks() runs on a detected change, that lag would
+        // otherwise leave EMC pinned at the old mode's clock (e.g. 1331 MHz
+        // handheld while docked). This runs AFTER the app/profile reset block on
+        // purpose: it forces exactly one corrective SetClocks() (which re-reads
+        // the now-settled confId) without re-triggering the GPU/DVFS reset path.
+        u32 stockMemHz = board::GetApmStockMemHz(mode);
+        if (stockMemHz && stockMemHz != s_lastApmStockMemHz) {
+            fileUtils::LogLine("[mgr] APM stock mem change: %u -> %u", s_lastApmStockMemHz, stockMemHz);
+            s_lastApmStockMemHz = stockMemHz;
+            hasChanged = true;
         }
         } // end R_SUCCEEDED(rc) block
 

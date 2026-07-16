@@ -89,4 +89,18 @@ namespace board {
         ResetToStockModule([](const HocClkApmConfiguration& cfg){ return cfg.mem_hz; }, HocClkModule_MEM);
     }
 
+    // Stock memory clock (Hz) the OS assigns to a given APM performance-configuration
+    // id, or 0 if the id is unknown (e.g. pre-9.0.0, where confIds aren't table-mapped).
+    // Used to catch dock/undock transitions that finish during sleep: the dock *state*
+    // (apmExtGetPerformanceMode) can flip a tick before the performance *configuration*
+    // (apmExtGetCurrentPerformanceConfiguration) that actually drives the stock EMC clock.
+    inline u32 GetApmStockMemHz(u32 confId) {
+        for (size_t i = 0; hocclk_g_apm_configurations[i].id; ++i) {
+            if (hocclk_g_apm_configurations[i].id == confId) {
+                return hocclk_g_apm_configurations[i].mem_hz;
+            }
+        }
+        return 0;
+    }
+
 }
