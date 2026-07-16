@@ -113,7 +113,6 @@ typedef enum {
     KipConfigValue_low_t6_tRTW,
     KipConfigValue_low_t7_tWTR,
     KipConfigValue_low_t8_tREFI,
-    KipConfigValue_t2_tRP_cap,
     KipConfigValue_t6_tRTW_fine_tune,
     KipConfigValue_t7_tWTR_fine_tune,
 
@@ -231,6 +230,8 @@ typedef enum {
     KipConfigValue_g_soc_volt_3133000,
     KipConfigValue_g_soc_volt_3166000,
     KipConfigValue_g_soc_volt_3200000,
+    KipConfigValue_g_soc_volt_3266000,
+    KipConfigValue_g_soc_volt_3333000,
 
     KipCrc32,
 
@@ -387,9 +388,6 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_low_t8_tREFI:
             return pretty ? "Low T8 - tREFI" : "low_t8_tREFI";
 
-        case KipConfigValue_t2_tRP_cap:
-            return pretty ? "t2 - trp 1333WL Cap" : "t2_tRP_cap";
-
         case KipConfigValue_read_latency_1333:
             return pretty ? "1333 Read Latency" : "read_latency_1333";
         case KipConfigValue_read_latency_1600:
@@ -539,6 +537,8 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_g_soc_volt_3133000: return pretty ? "Mariko SOC Volt 3133 MHz" : "g_soc_volt_3133000";
         case KipConfigValue_g_soc_volt_3166000: return pretty ? "Mariko SOC Volt 3166 MHz" : "g_soc_volt_3166000";
         case KipConfigValue_g_soc_volt_3200000: return pretty ? "Mariko SOC Volt 3200 MHz" : "g_soc_volt_3200000";
+        case KipConfigValue_g_soc_volt_3266000: return pretty ? "Mariko SOC Volt 3266 MHz" : "g_soc_volt_3266000";
+        case KipConfigValue_g_soc_volt_3333000: return pretty ? "Mariko SOC Volt 3333 MHz" : "g_soc_volt_3333000";
 
         case KipConfigValue_t6_tRTW_fine_tune: return pretty ? "t6 - tRTW Fine Tune" : "t6_tRTW_fine_tune";
         case KipConfigValue_t7_tWTR_fine_tune: return pretty ? "t7 - tWTR Fine Tune" : "t7_tWTR_fine_tune";
@@ -659,7 +659,6 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_low_t6_tRTW:
         case KipConfigValue_low_t7_tWTR:
         case KipConfigValue_low_t8_tREFI:
-        case KipConfigValue_t2_tRP_cap:
         case KipConfigValue_read_latency_1333:
         case KipConfigValue_read_latency_1600:
         case KipConfigValue_read_latency_1866:
@@ -762,6 +761,8 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_g_soc_volt_3133000:
         case KipConfigValue_g_soc_volt_3166000:
         case KipConfigValue_g_soc_volt_3200000:
+        case KipConfigValue_g_soc_volt_3266000:
+        case KipConfigValue_g_soc_volt_3333000:
         case KipConfigValue_eristaCpuVmin:
         case KipConfigValue_eristaCpuUnlock:
         case KipConfigValue_t6_tRTW_fine_tune:
