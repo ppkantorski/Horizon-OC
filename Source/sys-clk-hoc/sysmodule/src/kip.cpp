@@ -71,14 +71,9 @@ namespace kip {
      */
     void GetKipData()
     {
-        fileUtils::LogLine("[kip] GetKipData start (read-only, build: v9 / 2.5.0 layout)");
+        fileUtils::LogLine("[kip] GetKipData start (read-only, memory-only, 2.5.0 layout)");
 
-        // Refresh() returns false if the file mtime is unchanged AND
-        // config is already loaded. That's normal on subsequent calls.
-        // For the very first call (during Initialize), config may not
-        // be loaded yet - in that case we still proceed to read the KIP
-        // because GetConfigValues will give us a zeroed struct that we
-        // then populate from the KIP.
+        // Ensure config is loaded before we push KIP-derived values into it.
         config::Refresh();
 
         FILE* fp = fopen(KIP_PATH, "r");
@@ -97,121 +92,31 @@ namespace kip {
             return;
         }
 
-        HocClkConfigValueList configValues;
-        config::GetConfigValues(&configValues);
+        /* ------------------------------------------------------------------
+         * Push the handful of KIP values sys-clk-hoc actually consumes at
+         * runtime straight into the in-memory config. These are MEMORY-ONLY:
+         * config::SetConfigValue() skips disk persistence for indices >=
+         * KipConfigValue_FIRST, so nothing is mirrored to config.ini and a
+         * config reload preserves them (see config.cpp Close()). The KIP
+         * itself remains the single source of truth for every other value
+         * (read directly by the overlay / HOC Toolkit).
+         *   - marikoGpuUV  -> GetMaxAllowedHz() GPU cap in clock_manager
+         *   - eristaCpuUV / marikoCpuUVLow / marikoCpuUVHigh / tableConf
+         *                  -> board::SetDfllTunings when LiveCpuUv is enabled
+         * ----------------------------------------------------------------*/
+        config::SetConfigValue(KipConfigValue_eristaCpuUV,     cust_get_erista_cpu_uv(&table),      true);
+        config::SetConfigValue(KipConfigValue_marikoCpuUVLow,  cust_get_mariko_cpu_uv_low(&table),  true);
+        config::SetConfigValue(KipConfigValue_marikoCpuUVHigh, cust_get_mariko_cpu_uv_high(&table), true);
+        config::SetConfigValue(KipConfigValue_tableConf,       cust_get_table_conf(&table),         true);
+        config::SetConfigValue(KipConfigValue_marikoGpuUV,     cust_get_mariko_gpu_uv(&table),      true);
 
-        /* ----------------------------------------------------------
-         * Populate config values from the KIP.
-         * Order and field names match official kip.cpp:GetKipData.
-         * --------------------------------------------------------*/
-        configValues.values[KipConfigValue_custRev]                = cust_get_cust_rev(&table);
-        configValues.values[KipConfigValue_hpMode]                 = cust_get_hp_mode(&table);
-
-        configValues.values[KipConfigValue_commonEmcMemVolt]       = cust_get_common_emc_volt(&table);
-        configValues.values[KipConfigValue_eristaEmcMaxClock]      = cust_get_erista_emc_max(&table);
-        configValues.values[KipConfigValue_marikoEmcMaxClock]      = cust_get_mariko_emc_max(&table);
-        configValues.values[KipConfigValue_marikoEmcVddqVolt]      = cust_get_mariko_emc_vddq(&table);
-        configValues.values[KipConfigValue_emcDvbShift]            = cust_get_emc_dvb_shift(&table);
-        configValues.values[KipConfigValue_marikoSocVmax]          = cust_get_marikoSocVmax(&table);
-
-        configValues.values[KipConfigValue_t1_tRCD]                = cust_get_tRCD(&table);
-        configValues.values[KipConfigValue_t2_tRP]                 = cust_get_tRP(&table);
-        configValues.values[KipConfigValue_t3_tRAS]                = cust_get_tRAS(&table);
-        configValues.values[KipConfigValue_t4_tRRD]                = cust_get_tRRD(&table);
-        configValues.values[KipConfigValue_t5_tRFC]                = cust_get_tRFC(&table);
-        configValues.values[KipConfigValue_t6_tRTW]                = cust_get_tRTW(&table);
-        configValues.values[KipConfigValue_t7_tWTR]                = cust_get_tWTR(&table);
-        configValues.values[KipConfigValue_t8_tREFI]               = cust_get_tREFI(&table);
-        configValues.values[KipConfigValue_stepMode]               = cust_get_step_mode(&table);
-
-        configValues.values[KipConfigValue_timingEmcTbreak]        = cust_get_timing_emc_tbreak(&table);
-        configValues.values[KipConfigValue_low_t1_tRCD]            = cust_get_low_t1_tRCD(&table);
-        configValues.values[KipConfigValue_low_t2_tRP]             = cust_get_low_t2_tRP(&table);
-        configValues.values[KipConfigValue_low_t3_tRAS]            = cust_get_low_t3_tRAS(&table);
-        configValues.values[KipConfigValue_low_t4_tRRD]            = cust_get_low_t4_tRRD(&table);
-        configValues.values[KipConfigValue_low_t5_tRFC]            = cust_get_low_t5_tRFC(&table);
-        configValues.values[KipConfigValue_low_t6_tRTW]            = cust_get_low_t6_tRTW(&table);
-        configValues.values[KipConfigValue_low_t7_tWTR]            = cust_get_low_t7_tWTR(&table);
-        configValues.values[KipConfigValue_low_t8_tREFI]           = cust_get_low_t8_tREFI(&table);
-
-        configValues.values[KipConfigValue_read_latency_1333]      = cust_get_read_latency_1333(&table);
-        configValues.values[KipConfigValue_read_latency_1600]      = cust_get_read_latency_1600(&table);
-        configValues.values[KipConfigValue_read_latency_1866]      = cust_get_read_latency_1866(&table);
-        configValues.values[KipConfigValue_read_latency_2133]      = cust_get_read_latency_2133(&table);
-
-        configValues.values[KipConfigValue_write_latency_1333]     = cust_get_write_latency_1333(&table);
-        configValues.values[KipConfigValue_write_latency_1600]     = cust_get_write_latency_1600(&table);
-        configValues.values[KipConfigValue_write_latency_1866]     = cust_get_write_latency_1866(&table);
-        configValues.values[KipConfigValue_write_latency_2133]     = cust_get_write_latency_2133(&table);
-
-        configValues.values[KipConfigValue_eristaCpuUV]            = cust_get_erista_cpu_uv(&table);
-        configValues.values[KipConfigValue_eristaCpuVmin]          = cust_get_eristaCpuVmin(&table);
-        configValues.values[KipConfigValue_eristaCpuMaxVolt]       = cust_get_erista_cpu_max_volt(&table);
-        configValues.values[KipConfigValue_eristaCpuUnlock]        = cust_get_eristaCpuUnlock(&table);
-
-        configValues.values[KipConfigValue_marikoCpuUVLow]         = cust_get_mariko_cpu_uv_low(&table);
-        configValues.values[KipConfigValue_marikoCpuUVHigh]        = cust_get_mariko_cpu_uv_high(&table);
-        configValues.values[KipConfigValue_tableConf]              = cust_get_table_conf(&table);
-        configValues.values[KipConfigValue_marikoCpuLowVmin]       = cust_get_mariko_cpu_low_vmin(&table);
-        configValues.values[KipConfigValue_marikoCpuHighVmin]      = cust_get_mariko_cpu_high_vmin(&table);
-        configValues.values[KipConfigValue_marikoCpuMaxVolt]       = cust_get_mariko_cpu_max_volt(&table);
-        configValues.values[KipConfigValue_marikoCpuMaxClock]      = cust_get_marikoCpuMaxClock(&table);
-
-        configValues.values[KipConfigValue_eristaCpuBoostClock]    = cust_get_erista_cpu_boost(&table);
-        configValues.values[KipConfigValue_marikoCpuBoostClock]    = cust_get_mariko_cpu_boost(&table);
-
-        configValues.values[KipConfigValue_eristaGpuUV]            = cust_get_erista_gpu_uv(&table);
-        configValues.values[KipConfigValue_eristaGpuVmin]          = cust_get_erista_gpu_vmin(&table);
-        configValues.values[KipConfigValue_marikoGpuUV]            = cust_get_mariko_gpu_uv(&table);
-        configValues.values[KipConfigValue_marikoGpuVmin]          = cust_get_mariko_gpu_vmin(&table);
-        configValues.values[KipConfigValue_marikoGpuVmax]          = cust_get_mariko_gpu_vmax(&table);
-        configValues.values[KipConfigValue_commonGpuVoltOffset]    = cust_get_common_gpu_offset(&table);
-
-        for (int i = 0; i < 24; i++) {
-            configValues.values[KipConfigValue_g_volt_76800 + i]   = cust_get_mariko_gpu_volt(&table, i);
-        }
-
-        for (int i = 0; i < 27; i++) {
-            configValues.values[KipConfigValue_g_volt_e_76800 + i] = cust_get_erista_gpu_volt(&table, i);
-        }
-
-        for (int i = 0; i < 28; i++) {
-            configValues.values[KipConfigValue_g_soc_volt_1866000 + i] = cust_get_mariko_soc_volt(&table, i);
-        }
-
-        configValues.values[KipConfigValue_t7_tWTR_fine_tune]      = cust_get_tWTR_fine_tune(&table);
-        configValues.values[KipConfigValue_t6_tRTW_fine_tune]      = cust_get_tRTW_fine_tune(&table);
-
-        /* ----------------------------------------------------------
-         * Commit. SetConfigValues(false) means "don't persist to
-         * config.ini" - these are runtime values sourced from the KIP
-         * and shouldn't end up written to user config.
-         * --------------------------------------------------------*/
-        if (sizeof(HocClkConfigValueList) > sizeof(configValues)) {
-            fileUtils::LogLine("[kip] config buffer size mismatch - aborting commit");
-            return;
-        }
-
-        if (!config::SetConfigValues(&configValues, false)) {
-            fileUtils::LogLine("[kip] config::SetConfigValues failed");
-            return;
-        }
-
-        fileUtils::LogLine("[kip] KIP loaded (read-only). CustRev=%lu marikoGpuUV=%lu marikoCpuUVLow=%lu marikoCpuUVHigh=%lu tableConf=%lu marikoEmcMaxClock=%lu",
-            configValues.values[KipConfigValue_custRev],
-            configValues.values[KipConfigValue_marikoGpuUV],
-            configValues.values[KipConfigValue_marikoCpuUVLow],
-            configValues.values[KipConfigValue_marikoCpuUVHigh],
-            configValues.values[KipConfigValue_tableConf],
-            configValues.values[KipConfigValue_marikoEmcMaxClock]);
-
-        // Dump every KIP-derived value to the log so the user can verify
-        // the read-only path matched what their 3rd-party tool wrote.
-        for (u64 i = KipConfigValue_hpMode; i < HocClkConfigValue_EnumMax; i++) {
-            fileUtils::LogLine("[kip] %s: %ld",
-                hocclkFormatConfigValue((HocClkConfigValue)i, false),
-                configValues.values[i]);
-        }
+        fileUtils::LogLine("[kip] KIP loaded (read-only, memory-only). CustRev=%lu marikoGpuUV=%lu eristaCpuUV=%lu marikoCpuUVLow=%lu marikoCpuUVHigh=%lu tableConf=%lu",
+            (unsigned long)cust_get_cust_rev(&table),
+            (unsigned long)config::GetConfigValue(KipConfigValue_marikoGpuUV),
+            (unsigned long)config::GetConfigValue(KipConfigValue_eristaCpuUV),
+            (unsigned long)config::GetConfigValue(KipConfigValue_marikoCpuUVLow),
+            (unsigned long)config::GetConfigValue(KipConfigValue_marikoCpuUVHigh),
+            (unsigned long)config::GetConfigValue(KipConfigValue_tableConf));
     }
 
 } // namespace kip
