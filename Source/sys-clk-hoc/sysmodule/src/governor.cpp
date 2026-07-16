@@ -466,6 +466,21 @@ namespace governor {
                     if (gpuDownHoldRemaining > 0)
                         gpuDownHoldRemaining--;
 
+                    // GPU governor minimum floor. Read every tick so an overlay change
+                    // applies within one governor cycle (mirrors the CPU floor above).
+                    // Clamp newHz UP to the floor, but never above the profile ceiling
+                    // (maxHz): GPU has no IsAssignableHz ceiling, so an over-high floor
+                    // would otherwise push GPU past its cap. maxHz == 0 or ~0u means
+                    // "uncapped" (Uncapped Clocks on / no profile cap). Snap through the
+                    // frequency table so newHz always lands on a real, assignable step.
+                    u32 gpuMinHz = config::GetConfigValue(HocClkConfigValue_GpuGovernorMinimumFreq);
+                    if (gpuMinHz && newHz < gpuMinHz) {
+                        u32 flooredHz = gpuMinHz;
+                        if (maxHz && maxHz != ~0u && flooredHz > maxHz)
+                            flooredHz = maxHz;
+                        newHz = gpuTable.list[TableIndexForHz(gpuTable, flooredHz)];
+                    }
+
                     if ((!goingDown || (gpuDownHoldRemaining == 0)) && clockManager::IsAssignableHz(HocClkModule_GPU, newHz)) {
                         board::SetHz(HocClkModule_GPU, newHz);
                         clockManager::gContext.freqs[HocClkModule_GPU] = newHz;

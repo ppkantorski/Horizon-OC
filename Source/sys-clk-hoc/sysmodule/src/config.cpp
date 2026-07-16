@@ -285,6 +285,17 @@ namespace config {
             changed = true;
         }
 
+        // gpu_gov_min_freq — absent → fall back to sysmodule default 153.6 MHz
+        long rawGpuHz = ini_getl(CONFIG_VAL_SECTION,
+            hocclkFormatConfigValue(HocClkConfigValue_GpuGovernorMinimumFreq, false),
+            LONG_MIN, gPath.c_str());
+        uint64_t fileGpuHz   = (rawGpuHz == LONG_MIN) ? 76800000ULL : static_cast<uint64_t>(rawGpuHz);
+        uint64_t cachedGpuHz = configValues[HocClkConfigValue_GpuGovernorMinimumFreq];
+        if (fileGpuHz != cachedGpuHz) {
+            configValues[HocClkConfigValue_GpuGovernorMinimumFreq] = fileGpuHz;
+            changed = true;
+        }
+
         // allow_governing — absent → default (1 = enabled).
         //
         // Critical for the "change cpu_gov_min_freq then toggle governing off"
