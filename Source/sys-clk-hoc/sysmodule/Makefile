@@ -38,7 +38,7 @@ endif
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
 CFLAGS	:=	-g -Wall -Os \
-            -ffast-math -ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -fno-unwind-tables \
+            -ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -fno-unwind-tables \
             -flto -fuse-linker-plugin \
             -fvisibility=hidden -fmerge-all-constants \
             $(ARCH) $(DEFINES)
