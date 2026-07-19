@@ -14,6 +14,15 @@ CONFIG_DIR	:=	sys-clk
 BUILD		:=	build
 OUTDIR		:=	out
 RESOURCES	:=	res
+
+# SD-card layout staging dir + release archive.
+#   make clean; make -j10 sdout
+# Produces $(SDOUT)/ mirroring the SD root, then zips its contents into
+# $(ZIPFILE) ready to drag onto a GitHub release.
+SDOUT		:=	sdout
+ZIPFILE		:=	sys-clk-hoc.zip
+TITLE_ID	:=	00FF0000636C6BFF
+SD_CONTENTS	:=	$(SDOUT)/atmosphere/contents/$(TITLE_ID)
 SOURCES		:=	src src/nx/ipc ../common/src src/board
 DATA		:=	data
 INCLUDES	:=	../common/include
@@ -88,7 +97,7 @@ export BUILD_EXEFS_SRC := $(TOPDIR)/$(EXEFS_SRC)
 
 export APP_JSON := $(TOPDIR)/perms.json
 
-.PHONY: $(BUILD) clean clean-libs clean-build all libs
+.PHONY: $(BUILD) clean clean-libs clean-build clean-sdout all libs sdout
 
 all: $(BUILD)
 
@@ -103,6 +112,29 @@ $(BUILD): libs
 	@[ -d $(OUTDIR) ] || mkdir -p $(OUTDIR)
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
+#---------------------------------------------------------------------------------
+# Stage the SD-card layout and pack it into $(ZIPFILE).
+#
+# Depends on $(BUILD) so `make -j10 sdout` builds first, then stages — the
+# recipe never runs against a stale or missing out/$(TARGET).nsp.
+#
+# Archive layout (paths relative, no leading slash, matching 2.4.2):
+#   atmosphere/contents/$(TITLE_ID)/exefs.nsp
+#   atmosphere/contents/$(TITLE_ID)/toolbox.json
+#   atmosphere/contents/$(TITLE_ID)/flags/boot2.flag
+#---------------------------------------------------------------------------------
+sdout: $(BUILD)
+	@echo staging $(SDOUT) ...
+	@rm -fr $(SDOUT) $(ZIPFILE)
+	@mkdir -p $(SD_CONTENTS)/flags
+	@cp $(OUTDIR)/$(TARGET).nsp $(SD_CONTENTS)/exefs.nsp
+	@cp $(TOPDIR)/toolbox.json $(SD_CONTENTS)/toolbox.json
+	@touch $(SD_CONTENTS)/flags/boot2.flag
+	@echo packing $(ZIPFILE) ...
+	@cd $(SDOUT) && zip -r -q -X ../$(ZIPFILE) atmosphere
+	@echo "$(ZIPFILE) ready:"
+	@unzip -l $(ZIPFILE)
+
 clean-libs:
 	@echo clean libs $(LIBNAMES) ...
 	@$(foreach lib,$(LIBNAMES),$(MAKE) -C $(TOPDIR)/lib/$(lib) clean && ) true
@@ -111,7 +143,11 @@ clean-build:
 	@echo clean build ...
 	@rm -fr $(BUILD) $(TARGET).kip $(TARGET).nsp $(TARGET).npdm $(TARGET).nso $(TARGET).elf $(OUTDIR)
 
-clean: clean-libs clean-build
+clean-sdout:
+	@echo clean sdout ...
+	@rm -fr $(SDOUT) $(ZIPFILE)
+
+clean: clean-libs clean-build clean-sdout
 
 else
 .PHONY:	all $(LIBFILES)
