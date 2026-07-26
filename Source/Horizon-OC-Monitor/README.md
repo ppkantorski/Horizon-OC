@@ -1,1 +1,0 @@
-Thanks to NaGa for Status Monitor Pro!

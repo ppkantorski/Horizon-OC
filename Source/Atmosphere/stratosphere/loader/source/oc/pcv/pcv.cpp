@@ -27,8 +27,8 @@ namespace ams::ldr::hoc::pcv {
         R_UNLESS(entry->freq == entry->vco_max, ldr::ResultInvalidMemPllmEntry());
 
         // Double the max clk simply
-        u32 max_clk    = entry->freq * 2;
-        entry->freq    = max_clk;
+        u32 max_clk = entry->freq * 2;
+        entry->freq = max_clk;
         entry->vco_max = max_clk;
         R_SUCCEED();
     }
@@ -41,9 +41,9 @@ namespace ams::ldr::hoc::pcv {
         };
 
         constexpr u32 uv_step = 12'500;
-        constexpr u32 uv_min  = 600'000;
+        constexpr u32 uv_min = 600'000;
 
-        auto validator = [](regulator* entry) {
+        auto validator = [](regulator *entry) {
             R_UNLESS(entry->id              == 1,       ldr::ResultInvalidRegulatorEntry());
             R_UNLESS(entry->type            == 1,       ldr::ResultInvalidRegulatorEntry());
             R_UNLESS(entry->type_1.volt_reg == 0x17,    ldr::ResultInvalidRegulatorEntry());
@@ -67,7 +67,7 @@ namespace ams::ldr::hoc::pcv {
         }
 
         if (emc_uv % uv_step) {
-            emc_uv = emc_uv / uv_step * uv_step; // rounding
+            emc_uv = emc_uv / uv_step * uv_step;  // rounding
         }
 
         PATCH_OFFSET(ptr, emc_uv);
@@ -76,14 +76,14 @@ namespace ams::ldr::hoc::pcv {
     }
 
     void SafetyCheck() {
-        struct sValidator {
+        struct Validator {
             volatile u32 value;
             u32 min;
             u32 max;
             u32 panic;
             bool value_required = false;
 
-            Result check() {
+            Result Check() {
                 if (!value_required && !value) {
                     R_SUCCEED();
                 }
@@ -102,11 +102,12 @@ namespace ams::ldr::hoc::pcv {
 
         u32 eristaCpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.eristaCpuDvfsTable)->freq);
         u32 marikoCpuDvfsMaxFreq;
-            if (C.marikoCpuUVHigh) {
-                marikoCpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.marikoCpuDvfsTableSLT)->freq);
-            } else {
-                marikoCpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.marikoCpuDvfsTable)->freq);
-            }
+        if (C.marikoCpuUVHigh) {
+            marikoCpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.marikoCpuDvfsTableSLT)->freq);
+        } else {
+            marikoCpuDvfsMaxFreq = static_cast<u32>(GetDvfsTableLastEntry(C.marikoCpuDvfsTable)->freq);
+        }
+
         u32 eristaGpuDvfsMaxFreq;
         switch (C.eristaGpuUV) {
             case 0:
@@ -145,25 +146,25 @@ namespace ams::ldr::hoc::pcv {
                 break;
         }
 
-        sValidator validators[] = {
-            { C.eristaCpuBoostClock,                1020'000, 2397'000, panic::Cpu, true },
-            { C.marikoCpuBoostClock,                1020'000, 2703'000, panic::Cpu, true },
-            { C.eristaCpuMaxVolt,                       1000,     1260, panic::Cpu,      },
-            { C.marikoCpuMaxVolt,                       1000,     1200, panic::Cpu,      },
-            { eristaCpuDvfsMaxFreq,                 1785'000, 2397'000, panic::Cpu,      },
-            { marikoCpuDvfsMaxFreq,                 1785'000, 2703'000, panic::Cpu,      },
-            { C.commonEmcMemVolt,                    912'500, 1350'000, panic::Emc,      }, /* Official vmax for the RAMs is 1400-1500mV */
-            { C.eristaEmcMaxClock,                  1600'000, 2600'000, panic::Emc,      },
-            { C.marikoEmcMaxClock,                  1600'000, 3500'000, panic::Emc,      },
-            { C.marikoEmcVddqVolt,                   400'000,  750'000, panic::Emc,      },
-            { C.marikoSocVmax,                          1000,     1200, panic::Emc,      },
-            { eristaGpuDvfsMaxFreq,                  768'000, 1152'000, panic::Gpu,      },
-            { marikoGpuDvfsMaxFreq,                  768'000, 1536'000, panic::Gpu,      },
-            { C.marikoGpuVmax,                           800,      960, panic::Gpu,      },
+        Validator validators[] = {
+            { C.eristaCpuBoostClock, 1020'000, 2397'000, panic::Cpu, true },
+            { C.marikoCpuBoostClock, 1020'000, 2703'000, panic::Cpu, true },
+            { C.eristaCpuMaxVolt,        1000,     1260, panic::Cpu,      },
+            { C.marikoCpuMaxVolt,        1000,     1200, panic::Cpu,      },
+            { eristaCpuDvfsMaxFreq,  1785'000, 2397'000, panic::Cpu,      },
+            { marikoCpuDvfsMaxFreq,  1785'000, 2703'000, panic::Cpu,      },
+            { C.commonEmcMemVolt,     912'500, 1350'000, panic::Emc,      }, /* Official vmax for the RAMs is 1400-1500mV */
+            { C.eristaEmcMaxClock,   1600'000, 2600'000, panic::Emc,      },
+            { C.marikoEmcMaxClock,   1600'000, 3500'000, panic::Emc,      },
+            { C.marikoEmcVddqVolt,    400'000,  750'000, panic::Emc,      },
+            { C.marikoSocVmax,           1000,     1200, panic::Emc,      },
+            { eristaGpuDvfsMaxFreq,   768'000, 1152'000, panic::Gpu,      },
+            { marikoGpuDvfsMaxFreq,   768'000, 1536'000, panic::Gpu,      },
+            { C.marikoGpuVmax,            800,      960, panic::Gpu,      },
         };
 
         for (auto &v : validators) {
-            if (R_FAILED(v.check())) {
+            if (R_FAILED(v.Check())) {
                 panic::SmcError(v.panic);
                 CRASH("Validation FAIL");
             }
@@ -171,13 +172,15 @@ namespace ams::ldr::hoc::pcv {
     }
 
     void WriteKipLoadToIram() {
-        const u32 hocMagic                   = 0x686F634D;
+        const u32 hocMagic = 0x686F634D;
         constexpr uintptr_t LoadMagicAddress = 0x4003DC00; /* Should be a pretty safe address. */
         R_DISCARD(SmcCopyToIram(LoadMagicAddress, &hocMagic, sizeof(hocMagic)));
     }
 
-    void Patch(uintptr_t mapped_nso, size_t nso_size) {
+    void Patch(uintptr_t mapped_nso, size_t nso_size, uintptr_t cave, size_t cave_size, uintptr_t nso_address, uintptr_t data_arena) {
         SafetyCheck();
+
+        Hooks().Initialize(mapped_nso, nso_address, cave, cave_size, data_arena);
 
         bool isMariko = (spl::GetSocType() == spl::SocType_Mariko);
         if (isMariko) {

@@ -1,6 +1,5 @@
 /*
- * Copyright (c) 2019 m4xw <m4x@m4xw.net>
- * Copyright (c) 2019 Atmosphere-NX
+ * Copyright (c) Souldbminer, Lightos_ and Horizon OC Contributors
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -13,20 +12,18 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
  */
-
-/* See https://github.com/lulle2007200/emuMMC/blob/internal-emummc/source/ */
 
 #pragma once
 
-namespace ams::ldr::hoc {
+#include <string>
 
-    Result SmcCopyToIram(uintptr_t dest, const void *src, u32 size);
-    void Log(const char *data, ...);
-    void ViewLog();
+namespace lang {
 
-    /* Emit a formatted line over the kernel debug UART via svcOutputDebugString.
-       No-op unless the running kernel enables debug logging (audit/debug mesosphere). */
-    void UartLog(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+    // Translates text using Ultrahand's language setting and
+    // /config/horizon-oc/lang/<lang>.json (same format as the overlay).
+    // Returns the original text when no translation is available.
+    std::string Translate(const std::string &text);
 
-}
+}  // namespace lang

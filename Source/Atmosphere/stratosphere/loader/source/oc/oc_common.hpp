@@ -20,36 +20,68 @@
 
 #include <stratosphere.hpp>
 #include <vapours/results/results_common.hpp>
-#define LOGGING(fmt, ...) ((void)0)
-#define CRASH(msg, ...) { ams::diag::AbortImpl(msg, __PRETTY_FUNCTION__, "", 0); __builtin_unreachable(); }
+
+#define HOC_UART_LOG 1
+#define HOC_PCV_NVLOG_PATCH 1
+#define HOC_PCV_FORCE_VERBOSITY 1
 
 #include "customize.hpp"
 #include "oc_log.hpp"
+
+#if (!HOC_UART_LOG) && (defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING))
+    #define HOC_IRAM_LOG 1
+#endif
+
+#if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
+
+    #if defined(HOC_IRAM_LOG)
+        #define LOGGING(...) Log(__VA_ARGS__)
+    #elif HOC_UART_LOG
+        #define LOGGING(...) AMS_LOG(__VA_ARGS__)
+    #endif
+
+#else
+    #define LOGGING(...) ((void)0)
+#endif
+
+#define CRASH(msg, ...) { ams::diag::AbortImpl(msg, __PRETTY_FUNCTION__, "", 0); __builtin_unreachable(); }
 
 #define PATCH_OFFSET(offset, value) \
     static_assert(sizeof(__typeof__(offset)) <= sizeof(u64)); \
     *(offset) = value;
 
 namespace ams::ldr {
-    R_DEFINE_ERROR_RESULT(OutOfRange,               1000);
-    R_DEFINE_ERROR_RESULT(InvalidMemPllmEntry,      1001);
-    R_DEFINE_ERROR_RESULT(InvalidMtcMagic,          1002);
-    R_DEFINE_ERROR_RESULT(InvalidMtcTable,          1003);
-    R_DEFINE_ERROR_RESULT(InvalidDvbTable,          1004);
-    R_DEFINE_ERROR_RESULT(InvalidCpuFreqVddEntry,   1005);
-    R_DEFINE_ERROR_RESULT(InvalidCpuVoltDfllEntry,  1006);
-    R_DEFINE_ERROR_RESULT(InvalidCpuDvfs,           1007);
-    R_DEFINE_ERROR_RESULT(InvalidCpuMinVolt,        1008);
-    R_DEFINE_ERROR_RESULT(InvalidGpuDvfs,           1009);
-    R_DEFINE_ERROR_RESULT(InvalidGpuFreqMaxPattern, 1010);
-    R_DEFINE_ERROR_RESULT(InvalidGpuPllEntry,       1011);
-    R_DEFINE_ERROR_RESULT(InvalidRegulatorEntry,    1012);
-    R_DEFINE_ERROR_RESULT(UninitializedPatcher,     1013);
-    R_DEFINE_ERROR_RESULT(UnsuccessfulPatcher,      1014);
-    R_DEFINE_ERROR_RESULT(SafetyCheckFailure,       1015);
-    R_DEFINE_ERROR_RESULT(InvalidMtcTablePattern,   1016);
-    R_DEFINE_ERROR_RESULT(InvalidSocVoltPattern,    1017);
-    R_DEFINE_ERROR_RESULT(InvalidSocVoltLimit,      1018);
+    R_DEFINE_ERROR_RESULT(OutOfRange,                1000);
+    R_DEFINE_ERROR_RESULT(InvalidMemPllmEntry,       1001);
+    R_DEFINE_ERROR_RESULT(InvalidMtcMagic,           1002);
+    R_DEFINE_ERROR_RESULT(InvalidMtcTable,           1003);
+    R_DEFINE_ERROR_RESULT(InvalidDvbTable,           1004);
+    R_DEFINE_ERROR_RESULT(InvalidCpuFreqVddEntry,    1005);
+    R_DEFINE_ERROR_RESULT(InvalidCpuVoltDfllEntry,   1006);
+    R_DEFINE_ERROR_RESULT(InvalidCpuDvfs,            1007);
+    R_DEFINE_ERROR_RESULT(InvalidCpuMinVolt,         1008);
+    R_DEFINE_ERROR_RESULT(InvalidGpuDvfs,            1009);
+    R_DEFINE_ERROR_RESULT(InvalidGpuFreqMaxPattern,  1010);
+    R_DEFINE_ERROR_RESULT(InvalidGpuPllEntry,        1011);
+    R_DEFINE_ERROR_RESULT(InvalidRegulatorEntry,     1012);
+    R_DEFINE_ERROR_RESULT(UninitializedPatcher,      1013);
+    R_DEFINE_ERROR_RESULT(UnsuccessfulPatcher,       1014);
+    R_DEFINE_ERROR_RESULT(SafetyCheckFailure,        1015);
+    R_DEFINE_ERROR_RESULT(InvalidMtcTablePattern,    1016);
+    R_DEFINE_ERROR_RESULT(InvalidSocVoltPattern,     1017);
+    R_DEFINE_ERROR_RESULT(InvalidSocVoltLimit,       1018);
+    R_DEFINE_ERROR_RESULT(InvalidEmcDvfsCount,       1019);
+    R_DEFINE_ERROR_RESULT(InvalidEmcSocLut,          1020);
+    R_DEFINE_ERROR_RESULT(InvalidEmcRateList,        1021);
+    R_DEFINE_ERROR_RESULT(InvalidNvLogRedirect,      1022);
+    R_DEFINE_ERROR_RESULT(InvalidBusFreqReloc,       1023);
+    R_DEFINE_ERROR_RESULT(HookArenaOutOfMemory,      1024);
+    R_DEFINE_ERROR_RESULT(HookPayloadTooLarge,       1025);
+    R_DEFINE_ERROR_RESULT(HookRelocationUnsupported, 1026);
+    R_DEFINE_ERROR_RESULT(HookSiteInvalid,           1027);
+    R_DEFINE_ERROR_RESULT(HookPayloadEscapes,        1028);
+    R_DEFINE_ERROR_RESULT(HookDataOutOfMemory,       1029);
+    R_DEFINE_ERROR_RESULT(HookUnavailable,           1030);
 }
 
 namespace ams::ldr::hoc {
@@ -64,6 +96,7 @@ namespace ams::ldr::hoc {
         patternFn   pattern_search_fn = nullptr;
         Pointer     value_search;
         size_t      patched_count = 0;
+        bool        optional = false;
 
         Result Apply(Pointer *ptr) {
             Result res = patcher_fn(ptr);
@@ -94,7 +127,7 @@ namespace ams::ldr::hoc {
         }
 
         Result CheckResult() {
-            R_UNLESS(patched_count > 0, ldr::ResultUnsuccessfulPatcher());
+            R_UNLESS(optional || patched_count > 0, ldr::ResultUnsuccessfulPatcher());
 
             if (maximum_patched_count) {
                 R_UNLESS(patched_count <= maximum_patched_count, ldr::ResultUnsuccessfulPatcher());

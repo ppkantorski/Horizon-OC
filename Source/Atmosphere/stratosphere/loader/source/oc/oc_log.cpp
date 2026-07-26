@@ -19,7 +19,7 @@
 
 #include "oc_common.hpp"
 
-#if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
+#ifdef HOC_IRAM_LOG
 #include "fatal_handler_bin.h"
 #endif
 
@@ -70,6 +70,32 @@ namespace ams::ldr::hoc {
         return rc;
     }
 
+    #if HOC_UART_LOG
+    /* Remove this? */
+    void UartLog(const char *fmt, ...) {
+        char line[256];
+        constexpr size_t PrefixLen = 13;   /* "[HOC] " */
+        std::memcpy(line, "[Horizon OC] ", PrefixLen);
+
+        va_list args;
+        va_start(args, fmt);
+        int n = vsnprintf(line + PrefixLen, sizeof(line) - PrefixLen - 1, fmt, args);
+        va_end(args);
+        if (n < 0) {
+            return;
+        }
+
+        size_t body = static_cast<size_t>(n);
+        if (body > sizeof(line) - PrefixLen - 2) { /* vsnprintf returns the untruncated length */
+            body = sizeof(line) - PrefixLen - 2;
+        }
+        size_t len = PrefixLen + body;
+        line[len++] = '\n';
+
+        svc::OutputDebugString(line, len);
+    }
+    #endif
+
     struct log_ctx_t {
         u32 magic;
         u32 sz;
@@ -81,7 +107,7 @@ namespace ams::ldr::hoc {
     #define IRAM_LOG_CTX_ADDR 0x4003C000
     #define IRAM_LOG_MAX_SZ 4096
 
-    #if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
+    #ifdef HOC_IRAM_LOG
     void Log(const char *data, ...) {
         static const u32 max_log_sz = sizeof(working_buf) - sizeof(log_ctx_t);
         static bool initDone = false;
@@ -112,8 +138,8 @@ namespace ams::ldr::hoc {
     }
     #endif
 
-    #if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
     void ViewLog() {
+        #ifdef HOC_IRAM_LOG
         if (spl::GetSocType() == spl::SocType_Mariko) {
             return;
         }
@@ -127,6 +153,6 @@ namespace ams::ldr::hoc {
         SmcRebootToIramPayload();
 
         while(true) { }
+        #endif
     }
-    #endif
 }

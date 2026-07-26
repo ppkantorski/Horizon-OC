@@ -24,6 +24,7 @@
 #include "pcv_common.hpp"
 #include "pcv_erista.hpp"
 #include "pcv_mariko.hpp"
+#include "pcv_hook.hpp"
 
 namespace ams::ldr::hoc::pcv {
 
@@ -36,8 +37,7 @@ namespace ams::ldr::hoc::pcv {
         return true;
     };
 
-    template <bool isMariko>
-    Result CpuFreqCvbTable(u32 *ptr) {
+    template <bool isMariko> Result CpuFreqCvbTable(u32 *ptr) {
         cvb_entry_t *default_table = isMariko ? (cvb_entry_t *)(&mariko::CpuCvbTableDefault) : (cvb_entry_t *)(&erista::CpuCvbTableDefault);
         cvb_entry_t *customize_table = nullptr;
 
@@ -112,8 +112,7 @@ namespace ams::ldr::hoc::pcv {
         PATCH_OFFSET(&(entry->cvb_pll_param.c5), 0);
     }
 
-    template <bool isMariko>
-    Result GpuFreqCvbTable(u32 *ptr) {
+    template <bool isMariko> Result GpuFreqCvbTable(u32 *ptr) {
         cvb_entry_t *default_table = isMariko ? (cvb_entry_t *)(&mariko::GpuCvbTableDefault) : (cvb_entry_t *)(&erista::GpuCvbTableDefault);
         cvb_entry_t *customize_table;
         if (isMariko) {
@@ -136,7 +135,7 @@ namespace ams::ldr::hoc::pcv {
                 default:
                     customize_table = const_cast<cvb_entry_t *>(C.marikoGpuDvfsTableHiOPT);
                     break;
-                }
+            }
         } else {
             switch (C.eristaGpuUV) {
                 case 0:
@@ -151,7 +150,7 @@ namespace ams::ldr::hoc::pcv {
                 default:
                     customize_table = const_cast<cvb_entry_t *>(C.eristaGpuDvfsTable);
                     break;
-                }
+            }
         }
 
         size_t default_entry_count = GetDvfsTableEntryCount(default_table);
@@ -201,7 +200,11 @@ namespace ams::ldr::hoc::pcv {
     Result MemFreqPllmLimit(u32 *ptr);
     Result MemVoltHandler(u32 *ptr); // Used for Erista MEM Vdd2 + EMC Vddq or Mariko MEM Vdd2
 
+    /* Extra pcv .bss */
+    constexpr size_t HocPcvScratchSize   = 0x2000;
+    constexpr size_t HocBusFreqBufOffset = 0x1000; /* start of the SOC bus region */
+
     void SafetyCheck();
-    void Patch(uintptr_t mapped_nso, size_t nso_size);
+    void Patch(uintptr_t mapped_nso, size_t nso_size, uintptr_t cave, size_t cave_size, uintptr_t nso_address, uintptr_t data_arena);
 
 }
