@@ -377,11 +377,53 @@ namespace clockManager {
         }
     }
 
+    // GPU clock the GPU governor currently wants, with its minimum-frequency
+    // floor applied (snapped to a real table step, never above the profile cap).
+    static u32 GovernorOwnedGpuHz()
+    {
+        u32 hz = gContext.freqs[HocClkModule_GPU];
+        if (!hz)
+            hz = board::GetHz(HocClkModule_GPU);
+
+        auto& gpuTable = gFreqTable[HocClkModule_GPU];
+        u32 gpuMinHz = config::GetConfigValue(HocClkConfigValue_GpuGovernorMinimumFreq);
+        if (gpuTable.count > 0 && gpuMinHz && hz < gpuMinHz) {
+            u32 maxHz = GetMaxAllowedHz(HocClkModule_GPU, gContext.profile);
+            u32 flooredHz = gpuMinHz;
+            if (maxHz && maxHz != ~0u && flooredHz > maxHz)
+                flooredHz = maxHz;
+            hz = gpuTable.list[gpuTable.count - 1];
+            for (u32 i = 0; i < gpuTable.count; i++) {
+                if (gpuTable.list[i] >= flooredHz) { hz = gpuTable.list[i]; break; }
+            }
+        }
+        return hz;
+    }
+
     void DVFSReset()
     {
         if (GpuVoltDvfsSoc() && config::GetConfigValue(HocClkConfigValue_DVFSMode) == DVFSMode_Hijack) {
             fileUtils::LogLine("[dvfs] DVFSReset: un-hijacking");
             board::PcvHijackGpuVolts(0);
+
+            // BUG FIX: GPU governor minimum frequency ignored with Boost GPU Override.
+            // DVFSReset used to force the GPU to the profile target or to the APM
+            // stock clock (76.8 MHz during boost). With ow_boost ON, SetClocks runs on
+            // every tick during boost, so this path yanked a governor-owned GPU below
+            // its configured minimum over and over. When the GPU governor owns the GPU,
+            // only re-apply its current (floored) clock so PCV re-reads the restored
+            // voltage table, and leave frequency selection to the governor.
+            if (governor::isGpuGovernorEnabled) {
+                u32 govHz = GovernorOwnedGpuHz();
+                fileUtils::LogLine("[dvfs] DVFSReset: GPU governor active, re-applying %u", govHz);
+                if (govHz) {
+                    board::SetHz(HocClkModule_GPU, govHz);
+                    gContext.freqs[HocClkModule_GPU] = govHz;
+                }
+                s_lastDvfsOffset = INT32_MIN; // force re-apply when DVFS re-enables
+                fileUtils::LogLine("[dvfs] DVFSReset: done");
+                return;
+            }
 
             u32 targetHz = gContext.overrideFreqs[HocClkModule_GPU];
             if (!targetHz) {
@@ -469,7 +511,15 @@ namespace clockManager {
         // Fix: replace the early return with a flag that skips only CPU
         // (which is the only thing boost mode should control).  GPU and
         // MEM continue to be applied normally.
-        bool skipCpuDueToBoost = isBoost && !config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode);
+        //
+        // BUG FIX: CPU boost not working with Boost GPU Override (ow_boost) ON.
+        // ow_boost is the "Boost GPU Override" toggle: it only lets the profile
+        // GPU clock win over APM's 76.8 MHz boost throttle. It used to also make
+        // the profile CPU clock (and the governor's maintenance loop) overwrite
+        // the CPU boost clock, so CPU boost never took effect while it was ON.
+        // CPU is now always left to APM / the KIP boost clock during boost,
+        // regardless of ow_boost.
+        bool skipCpuDueToBoost = isBoost;
         if (skipCpuDueToBoost) {
             u32 boostFreq = board::GetHz(HocClkModule_CPU);
             if (boostFreq / 1000000 > 1785) {
@@ -519,12 +569,8 @@ namespace clockManager {
             }
 
             // Skip CPU when deferred to boost mode OR when the CPU governor is active.
-            // Exception: when OverwriteBoostMode is set AND we're in boost, the governor
-            // yields to us (it now sleeps instead of looping), so the tick thread must
-            // apply the configured CPU target here.  Without this carve-out the governor's
-            // isCpuGovernorEnabled=true would make noCPU=true and skip CPU, leaving
-            // nobody to apply the user's boost-clock override.
-            bool governorOwnerCpu = noCPU && !(isBoost && (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode));
+            // (ow_boost no longer carves out CPU during boost - see skipCpuDueToBoost.)
+            bool governorOwnerCpu = noCPU;
             // Boost-exit debounce: skip CPU entirely while s_boostExitDeadlineNs is active.
             // Prevents the non-boost CPU preset from flashing in during the brief inter-pulse
             // non-boost gaps TotK produces on loading screens.  The deadline is cleared (→ 0)
@@ -962,6 +1008,34 @@ namespace clockManager {
         memcpy(list, &gFreqTable[module].list[0], *outCount * sizeof(gFreqTable[0].list[0]));
     }
 
+    // Boost GPU Override (ow_boost) per-tick maintenance during boost.
+    // APM re-asserts its 76.8 MHz boost GPU clock whenever the game calls
+    // apmSetPerformanceConfiguration; re-apply only the configured GPU clock.
+    // Deliberately GPU-only: running the full SetClocks() here every tick also
+    // reset MEM + un-hijacked/re-hijacked the GPU DVFS table (DVFSReset) on every
+    // tick, which knocked a governor-owned GPU below its minimum frequency.
+    // A governor-owned GPU is maintained by the governor thread itself.
+    static void MaintainBoostGpuOverride()
+    {
+        if (governor::isGpuGovernorEnabled)
+            return;
+
+        u32 targetHz = gContext.overrideFreqs[HocClkModule_GPU];
+        if (!targetHz)
+            targetHz = config::GetAutoClockHz(gContext.applicationId, HocClkModule_GPU, gContext.profile, false);
+        if (!targetHz)
+            targetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_GPU, gContext.profile, false);
+        if (!targetHz)
+            return; // "do not override": keep APM's stock boost GPU clock
+
+        u32 maxHz = GetMaxAllowedHz(HocClkModule_GPU, gContext.profile);
+        u32 nearestHz = GetNearestHz(HocClkModule_GPU, targetHz, maxHz);
+        if (nearestHz && board::GetHz(HocClkModule_GPU) != nearestHz) {
+            board::SetHz(HocClkModule_GPU, nearestHz);
+            gContext.freqs[HocClkModule_GPU] = nearestHz;
+        }
+    }
+
     void Tick()
     {
         // Hold gContextMutex to guard gContext against concurrent governor-thread writes.
@@ -1080,13 +1154,10 @@ namespace clockManager {
             s_boostExitDeadlineNs = 0; // disarm
         }
 
-        // While boost+OverwriteBoostMode is active, force SetClocks every tick.
-        // APM can re-assert the default boost clock (~1785 MHz) between our
-        // polling intervals; actively re-applying each tick ensures we reclaim
-        // the configured target within one tick interval rather than waiting for
-        // RefreshContext to detect the hardware deviation on a future tick.
-        // The nearestHz != gContext.freqs guard inside SetClocks prevents
-        // unnecessary board::SetHz calls when the clock is already correct.
+        // While boost + Boost GPU Override (ow_boost) is active, re-apply the
+        // configured GPU clock every tick (MaintainBoostGpuOverride). APM can
+        // re-assert its 76.8 MHz boost GPU clock between our polling intervals.
+        // CPU is never overridden during boost (APM / KIP boost clock wins).
         bool overrideBoostActive = isBoost && (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode);
 
         if (!enabled) {
@@ -1102,8 +1173,11 @@ namespace clockManager {
             // tick while an active boost override needs to be maintained,
             // while the debounce window is open, or the instant it expires.
             if (enabledChanged || contextOrConfigChanged || boostChanged ||
-                overrideBoostActive || debounceActive || debounceJustExpired) {
+                debounceActive || debounceJustExpired) {
                 SetClocks(isBoost);
+            } else if (overrideBoostActive) {
+                // Nothing else changed: only keep the Boost GPU Override clock applied.
+                MaintainBoostGpuOverride();
             }
         }
 

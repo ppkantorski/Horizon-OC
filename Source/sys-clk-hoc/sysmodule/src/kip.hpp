@@ -31,6 +31,11 @@
 namespace kip {
     extern bool kipAvailable;
 
+    // CUST table revision this build is written for (Horizon OC 2.6.0 loader:
+    // CUST_REV 7 / KIP_VERSION 260, same struct layout as 2.5.0 rev 6). Only used
+    // for a log warning: sys-clk-hoc stays read-only and never rewrites a KIP.
+    #define HOC_CUST_REV_EXPECTED 7
+
     typedef struct {
         u8  cust[4];
         u32 custRev;
@@ -178,6 +183,7 @@ namespace kip {
     #define CUST_GET_FIELD(table, field) ((table) ? (table)->field : 0)
 
     static inline u32 cust_get_cust_rev(const CustomizeTable* t) { return CUST_GET_FIELD(t, custRev); }
+    static inline u32 cust_get_kip_version(const CustomizeTable* t) { return CUST_GET_FIELD(t, hocVersion); }
     // static inline u32 cust_get_mtc_conf(const CustomizeTable* t) { return CUST_GET_FIELD(t, mtcConf); }
     static inline u32 cust_get_hp_mode(const CustomizeTable* t) { return CUST_GET_FIELD(t, hpMode); }
 

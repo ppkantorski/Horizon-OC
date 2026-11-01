@@ -348,63 +348,17 @@ namespace governor {
                 cpuLastHz            = 0;
             }
 
-            // ── OverwriteBoostMode CPU maintenance ─────────────────────────
-            // When OverwriteBoostMode is active the tick thread applies the
-            // configured boost clock every 50 ms.  APM re-asserts its own
-            // boost clock (1785 MHz) each time the game calls
-            // apmSetPerformanceConfiguration, so the CPU can sit at 1785 for
-            // up to 50 ms between our corrections — producing visible flicker.
-            //
-            // The governor loop runs every 5 ms.  By re-applying the target
-            // here we reduce the APM re-assertion window from 50 ms to 5 ms,
-            // making the flicker effectively imperceptible.
-            //
-            // Also covers the boost EXIT edge (cpuJustExitedBoost):
-            //   • Runs one trailing correction to push the clock back to the
-            //     boost target even though cpuInBoost is now false.  This
-            //     prevents the brief 1785 window that appears during APM's
-            //     own boost→non-boost transition from being held.
-            //   • Signals the tick thread so it arms the debounce within 1 ms
-            //     (vs. waiting up to 50 ms on the fast-tick interval) — the
-            //     debounce then holds the boost clock through any remaining
-            //     TotK-style rapid pulse gaps cleanly.
-            //
-            // Runs regardless of isCpuGovernorEnabled so it works whether or
-            // not the CPU governor is active.  The board::GetHz guard prevents
-            // redundant SetHz calls when the clock is already correct.
-            if ((cpuInBoost || cpuJustExitedBoost) && config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode)) {
-                // Signal tick thread on the first non-boost tick so it arms the
-                // debounce immediately.  One signal per boost-exit edge; the
-                // cpuJustExitedBoost flag is only true for a single governor tick.
-                if (cpuJustExitedBoost) {
-                    leventSignal(&clockManager::gTickWakeEvent);
-                }
-
-                auto& cpuTable = clockManager::gFreqTable[HocClkModule_CPU];
-                if (cpuTable.count > 0) {
-                    std::scoped_lock lock{clockManager::gContextMutex};
-                    u32 targetHz = ResolveTargetHz(HocClkModule_CPU);
-                    if (targetHz) {
-                        u32 maxHz = clockManager::GetMaxAllowedHz(HocClkModule_CPU, clockManager::gContext.profile);
-                        if (maxHz && targetHz > maxHz) targetHz = maxHz;
-                        u32 nearestHz = cpuTable.list[TableIndexForHz(cpuTable, targetHz)];
-                        // IMPORTANT: compare against board::GetHz (live hardware read), NOT
-                        // gContext.freqs (cache).  The tick thread writes gContext.freqs=2601
-                        // after applying OverwriteBoostMode, but APM can re-assert its own
-                        // boost clock (1785 MHz) at any time.  When it does, the hardware is
-                        // at 1785 while gContext.freqs still says 2601 — so the cache-based
-                        // check (nearestHz != gContext.freqs) evaluates 2601 != 2601 = false,
-                        // silently skipping the correction.  APM then holds 1785 for up to
-                        // 50 ms until the tick thread detects the mismatch via its own freq
-                        // loop, producing the visible 2601→1785→2601→1785 oscillation.
-                        // Using board::GetHz here catches every re-assertion within 5 ms.
-                        u32 actualHz = board::GetHz(HocClkModule_CPU);
-                        if (nearestHz != actualHz) {
-                            board::SetHz(HocClkModule_CPU, nearestHz);
-                            clockManager::gContext.freqs[HocClkModule_CPU] = nearestHz;
-                        }
-                    }
-                }
+            // ── Boost exit edge ───────────────────────────────────────────
+            // BUG FIX: CPU boost not working with Boost GPU Override (ow_boost) ON.
+            // This used to be an "OverwriteBoostMode CPU maintenance" block that,
+            // with ow_boost ON, re-applied the profile CPU clock every 1-5 ms during
+            // boost - overwriting the APM / KIP CPU boost clock, so CPU boost never
+            // took effect. ow_boost is the *GPU* boost override; the CPU is now left
+            // alone during boost (see clockManager::SetClocks skipCpuDueToBoost).
+            // Kept: wake the tick thread on the boost-exit edge so it arms the
+            // debounce and applies the non-boost profile without waiting a full tick.
+            if (cpuJustExitedBoost) {
+                leventSignal(&clockManager::gTickWakeEvent);
             }
 
             // ── GPU governor ──────────────────────────────────────────────
@@ -566,7 +520,10 @@ namespace governor {
             //
             // The 1 ms rate is only active when OverwriteBoostMode needs it; all
             // other governor work (CPU scaling, GPU governor, VRR) stays at 5 ms.
-            bool needsFastPoll = (cpuInBoost || cpuJustExitedBoost) &&
+            // Now only needed for a governor-owned GPU under Boost GPU Override, so the
+            // governor reclaims the GPU (and its minimum-frequency floor) quickly after
+            // APM re-asserts its 76.8 MHz boost GPU clock.
+            bool needsFastPoll = (cpuInBoost || cpuJustExitedBoost) && isGpuGovernorEnabled &&
                                  (bool)config::GetConfigValue(HocClkConfigValue_OverwriteBoostMode);
             svcSleepThread(needsFastPoll ? 1'000'000ULL : POLL_NS);
         }

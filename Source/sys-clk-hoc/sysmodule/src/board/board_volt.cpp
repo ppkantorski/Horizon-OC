@@ -107,6 +107,19 @@ namespace board {
 
     /* TODO: clean up this code. */
     void SetDfllTunings(u32 levelLow, u32 levelHigh, u32 tbreakPoint) {
+        // Clamp KIP-provided levels to the table sizes so an unexpected value
+        // (e.g. a newer KIP that adds levels) can never index past the tables and
+        // write garbage into the CL-DVFS tune registers.
+        constexpr u32 kMarikoLowLevels  = sizeof(marikoCpuUvLow)  / sizeof(marikoCpuUvLow[0]);
+        constexpr u32 kMarikoHighLevels = sizeof(marikoCpuUvHigh) / sizeof(marikoCpuUvHigh[0]);
+        constexpr u32 kEristaLevels     = sizeof(eristaCpuUvTable) / sizeof(eristaCpuUvTable[0]);
+        if (GetSocType() == HocClkSocType_Mariko) {
+            if (levelLow  > kMarikoLowLevels)  levelLow  = kMarikoLowLevels;
+            if (levelHigh > kMarikoHighLevels) levelHigh = kMarikoHighLevels;
+        } else if (levelLow >= kEristaLevels) {
+            levelLow = kEristaLevels - 1;
+        }
+
         u32* tune0_ptr = reinterpret_cast<u32 *>(cldvfs + CL_DVFS_TUNE0_0);
         u32* tune1_ptr = reinterpret_cast<u32 *>(cldvfs + CL_DVFS_TUNE1_0);
         if (GetSocType() == HocClkSocType_Mariko) {

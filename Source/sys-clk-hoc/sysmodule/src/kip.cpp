@@ -71,7 +71,7 @@ namespace kip {
      */
     void GetKipData()
     {
-        fileUtils::LogLine("[kip] GetKipData start (read-only, memory-only, 2.5.0 layout)");
+        fileUtils::LogLine("[kip] GetKipData start (read-only, memory-only, cust rev %u layout)", HOC_CUST_REV_EXPECTED);
 
         // Ensure config is loaded before we push KIP-derived values into it.
         config::Refresh();
@@ -109,6 +109,12 @@ namespace kip {
         config::SetConfigValue(KipConfigValue_marikoCpuUVHigh, cust_get_mariko_cpu_uv_high(&table), true);
         config::SetConfigValue(KipConfigValue_tableConf,       cust_get_table_conf(&table),         true);
         config::SetConfigValue(KipConfigValue_marikoGpuUV,     cust_get_mariko_gpu_uv(&table),      true);
+
+        if (cust_get_cust_rev(&table) != HOC_CUST_REV_EXPECTED) {
+            fileUtils::LogLine("[kip] WARNING: KIP cust rev %lu (kip version %lu) does not match the expected rev %u. "
+                               "Only the fields at fixed offsets (<= marikoGpuUV) are used, so values stay valid.",
+                (unsigned long)cust_get_cust_rev(&table), (unsigned long)cust_get_kip_version(&table), HOC_CUST_REV_EXPECTED);
+        }
 
         fileUtils::LogLine("[kip] KIP loaded (read-only, memory-only). CustRev=%lu marikoGpuUV=%lu eristaCpuUV=%lu marikoCpuUVLow=%lu marikoCpuUVHigh=%lu tableConf=%lu",
             (unsigned long)cust_get_cust_rev(&table),
