@@ -26,7 +26,7 @@
 #define DISABLED 0
 #define DEACTIVATED_GPU_FREQ 2000
 #define GPU_MIN_MIN_VOLT 480000
-#define CPU_MAX_MAX_VOLT 1200000
+#define CPU_MAX_MAX_VOLT 1235000
 
 namespace ams::ldr::hoc {
 
@@ -36,14 +36,14 @@ volatile CustomizeTable C = {
 .hpMode = DISABLED,
 
 .commonEmcMemVolt  = 1175000, /* LPDDR4(X) JEDEC Specification */
-.eristaEmcMaxClock = 1600000, /* Maximum HB-MGCH ram rating */
+.eristaEmcMaxClock = 1600000, /* Erista ram rating*/
 
 /* Available: 33MHz step rate, 66MHz step rate, 100MHz step rate, 133MHz step rate and jedec. */
 /* Jedec freqs are 1333MHz, 1600MHz, 1866MHz, 2133MHz, 2400MHz, 2666MHz, 2933MHz, 3200MHz. */
-.stepMode = StepMode_33MHz,
+.stepMode = StepMode_Jedec,
 
-.marikoEmcMaxClock = 2133000, /* Requires the EMC DVFS 63-entry patches (EMC DVFS Count / EMC SoC LUT). */
-.marikoEmcVddqVolt = 600000,
+.marikoEmcMaxClock = 2133000, /* Should work for every ram*/
+.marikoEmcVddqVolt = 640000,  /* Optimal for DRAM OC */
 
 .emcDvbShift   = 0,
 .marikoSocVmax = 0, /* 0 = stock limits (1450 - 1597 is 1050mV, 1598-1708 is 1025mV, 1709+ is 1000mV). */
@@ -100,13 +100,14 @@ volatile CustomizeTable C = {
 /* 1120mV is NVIDIA rating */
 .marikoCpuMaxVolt  = 1120,
 
-/* Supported values: 1963500, 2091000, 2193000, 2295000, 2397000, 2499000, 2601000, 2703000. */
-/* 1963500 is official rating of T214/Mariko, fully safe. */
-/* 2091000-2295000 is a slight OC which should work on all units, but no guarantees. */
-/* 2397000 is the max safe OC for most average units with tuned undervolt. */
-/* 2499000 should be used with caution. */
-/* 2601000 exceeds pmic limit on most consoles. */
-/* 2703000 is potentially dangerous and not advised. */
+/* Supported values: 1963500, 2091000, 2193000, 2295000, 2397000, 2499000, 2601000, 2703000, 2805000.  */
+/* 1963500 is official rating of T214/Mariko, fully safe.                                              */
+/* 2091000-2295000 is a slight OC which should work on all units, but no guarantees.                   */
+/* 2397000 is the max safe OC for most average units with tuned undervolt.                             */
+/* 2499000 should be used with caution.                                                                */
+/* 2601000 exceeds pmic limit on most consoles.                                                        */
+/* 2703000 is potentially dangerous and not advised.                                                   */
+/* 2805000 can only be ran on the best of consoles and may be dangerous due to the voltage requirement */
 .marikoCpuMaxClock = 1963500,
 
 .eristaCpuBoostClock = 1785000, /* Default boost clock */
@@ -132,7 +133,7 @@ volatile CustomizeTable C = {
                         AUTO /*  153                       */,
                         AUTO /*  192                       */,
                         AUTO /*  230                       */,
-                        AUTO /*  269                       */,
+                        AUTO /*  268                       */,
                         AUTO /*  307                       */,
                         AUTO /*  346                       */,
                         AUTO /*  384                       */,
@@ -181,6 +182,7 @@ volatile CustomizeTable C = {
     DEACTIVATED_GPU_FREQ  /* 1459 (Disabled by default)   */,
     DEACTIVATED_GPU_FREQ  /* 1497 (Disabled by default)   */,
     DEACTIVATED_GPU_FREQ  /* 1536 (Disabled by default)   */,
+    DEACTIVATED_GPU_FREQ  /* 1574 (Disabled by default)   */,
 },
 
 /* Override soc voltage brackets. */
@@ -218,6 +220,16 @@ volatile CustomizeTable C = {
 /* Advanced. */
 .fineTune_t6_tRTW = 0,
 .fineTune_t7_tWTR = 0,
+
+/* Debugging options             */
+
+/* PCV Log Verbosity              */
+/* 0xFF: Nothing                    */
+/* 0:  Basic logging              */
+/* 1:  More advanced logging      */
+/* 2:  All logging excluding MMIO */
+/* 3:  All logging including MMIO */
+.pcvLogVerbosity = 2,
 
 /* You shouldn't have to anything past here. */
 .eristaCpuDvfsTable = {
@@ -318,6 +330,7 @@ volatile CustomizeTable C = {
     { 2499000, { 1580725, -35815, 113, }, { CPU_MAX_MAX_VOLT, } },
     { 2601000, { 1702903, -36675, 113, }, { CPU_MAX_MAX_VOLT, } },
     { 2703000, { 1770375, -37515, 113, }, { CPU_MAX_MAX_VOLT, } },
+	{ 2805000, { 1838820, -37707, 113, }, { CPU_MAX_MAX_VOLT, } },
 },
 
 .marikoCpuDvfsTable1581Tbreak {
@@ -346,6 +359,7 @@ volatile CustomizeTable C = {
     { 2499000, { 1736856, -35286, 113, }, { CPU_MAX_MAX_VOLT, } },
     { 2601000, { 1787838, -35967, 113, }, { CPU_MAX_MAX_VOLT, } },
     { 2703000, { 1838820, -36648, 113, }, { CPU_MAX_MAX_VOLT, } },
+	{ 2805000, { 1908891, -37707, 113, }, { CPU_MAX_MAX_VOLT, } },
 },
 
 .marikoCpuDvfsTable1683Tbreak {
@@ -374,6 +388,7 @@ volatile CustomizeTable C = {
     { 2499000, { 1736856, -35286, 113, }, { CPU_MAX_MAX_VOLT, } },
     { 2601000, { 1787838, -35967, 113, }, { CPU_MAX_MAX_VOLT, } },
     { 2703000, { 1838820, -36648, 113, }, { CPU_MAX_MAX_VOLT, } },
+	{ 2805000, { 1908891, -37707, 113, }, { CPU_MAX_MAX_VOLT, } },
 },
 
 .marikoCpuDvfsTableExtreme {
@@ -402,6 +417,7 @@ volatile CustomizeTable C = {
     { 2499000, { 1580725, -35815, 113, }, { CPU_MAX_MAX_VOLT, } },
     { 2601000, { 1702903, -36675, 113, }, { CPU_MAX_MAX_VOLT, } },
     { 2703000, { 1775375, -37515, 113, }, { CPU_MAX_MAX_VOLT, } },
+	{ 2805000, { 1838820, -37707, 113, }, { CPU_MAX_MAX_VOLT, } },
 },
 
 .eristaGpuDvfsTable = {
@@ -571,13 +587,14 @@ volatile CustomizeTable C = {
     { 1152000, { }, { 1180029, -14534, -830,    0,  1469, 110 } },
     { 1228800, { }, { 1238293, -16383, -859,    0,  3722, 313 } },
     { 1267200, { }, { 1276399, -17475, -867,    0,  3681, 559 } },
-    { 1305600, { }, {                                         } },
-    { 1344000, { }, {                                         } },
-    { 1382400, { }, {                                         } },
-    { 1420800, { }, {                                         } },
-    { 1459200, { }, {                                         } },
-    { 1497600, { }, {                                         } },
-    { 1536000, { }, {                                         } },
+    { 1305600, { }, {       0,      0,    0,    0,     0,   0 } },
+    { 1344000, { }, {       0,      0,    0,    0,     0,   0 } },
+    { 1382400, { }, {       0,      0,    0,    0,     0,   0 } },
+    { 1420800, { }, {       0,      0,    0,    0,     0,   0 } },
+    { 1459200, { }, {       0,      0,    0,    0,     0,   0 } },
+    { 1497600, { }, {       0,      0,    0,    0,     0,   0 } },
+    { 1536000, { }, {       0,      0,    0,    0,     0,   0 } },
+    { 1574400, { }, {       0,      0,    0,    0,     0,   0 } },
 },
 
 .marikoGpuDvfsTableHighUV = {
@@ -605,6 +622,7 @@ volatile CustomizeTable C = {
     { 1459200, { }, {       0,      0,    0,    0,     0,   0 } },
     { 1497600, { }, {       0,      0,    0,    0,     0,   0 } },
     { 1536000, { }, {       0,      0,    0,    0,     0,   0 } },
+    { 1574400, { }, {       0,      0,    0,    0,     0,   0 } },
 },
 
 };

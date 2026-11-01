@@ -19,7 +19,7 @@
 
 #include "oc_common.hpp"
 
-#ifdef HOC_IRAM_LOG
+#if HOC_IRAM_LOG
 #include "fatal_handler_bin.h"
 #endif
 
@@ -107,7 +107,7 @@ namespace ams::ldr::hoc {
     #define IRAM_LOG_CTX_ADDR 0x4003C000
     #define IRAM_LOG_MAX_SZ 4096
 
-    #ifdef HOC_IRAM_LOG
+    #if HOC_IRAM_LOG
     void Log(const char *data, ...) {
         static const u32 max_log_sz = sizeof(working_buf) - sizeof(log_ctx_t);
         static bool initDone = false;
@@ -139,7 +139,7 @@ namespace ams::ldr::hoc {
     #endif
 
     void ViewLog() {
-        #ifdef HOC_IRAM_LOG
+        #if HOC_IRAM_LOG
         if (spl::GetSocType() == spl::SocType_Mariko) {
             return;
         }
@@ -155,4 +155,63 @@ namespace ams::ldr::hoc {
         while(true) { }
         #endif
     }
+
+    namespace {
+        constexpr size_t SdLogBufferSize = 0x1000;
+        char sdLogBuffer[SdLogBufferSize];
+        size_t workingLength = 0;
+    }
+
+    void SdLog(const char *data, ...) {
+        if (workingLength >= SdLogBufferSize - 1) {
+            return;
+        }
+
+        va_list args;
+        va_start(args, data);
+        s32 res = vsnprintf(sdLogBuffer + workingLength, SdLogBufferSize - workingLength, data, args);
+        va_end(args);
+
+        if (res < 0) {
+            return;
+        }
+
+        workingLength = std::min(workingLength + static_cast<size_t>(res), SdLogBufferSize - 1);
+    }
+
+    void SaveLog() {
+        static bool saved = false;
+        if (workingLength == 0 || saved) {
+            return;
+        }
+
+        if (!cfg::IsSdCardInitialized()) {
+            return;
+        }
+
+        if (R_FAILED(fs::MountSdCard("sdmc"))) {
+            return;
+        }
+
+        ON_SCOPE_EXIT { fs::Unmount("sdmc"); };
+
+        constexpr const char *Path = "sdmc:/config/horizon-oc/ldr_log.txt";
+
+        R_DISCARD(fs::DeleteFile(Path));
+        if (R_FAILED(fs::CreateFile(Path, workingLength))) {
+            return;
+        }
+
+        fs::FileHandle file;
+        if (R_FAILED(fs::OpenFile(std::addressof(file), Path, fs::OpenMode_Write))) {
+            return;
+        }
+        ON_SCOPE_EXIT { fs::CloseFile(file); };
+
+        if (R_FAILED(fs::WriteFile(file, 0, sdLogBuffer, workingLength, fs::WriteOption::Flush))) {
+            return;
+        }
+        saved = true;
+    }
+
 }

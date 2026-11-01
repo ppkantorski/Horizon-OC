@@ -31,7 +31,7 @@
 
 #include "../util/lockable_mutex.h"
 
-namespace clockManager {
+namespace mgr {
 
     struct FreqTable {
         std::uint32_t count;
@@ -45,6 +45,7 @@ namespace clockManager {
     extern LockableMutex gContextMutex;
     extern HocClkContext gContext;
     extern FreqTable gFreqTable[HocClkModule_EnumMax];
+    extern u32 patchedEmcMaxClock;
     extern std::uint64_t gLastTempLogNs;
     extern std::uint64_t gLastFreqLogNs;
     extern std::uint64_t gLastPowerLogNs;
@@ -65,6 +66,8 @@ namespace clockManager {
 
     void ApplyGpuFreqVoltRequest(u32 voltage, u32 hz);
 
+    u32 GetNearestOverrideHz(HocClkModule module);
+
     void Tick();
     void WaitForNextTick();
-}  // namespace clockManager
+}  // namespace mgr

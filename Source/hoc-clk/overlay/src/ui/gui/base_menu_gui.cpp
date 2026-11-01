@@ -61,7 +61,7 @@ void BaseMenuGui::preDraw(tsl::gfx::Renderer *renderer) {
 
     // All constants pre-calculated and cached
     const char *labels[] = { "App ID", "Profile", "CPU", "GPU", "MEM",  "SoC", "Board",
-                             "Skin",   "Now",     "Avg", "BAT", "PMIC", "Fan", IsAula() || this->context->isUsingRetroSuper ? "OLED" : "LCD",
+                             "Skin",   "Now",     "Avg", "BAT", "PMIC", "Fan", IsAula() ? "OLED" : "LCD",
                              "FPS",    "RES" };
 
     static constexpr u32 dataPositions[6] = { 63 - 3 + 3, 200 - 1, 344 - 1 - 3, 200 - 1, 342 - 1, 321 - 1 };
@@ -284,6 +284,10 @@ void BaseMenuGui::refresh() {
             sprintf(displayStrings[10], "%u.%u mV", context->voltages[HocClkVoltage_EMCVDDQ] / 1000U,
                     (context->voltages[HocClkVoltage_EMCVDDQ] % 1000U) / 100U);
             break;
+        case RamDisplayMode_VDD2VDDQ:
+            sprintf(displayStrings[10], "%u/%u mV", context->voltages[HocClkVoltage_EMCVDD2] / 1000U,
+                    context->voltages[HocClkVoltage_EMCVDDQ] / 1000U);
+            break;
         default:
             strcpy(displayStrings[10], "N/A");
             break;
@@ -344,15 +348,15 @@ void BaseMenuGui::refresh() {
 
     millis = context->temps[HocClkThermalSensor_CPU];
     sprintf(displayStrings[28], "%u.%u", millis / 1000U, (millis % 1000U) / 100U);
-    tempColors[HocClkThermalSensor_CPU] = tsl::GradientColor(millis * 0.001f);
+    tempColors[HocClkThermalSensor_CPU] = tsl::GradientColor(millis * 0.001f, tsl::DEFAULT_TEMP_RANGE_HIGH);
 
     millis = context->temps[HocClkThermalSensor_GPU];
     sprintf(displayStrings[29], "%u.%u", millis / 1000U, (millis % 1000U) / 100U);
-    tempColors[HocClkThermalSensor_GPU] = tsl::GradientColor(millis * 0.001f);
+    tempColors[HocClkThermalSensor_GPU] = tsl::GradientColor(millis * 0.001f, tsl::DEFAULT_TEMP_RANGE_HIGH);
 
     millis = context->temps[HocClkThermalSensor_MEM];
     sprintf(displayStrings[30], "%u.%u", millis / 1000U, (millis % 1000U) / 100U);
-    tempColors[HocClkThermalSensor_MEM] = tsl::GradientColor(millis * 0.001f);
+    tempColors[HocClkThermalSensor_MEM] = tsl::GradientColor(millis * 0.001f, tsl::DEFAULT_TEMP_RANGE_HIGH);
 }
 
 tsl::elm::Element *BaseMenuGui::baseUI() {

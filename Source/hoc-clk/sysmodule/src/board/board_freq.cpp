@@ -83,10 +83,10 @@ namespace board {
 
     void HandleCpuUv() {
         if (board::GetSocType() == HocClkSocType_Erista)
-            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000);  // Erista tbreak is always 1581MHz
+            board::SetDfllTunings(file::config::GetConfigValue(KipConfigValue_eristaCpuUV), 0, 1581000000);  // Erista tbreak is always 1581MHz
         else
-            board::SetDfllTunings(config::GetConfigValue(KipConfigValue_marikoCpuUVLow), config::GetConfigValue(KipConfigValue_marikoCpuUVHigh),
-                                  board::CalculateTbreak(config::GetConfigValue(KipConfigValue_tableConf)));
+            board::SetDfllTunings(file::config::GetConfigValue(KipConfigValue_marikoCpuUVLow), file::config::GetConfigValue(KipConfigValue_marikoCpuUVHigh),
+                                  board::CalculateTbreak(file::config::GetConfigValue(KipConfigValue_tableConf)));
     }
 
     void SetHz(HocClkModule module, u32 hz) {
@@ -121,7 +121,6 @@ namespace board {
                 svcSleepThread(300'000);
                 ClkrstSetHz(session, pcvHz);
             }
-
             clkrstCloseSession(&session);
         } else {
             PcvSetHz(GetPcvModule(module), pcvHz);
@@ -131,12 +130,13 @@ namespace board {
                 PcvSetHz(GetPcvModule(module), pcvHz);
             }
         }
-        if (config::GetConfigValue(HocClkConfigValue_LiveCpuUv) && module == HocClkModule_CPU) {
+        if (file::config::GetConfigValue(HocClkConfigValue_LiveCpuUv) && module == HocClkModule_CPU) {
             HandleCpuUv();
         }
         if (useGm20b) {
-            gm20b::setClock(hz / 1000);
-            currentInjectedHz = hz;
+            if (soc::SetClock(hz / 1000)) {
+                currentInjectedHz = hz;
+            }
         }
     }
 
@@ -154,7 +154,11 @@ namespace board {
         }
 
         if (module == HocClkModule_GPU && currentInjectedHz != 0) {
-            return currentInjectedHz;
+            if (GetRealHz(HocClkModule_GPU) != currentInjectedHz) {
+                currentInjectedHz = 0;
+            } else {
+                return currentInjectedHz;
+            }
         }
 
         if (HOSSVC_HAS_CLKRST) {
@@ -183,7 +187,7 @@ namespace board {
             case HocClkModule_GPU:
                 return t210ClkGpuFreq();
             case HocClkModule_MEM:
-                return config::GetConfigValue(HocClkConfigValue_MemoryFrequencyMeasurementMode) == MemoryFrequencyMeasurementMode_PLL
+                return file::config::GetConfigValue(HocClkConfigValue_MemoryFrequencyMeasurementMode) == MemoryFrequencyMeasurementMode_PLL
                            ? pllmb::getRamClockRatePLLMB()
                            : t210ClkMemFreq();
             case HocClkModule_Display:

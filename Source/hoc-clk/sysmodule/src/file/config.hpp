@@ -26,18 +26,23 @@
 
 #pragma once
 
+#include <set>
+#include <vector>
 #include <hocclk.h>
 #include <switch.h>
 
 #define CONFIG_VAL_SECTION "values"
 
-namespace config {
+namespace file::config {
 
     void Initialize();
     void Exit();
 
     bool Refresh();
     bool HasProfilesLoaded();
+
+    bool IsProfileDirty();
+    void SetProfileDirty(bool dirty);
 
     std::uint8_t GetProfileCount(std::uint64_t tid);
     void GetProfiles(std::uint64_t tid, HocClkTitleProfileList *out_profiles);
@@ -46,6 +51,7 @@ namespace config {
 
     void SetEnabled(bool enabled);
     bool Enabled();
+    bool MigrationHappened();
     void SetOverrideHz(HocClkModule module, std::uint32_t hz);
     std::uint32_t GetOverrideHz(HocClkModule module);
 
@@ -59,4 +65,4 @@ namespace config {
 
     extern uint64_t configValues[HocClkConfigValue_EnumMax];
 
-}  // namespace config
+}  // namespace file::config

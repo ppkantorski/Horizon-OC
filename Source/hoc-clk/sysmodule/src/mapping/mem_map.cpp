@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Souldbminer and Horizon OC Contributors
+ * Copyright (c) Souldbminer, Lightos and Horizon OC Contributors
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -31,7 +31,7 @@ Result QueryMemoryMapping(u64 *virtaddr, u64 physaddr, u64 size) {
 Result MapAddress(u64 &va, const u64 &physAddr, const char *name) {
     Result mapResult = QueryMemoryMapping(&va, physAddr, 0x1000);
     if (R_FAILED(mapResult)) {
-        fileUtils::LogLine("Failed to map %s! %u", name, R_DESCRIPTION(mapResult));
+        file::utils::LogLine("Failed to map %s! %u", name, R_DESCRIPTION(mapResult));
     }
 
     return mapResult;

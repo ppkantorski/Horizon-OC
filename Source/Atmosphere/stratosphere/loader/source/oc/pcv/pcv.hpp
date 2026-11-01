@@ -22,8 +22,17 @@
 
 #include "../oc_common.hpp"
 #include "pcv_common.hpp"
-#include "pcv_erista.hpp"
-#include "pcv_mariko.hpp"
+
+#include "erista/pcv_erista_cpu.hpp"
+#include "erista/pcv_erista_gpu.hpp"
+#include "erista/pcv_erista_mtc.hpp"
+#include "erista/pcv_erista.hpp"
+
+#include "mariko/pcv_mariko.hpp"
+#include "mariko/pcv_mariko_cpu.hpp"
+#include "mariko/pcv_mariko_gpu.hpp"
+#include "mariko/pcv_mariko_mtc.hpp"
+
 #include "pcv_hook.hpp"
 
 namespace ams::ldr::hoc::pcv {
@@ -37,7 +46,8 @@ namespace ams::ldr::hoc::pcv {
         return true;
     };
 
-    template <bool isMariko> Result CpuFreqCvbTable(u32 *ptr) {
+    template <bool isMariko>
+    Result CpuFreqCvbTable(u32 *ptr) {
         cvb_entry_t *default_table = isMariko ? (cvb_entry_t *)(&mariko::CpuCvbTableDefault) : (cvb_entry_t *)(&erista::CpuCvbTableDefault);
         cvb_entry_t *customize_table = nullptr;
 
@@ -112,7 +122,8 @@ namespace ams::ldr::hoc::pcv {
         PATCH_OFFSET(&(entry->cvb_pll_param.c5), 0);
     }
 
-    template <bool isMariko> Result GpuFreqCvbTable(u32 *ptr) {
+    template <bool isMariko>
+    Result GpuFreqCvbTable(u32 *ptr) {
         cvb_entry_t *default_table = isMariko ? (cvb_entry_t *)(&mariko::GpuCvbTableDefault) : (cvb_entry_t *)(&erista::GpuCvbTableDefault);
         cvb_entry_t *customize_table;
         if (isMariko) {
@@ -186,6 +197,7 @@ namespace ams::ldr::hoc::pcv {
             }
             ++entry;
         }
+
         if (C.commonGpuVoltOffset && !(isMariko ? C.marikoGpuUV : C.eristaGpuUV)) {
             cvb_entry_t *entry = static_cast<cvb_entry_t *>(gpu_cvb_table_head);
             for (size_t i = 0; i < customize_entry_count; ++i) {
@@ -199,10 +211,6 @@ namespace ams::ldr::hoc::pcv {
 
     Result MemFreqPllmLimit(u32 *ptr);
     Result MemVoltHandler(u32 *ptr); // Used for Erista MEM Vdd2 + EMC Vddq or Mariko MEM Vdd2
-
-    /* Extra pcv .bss */
-    constexpr size_t HocPcvScratchSize   = 0x2000;
-    constexpr size_t HocBusFreqBufOffset = 0x1000; /* start of the SOC bus region */
 
     void SafetyCheck();
     void Patch(uintptr_t mapped_nso, size_t nso_size, uintptr_t cave, size_t cave_size, uintptr_t nso_address, uintptr_t data_arena);

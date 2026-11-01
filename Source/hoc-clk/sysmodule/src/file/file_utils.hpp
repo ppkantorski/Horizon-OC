@@ -35,19 +35,24 @@
 #include <vector>
 
 #define FILE_CONFIG_DIR "/config/" CONFIG_DIR
-#define FILE_FLAG_CHECK_INTERVAL_NS (10000ULL * 1000000000ULL)
 #define FILE_CONTEXT_CSV_PATH FILE_CONFIG_DIR "/context.csv"
-#define FILE_LOG_FLAG_PATH FILE_CONFIG_DIR "/log.flag"
 #define FILE_LOG_FILE_PATH FILE_CONFIG_DIR "/log.txt"
+#define FILE_SETTINGS_PATH FILE_CONFIG_DIR "/settings.ini"
+#define FILE_KIP_DIR FILE_CONFIG_DIR "/kip"
+#define FILE_KIP_CONFIG_PATH FILE_KIP_DIR "/current.ini"
+#define FILE_PROFILES_DIR FILE_CONFIG_DIR "/profiles"
+#define FILE_LEGACY_CONFIG_PATH FILE_CONFIG_DIR "/config.ini"
 
-namespace fileUtils {
+namespace file::utils {
 
     void Exit();
     Result Initialize();
     bool IsInitialized();
     bool IsLogEnabled();
+    bool IsUartEnabled();
     void InitializeAsync();
+    void InitializeLogging();
     void LogLine(const char *format, ...);
     void WriteContextToCsv(const HocClkContext *context);
 
-}  // namespace fileUtils
+}  // namespace file::utils

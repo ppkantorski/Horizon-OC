@@ -47,14 +47,14 @@ enum ReadLatency: u32 {
     RL_2133 = 40,
     RL_1866 = 36,
     RL_1600 = 32,
-    RL_1331 = 28,
+    RL_1333 = 28,
 };
 
 enum WriteLatency: u32 {
     WL_2133 = 18,
     WL_1866 = 16,
     WL_1600 = 14,
-    WL_1331 = 12,
+    WL_1333 = 12,
 };
 
 using CustomizeCpuDvfsTable = pcv::cvb_entry_t[pcv::DvfsTableEntryLimit];
@@ -126,13 +126,15 @@ struct CustomizeTable {
     s32 commonGpuVoltOffset;
 
     u32 eristaGpuVoltArray[27];
-    u32 marikoGpuVoltArray[24];
+    u32 marikoGpuVoltArray[25];
     s32 marikoSocVoltArray[28];
 
     u32 fineTune_t6_tRTW;
     u32 fineTune_t7_tWTR;
 
-    u32 reserved[60];
+    u32 pcvLogVerbosity;
+
+    u32 reserved[57];
 
     CustomizeCpuDvfsTable eristaCpuDvfsTable;
     CustomizeCpuDvfsTable eristaCpuDvfsTableSLT;

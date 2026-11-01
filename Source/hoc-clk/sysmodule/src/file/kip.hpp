@@ -28,7 +28,7 @@
 #include "file_utils.hpp"
 
 
-namespace kip {
+namespace file::kip {
     extern bool kipAvailable;
 
     typedef struct {
@@ -94,13 +94,15 @@ namespace kip {
         u32 commonGpuVoltOffset;
 
         u32 eristaGpuVoltArray[27];
-        u32 marikoGpuVoltArray[24];
+        u32 marikoGpuVoltArray[25];
         s32 marikoSocVoltArray[28];
 
         u32 t6_tRTW_fine_tune;
         u32 t7_tWTR_fine_tune;
+        
+        u32 pcvLogVerbosity;
 
-        u32 reserved[60];
+        u32 reserved[57];
     } CustomizeTable;
 
 #define CUST_MAGIC "CUST"
@@ -393,7 +395,7 @@ namespace kip {
     }
 
     static inline bool cust_set_mariko_gpu_volt(const char *p, int idx, u32 v) {
-        if (idx < 0 || idx >= 24)
+        if (idx < 0 || idx >= 25)
             return false;
         CustomizeTable t;
         if (!cust_read_table(p, &t))
@@ -505,6 +507,10 @@ namespace kip {
         return CUST_GET_FIELD(t, t7_tWTR_fine_tune);
     }
 
+    static inline u32 cust_get_log_verbosity(const CustomizeTable *t) {
+        return CUST_GET_FIELD(t, pcvLogVerbosity);
+    }
+
     static inline u32 cust_get_read_latency_1333(const CustomizeTable *t) {
         return CUST_GET_FIELD(t, readLatency1333);
     }
@@ -601,7 +607,7 @@ namespace kip {
     }
 
     static inline u32 cust_get_mariko_gpu_volt(const CustomizeTable *t, int idx) {
-        if (!t || idx < 0 || idx >= 24)
+        if (!t || idx < 0 || idx >= 25)
             return 0;
         return t->marikoGpuVoltArray[idx];
     }
@@ -679,6 +685,7 @@ namespace kip {
     DECL_MARIKO_GPU_VOLT_HELPER(1459200, 21)
     DECL_MARIKO_GPU_VOLT_HELPER(1497600, 22)
     DECL_MARIKO_GPU_VOLT_HELPER(1536000, 23)
+    DECL_MARIKO_GPU_VOLT_HELPER(1574400, 24)
 
     DECL_MARIKO_SOC_VOLT_HELPER(1866000,  0)
     DECL_MARIKO_SOC_VOLT_HELPER(2000000,  1)
@@ -784,6 +791,7 @@ namespace kip {
     DECL_MARIKO_GPU_VOLT_GET(1459200, 21)
     DECL_MARIKO_GPU_VOLT_GET(1497600, 22)
     DECL_MARIKO_GPU_VOLT_GET(1536000, 23)
+    DECL_MARIKO_GPU_VOLT_GET(1574400, 24)
 
     DECL_MARIKO_SOC_VOLT_GET(1866000,  0)
     DECL_MARIKO_SOC_VOLT_GET(2000000,  1)
@@ -817,4 +825,5 @@ namespace kip {
     void MigrateKipData(u32 custRev, u32 version);
     void SetKipData();
     void GetKipData();
-}  // namespace kip
+    bool IsKipLoaded();
+}  // namespace file::kip

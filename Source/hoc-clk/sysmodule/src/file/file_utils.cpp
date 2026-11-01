@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Souldbminer and Horizon OC Contributors
+ * Copyright (c) Souldbminer, Lightos and Horizon OC Contributors
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,17 +26,20 @@
 
 #include <i2c.h>
 #include <max17050.h>
-#include <t210.h>
 #include <tmp451.h>
 
 #include "../hos/apm_ext.h"
 #include "file_utils.hpp"
+#include "config.hpp"
 #include <ipc_server.h>
 #include <lockable_mutex.h>
+#include <string>
+#include <utility>
+#include <vector>
 
 extern "C" void __libnx_init_time(void);
 
-namespace fileUtils {
+namespace file::utils {
 
     namespace {
 
@@ -45,23 +48,25 @@ namespace fileUtils {
         LockableMutex g_csv_mutex;
         std::atomic_bool g_has_initialized = false;
         bool g_log_enabled = false;
-        std::uint64_t g_last_flag_check = 0;
+        bool g_uart_enabled = false;
+        bool g_flags_resolved = false;
 
-        void RefreshFlags(bool force) {
-            std::uint64_t now = armTicksToNs(armGetSystemTick());
-            if (!force && (now - g_last_flag_check) < FILE_FLAG_CHECK_INTERVAL_NS) {
-                return;
+        constexpr size_t MaxPendingLines = 64;
+        std::vector<std::pair<u64, std::string>> g_pending_lines;
+
+        void EmitLine(u64 secs, const char *buff, int len) {
+            if (g_uart_enabled) {
+                svcOutputDebugString(buff, len);
             }
 
-            FILE *file = fopen(FILE_LOG_FLAG_PATH, "r");
-            if (file) {
-                g_log_enabled = true;
-                fclose(file);
-            } else {
-                g_log_enabled = false;
-            }
+            if (g_log_enabled) {
+                FILE *file = fopen(FILE_LOG_FILE_PATH, "a");
 
-            g_last_flag_check = now;
+                if (file) {
+                    fprintf(file, "[%luls] %s", secs, buff);
+                    fclose(file);
+                }
+            }
         }
 
         void InitializeThreadFunc(void *args) {
@@ -69,6 +74,24 @@ namespace fileUtils {
         }
 
     }  // namespace
+
+    void InitializeLogging() {
+        const bool logEnabled  = config::GetConfigValue(HocClkConfigValue_FileLogging);
+        const bool uartEnabled = config::GetConfigValue(HocClkConfigValue_UartLogging);
+
+        std::scoped_lock lock{ g_log_mutex };
+        g_log_enabled  = logEnabled;
+        g_uart_enabled = uartEnabled;
+        g_flags_resolved = true;
+
+        if (g_log_enabled || g_uart_enabled) {
+            for (const auto &[secs, line] : g_pending_lines) {
+                EmitLine(secs, line.c_str(), (int)line.size());
+            }
+        }
+        g_pending_lines.clear();
+        g_pending_lines.shrink_to_fit();
+    }
 
     bool IsInitialized() {
         return g_has_initialized;
@@ -78,13 +101,25 @@ namespace fileUtils {
         return g_log_enabled;
     }
 
+    bool IsUartEnabled() {
+        return g_uart_enabled;
+    }
+
     void LogLine(const char *format, ...) {
         std::scoped_lock lock{ g_log_mutex };
+
+        if (!g_has_initialized) {
+            return;
+        }
+
+        if (g_flags_resolved && !g_log_enabled && !g_uart_enabled) {
+            return;
+        }
 
         va_list args;
         va_start(args, format);
 
-        char buff[0xfff];
+        char buff[0x200];
         int len = vsnprintf(buff, sizeof(buff), format, args);
         va_end(args);
 
@@ -98,24 +133,18 @@ namespace fileUtils {
         buff[len++] = '\n';
         buff[len] = '\0';
 
-        // Debug UART log
-        svcOutputDebugString(buff, len);
+        timespec now = {};
+        clock_gettime(CLOCK_REALTIME, &now);
+        const u64 secs = now.tv_sec - bootTimeS;
 
-        if (g_has_initialized) {
-            RefreshFlags(false);
-
-            if (g_log_enabled) {
-                FILE *file = fopen(FILE_LOG_FILE_PATH, "a");
-
-                if (file) {
-                    timespec now = {};
-                    clock_gettime(CLOCK_REALTIME, &now);
-
-                    fprintf(file, "[%luls] %s", now.tv_sec - bootTimeS, buff);
-                    fclose(file);
-                }
+        if (!g_flags_resolved) {
+            if (g_pending_lines.size() < MaxPendingLines) {
+                g_pending_lines.emplace_back(secs, std::string(buff, len));
             }
+            return;
         }
+
+        EmitLine(secs, buff, len);
     }
 
     void WriteContextToCsv(const HocClkContext *context) {
@@ -206,7 +235,6 @@ namespace fileUtils {
         }
 
         if (R_SUCCEEDED(rc)) {
-            RefreshFlags(true);
             g_has_initialized = true;
             LogLine("=== hoc-clk " TARGET_VERSION " ===");
             LogLine("by m4xw, natinusala, p-sam, Souldbminer, Lightos_ and Dominatorul");
@@ -222,9 +250,10 @@ namespace fileUtils {
 
         g_has_initialized = false;
         g_log_enabled = false;
+        g_uart_enabled = false;
 
         fsdevUnmountAll();
         fsExit();
     }
 
-}  // namespace fileUtils
+}  // namespace file::utils

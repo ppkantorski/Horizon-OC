@@ -52,8 +52,12 @@ typedef enum {
     HocClkConfigValue_OverwriteRefreshRate,
     HocClkConfigValue_MaxDisplayClockH,
 
-    HocClkConfigValue_DVFSMode,
-    HocClkConfigValue_DVFSOffset,
+    HocClkConfigValue_GPUDVFSMode,
+    HocClkConfigValue_GPUDVFSOffset,
+
+    HocClkConfigValue_CPUDVFSMode,
+    HocClkConfigValue_CPUDVFSOffset,
+
     HocClkConfigValue_LiveCpuUv,
     HocClkConfigValue_EnableExperimentalSettings,
 
@@ -62,6 +66,9 @@ typedef enum {
 
     HocClkConfigValue_RAMVoltDisplayMode,
     HocClkConfigValue_CpuGovernorMinimumFreq,
+    HocClkConfigValue_GovernorPollRateMs,
+    HocClkConfigValue_GovernorDownHoldTicks,
+    HocClkConfigValue_GovernorStepUtil,
     HocClkConfigValue_DisplayVoltage,
 
     HocClkConfigValue_MemoryFrequencyMeasurementMode,
@@ -72,9 +79,10 @@ typedef enum {
     HocClkConfigValue_MarikoMiddleFreqs,
     HocClkConfigValue_LiveGpuVoltage,
 
-    HocClkConfigValue_AutoRAMCPUOverclock,
-    HocClkConfigValue_AutoRamCpuCpuOCFreq,
-    HocClkConfigValue_AutoRamCpuRamOCThreshold,
+    HocClkConfigValue_Watchdog,
+
+    HocClkConfigValue_FileLogging,
+    HocClkConfigValue_UartLogging,
 
     KipConfigValue_custRev,
     KipConfigValue_KipVersion,
@@ -167,6 +175,7 @@ typedef enum {
     KipConfigValue_g_volt_1459200,
     KipConfigValue_g_volt_1497600,
     KipConfigValue_g_volt_1536000,
+    KipConfigValue_g_volt_1574400,
 
     KipConfigValue_g_volt_e_76800,
     KipConfigValue_g_volt_e_115200,
@@ -228,6 +237,8 @@ typedef enum {
     KipConfigValue_t6_tRTW_fine_tune,
     KipConfigValue_t7_tWTR_fine_tune,
 
+    KipConfigValue_PcvDebugVerbosity,
+
     KipCrc32,
     HocClkConfigValue_EnumMax,
 } HocClkConfigValue;
@@ -280,11 +291,17 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case HocClkConfigValue_MaxDisplayClockH:
             return pretty ? "Max Display Clock (Handheld)" : "drr_max_clock";
 
-        case HocClkConfigValue_DVFSMode:
-            return pretty ? "DVFS Mode" : "dvfs_mode";
+        case HocClkConfigValue_GPUDVFSMode:
+            return pretty ? "GPU DVFS Mode" : "dvfs_mode";
 
-        case HocClkConfigValue_DVFSOffset:
-            return pretty ? "DVFS Offset" : "dvfs_offset";
+        case HocClkConfigValue_GPUDVFSOffset:
+            return pretty ? "GPU DVFS Offset" : "dvfs_offset";
+
+        case HocClkConfigValue_CPUDVFSMode:
+            return pretty ? "CPU DVFS Mode" : "cpu_dvfs_mode";
+
+        case HocClkConfigValue_CPUDVFSOffset:
+            return pretty ? "CPU DVFS Offset" : "cpu_dvfs_offset";
 
         case HocClkConfigValue_GPUScheduling:
             return pretty ? "GPU Scheduling" : "gpu_scheduling";
@@ -302,6 +319,12 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
             return pretty ? "RAM Voltage / Usage Display Mode" : "ram_volt_usage_display_mode";
         case HocClkConfigValue_CpuGovernorMinimumFreq:
             return pretty ? "CPU Governor Minimum Frequency" : "cpu_gov_min_freq";
+        case HocClkConfigValue_GovernorPollRateMs:
+            return pretty ? "Governor Poll Rate" : "gov_poll_rate_ms";
+        case HocClkConfigValue_GovernorDownHoldTicks:
+            return pretty ? "Governor Down Hold" : "gov_down_hold_ticks";
+        case HocClkConfigValue_GovernorStepUtil:
+            return pretty ? "Governor Step Divisor" : "gov_step_util";
 
         case HocClkConfigValue_DisplayVoltage:
             return pretty ? "Display Voltage" : "display_voltage";
@@ -319,13 +342,13 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case HocClkConfigValue_LiveGpuVoltage:
             return pretty ? "GPU Voltage Request" : "gpu_voltage_request";
 
-        case HocClkConfigValue_AutoRAMCPUOverclock:
-            return pretty ? "Auto High RAM CPU OC" : "auto_high_ram_cpu_oc";
-        case HocClkConfigValue_AutoRamCpuCpuOCFreq:
-            return pretty ? "Auto High RAM CPU OC Freq" : "auto_ram_cpu_cpu_oc_freq";
-        case HocClkConfigValue_AutoRamCpuRamOCThreshold:
-            return pretty ? "Auto High RAM CPU OC RAM Threshold" : "auto_ram_cpu_ram_oc_threshold";
+        case HocClkConfigValue_Watchdog:
+            return pretty ? "Watchcat" : "watchdog"; // More dignified
 
+        case HocClkConfigValue_FileLogging:
+            return pretty ? "File Logging" : "file_logging";
+        case HocClkConfigValue_UartLogging:
+            return pretty ? "UART Logging" : "uart_logging";
         // KIP config values
         case KipConfigValue_custRev:
             return pretty ? "Custom Revision" : "kip_cust_rev";
@@ -387,7 +410,7 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_low_t7_tWTR:
             return pretty ? "Low T7 - tWTR" : "low_t7_tWTR";
         case KipConfigValue_low_t8_tREFI:
-            return pretty ? "Low T8 - tREFI" : "low_t7_tREFI";
+            return pretty ? "Low T8 - tREFI" : "low_t8_tREFI";
 
         case KipConfigValue_read_latency_1333:
             return pretty ? "1333 Read Latency" : "read_latency_1333";
@@ -481,6 +504,7 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_g_volt_1459200: return pretty ? "Mariko GPU Volt 1459 MHz" : "g_volt_1459200";
         case KipConfigValue_g_volt_1497600: return pretty ? "Mariko GPU Volt 1497 MHz" : "g_volt_1497600";
         case KipConfigValue_g_volt_1536000: return pretty ? "Mariko GPU Volt 1536 MHz" : "g_volt_1536000";
+        case KipConfigValue_g_volt_1574400: return pretty ? "Mariko GPU Volt 1574 MHz" : "g_volt_1574400";
 
         // Erista GPU voltages (27)
         case KipConfigValue_g_volt_e_76800: return pretty ? "Erista GPU Volt 76 MHz" : "g_volt_e_76800";
@@ -512,7 +536,7 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
         case KipConfigValue_g_volt_e_1075200: return pretty ? "Erista GPU Volt 1075 MHz" : "g_volt_e_1075200";
         case KipConfigValue_t6_tRTW_fine_tune: return pretty ? "t6 - tRTW Fine Tune" : "t6_tRTW_fine_tune";
         case KipConfigValue_t7_tWTR_fine_tune: return pretty ? "t7 - tWTR Fine Tune" : "t7_tWTR_fine_tune";
-
+        case KipConfigValue_PcvDebugVerbosity: return pretty ? "Pcv Debug Verbosity" : "debug_verbosity";
         case KipConfigValue_g_soc_volt_1866000: return pretty ? "Mariko SOC Volt 1866 MHz" : "g_soc_volt_1866000";
         case KipConfigValue_g_soc_volt_2000000: return pretty ? "Mariko SOC Volt 2000 MHz" : "g_soc_volt_2000000";
         case KipConfigValue_g_soc_volt_2133000: return pretty ? "Mariko SOC Volt 2133 MHz" : "g_soc_volt_2133000";
@@ -551,6 +575,11 @@ static inline const char* hocclkFormatConfigValue(HocClkConfigValue val, bool pr
     }
 }
 
+static inline bool hocclkIsKipConfigValue(HocClkConfigValue val)
+{
+    return val >= KipConfigValue_custRev && val <= KipCrc32;
+}
+
 static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
 {
     switch(val)
@@ -572,6 +601,8 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
         case HocClkConfigValue_MemoryFrequencyMeasurementMode:
         case HocClkConfigValue_MarikoMiddleFreqs:
         case HocClkConfigValue_LiveGpuVoltage:
+        case HocClkConfigValue_FileLogging:
+        case HocClkConfigValue_UartLogging:
             return 0ULL;
         case HocClkConfigValue_RamDisplayUnit:
             return (uint64_t)RamDisplayUnit_MHz;
@@ -583,17 +614,19 @@ static inline uint64_t hocclkDefaultConfigValue(HocClkConfigValue val)
 
         case HocClkConfigValue_ThermalThrottle:
         case HocClkConfigValue_IsFirstLoad:
-        case HocClkConfigValue_DVFSMode:
-        case HocClkConfigValue_AutoRAMCPUOverclock:
+        case HocClkConfigValue_GPUDVFSMode:
+        case HocClkConfigValue_CPUDVFSMode:
             return 1ULL;
-        case HocClkConfigValue_AutoRamCpuCpuOCFreq:
-            return 1683000ULL;
-        case HocClkConfigValue_AutoRamCpuRamOCThreshold:
-            return 2666000ULL;
         case HocClkConfigValue_ThermalThrottleThreshold:
             return 70ULL;
         case HocClkConfigValue_CpuGovernorMinimumFreq:
             return 612000000ULL; // 612MHz
+        case HocClkConfigValue_GovernorPollRateMs:
+            return 5ULL; // 5ms
+        case HocClkConfigValue_GovernorDownHoldTicks:
+            return 10ULL; // 10 ticks (50ms at 5ms poll)
+        case HocClkConfigValue_GovernorStepUtil:
+            return 900ULL; // max freq at 90% load
         case HocClkConfigValue_MaxDisplayClockH:
             return 60ULL;
         case HocClkConfigValue_DisplayVoltage:
@@ -630,7 +663,10 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case HocClkConfigValue_GPUSchedulingMethod:
         case HocClkConfigValue_MarikoMiddleFreqs:
         case HocClkConfigValue_LiveGpuVoltage:
-        case HocClkConfigValue_AutoRAMCPUOverclock:
+        case HocClkConfigValue_Watchdog:
+        case HocClkConfigValue_FileLogging:
+        case HocClkConfigValue_UartLogging:
+        case KipConfigValue_eristaCpuUnlock:
             return (input & 0x1) == input;
 
         case KipConfigValue_KipVersion:
@@ -710,6 +746,7 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_g_volt_1459200:
         case KipConfigValue_g_volt_1497600:
         case KipConfigValue_g_volt_1536000:
+        case KipConfigValue_g_volt_1574400:
         case KipConfigValue_g_volt_e_76800:
         case KipConfigValue_g_volt_e_115200:
         case KipConfigValue_g_volt_e_153600:
@@ -766,23 +803,32 @@ static inline uint64_t hocclkValidConfigValue(HocClkConfigValue val, uint64_t in
         case KipConfigValue_g_soc_volt_3266000:
         case KipConfigValue_g_soc_volt_3333000:
         case KipConfigValue_eristaCpuVmin:
-        case KipConfigValue_eristaCpuUnlock:
         case KipConfigValue_t6_tRTW_fine_tune:
         case KipConfigValue_t7_tWTR_fine_tune:
         case KipCrc32:
-        case HocClkConfigValue_DVFSMode:
-        case HocClkConfigValue_DVFSOffset:
+        case HocClkConfigValue_GPUDVFSMode:
+        case HocClkConfigValue_GPUDVFSOffset:
+        case HocClkConfigValue_CPUDVFSMode:
+        case HocClkConfigValue_CPUDVFSOffset:
         case HocClkConfigValue_GPUScheduling:
         case HocClkConfigValue_RAMVoltDisplayMode:
         case HocClkConfigValue_CpuGovernorMinimumFreq:
         case HocClkConfigValue_MemoryFrequencyMeasurementMode:
         case HocClkConfigValue_RamDisplayUnit:
         case HocClkConfigValue_AulaDisplayColorPreset:
-        case HocClkConfigValue_AutoRamCpuCpuOCFreq:
-        case HocClkConfigValue_AutoRamCpuRamOCThreshold:
+        case KipConfigValue_PcvDebugVerbosity:
             return true;
         case HocClkConfigValue_BatteryChargeCurrent:
             return ((input >= 1024) && (input <= 3072)) || !input;
+
+        case HocClkConfigValue_GovernorPollRateMs:
+            return ((input >= 1) && (input <= 50));
+
+        case HocClkConfigValue_GovernorDownHoldTicks:
+            return (input <= 100);
+
+        case HocClkConfigValue_GovernorStepUtil:
+            return ((input >= 100) && (input <= 1500));
 
         case HocClkConfigValue_InputCurrentLimit:
             return ((input >= 100) && (input <= 3000)) || !input;

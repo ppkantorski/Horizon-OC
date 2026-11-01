@@ -60,13 +60,16 @@ class DisplaySubMenuGui;
 class SafetySubMenuGui;
 class RamSubmenuGui;
 class RamTimingsSubmenuGui;
+class RamTimingPresetsSubmenuGui;
 class RamLatenciesSubmenuGui;
 class SocCustomTableSubmenuGui;
 class CpuSubmenuGui;
 class GpuSubmenuGui;
 class GpuCustomTableSubmenuGui;
 class ExperimentalSettingsSubMenuGui;
-
+#ifdef OVERLAY_DEBUG
+class DebugSettingsSubMenuGui;
+#endif
 MiscGui::MiscGui() {
     this->configList = new HocClkConfigValueList{};
 }
@@ -735,7 +738,18 @@ void MiscGui::listUI() {
         experimentalSubMenu->setValue(R_ARROW);
         this->listElement->addItem(experimentalSubMenu);
     }
-
+    #ifdef OVERLAY_DEBUG
+    tsl::elm::ListItem *debugSubMenu = new tsl::elm::ListItem("Debug Settings");
+    debugSubMenu->setClickListener([](u64 keys) {
+        if (keys & HidNpadButton_A) {
+            tsl::swapTo<DebugSettingsSubMenuGui>();
+            return true;
+        }
+        return false;
+    });
+    debugSubMenu->setValue(R_ARROW);
+    this->listElement->addItem(debugSubMenu);
+    #endif
     if (!lastItemName.empty()) {
         this->listElement->jumpToItem(lastItemName);
     }
@@ -771,6 +785,7 @@ class GeneralSettingsSubMenuGui : public MiscGui {
         std::vector<NamedValue> ramVoltDispModes = {
             NamedValue("VDD2", RamDisplayMode_VDD2),
             NamedValue("VDDQ", RamDisplayMode_VDDQ),
+            NamedValue("VDD2/VDDQ", RamDisplayMode_VDD2VDDQ),
         };
 
         if (IsMariko()) {
@@ -790,6 +805,13 @@ class GeneralSettingsSubMenuGui : public MiscGui {
 
         addConfigButton(HocClkConfigValue_PollingIntervalMs, "Polling Interval", ValueRange(50, 1000, 50, "ms", 1), "Polling Interval",
                         &thresholdsDisabled, {}, {}, false);
+
+        tsl::elm::CustomDrawer *loggingSpacer = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *, s32, s32, s32, s32) {});
+        loggingSpacer->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 12);
+        this->listElement->addItem(loggingSpacer);
+        this->listElement->addItem(new CompactCategoryHeader("Logging"));
+        addConfigToggle(HocClkConfigValue_FileLogging, nullptr);
+        addConfigToggle(HocClkConfigValue_UartLogging, nullptr);
 
         tsl::elm::CustomDrawer *exSetWarning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150 Experimental Settings are incomplete ", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
@@ -826,12 +848,23 @@ class ExperimentalSettingsSubMenuGui : public MiscGui {
             FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc);
             return;
         }
-        this->listElement->addItem(new CompactCategoryHeader("Experimental Settings"));
+        auto addHeaderSpacer = [this]() {
+            tsl::elm::CustomDrawer *spacer = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *, s32, s32, s32, s32) {});
+            spacer->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 12);
+            this->listElement->addItem(spacer);
+        };
+
         ValueThresholds thresholdsDisabled(0, 0);
         if (IsMariko()) {
-            addConfigToggle(HocClkConfigValue_MarikoMiddleFreqs, nullptr, true);
+            this->listElement->addItem(new CompactCategoryHeader("CPU Settings"));
             addConfigToggle(HocClkConfigValue_LiveCpuUv, nullptr);
         }
+
+        if (IsMariko())
+            addHeaderSpacer();
+        this->listElement->addItem(new CompactCategoryHeader("GPU Settings"));
+        if (IsMariko())
+            addConfigToggle(HocClkConfigValue_MarikoMiddleFreqs, nullptr, true);
 
         addConfigToggle(HocClkConfigValue_LiveGpuVoltage, "Live GPU Volt Request", false);
 
@@ -841,13 +874,6 @@ class ExperimentalSettingsSubMenuGui : public MiscGui {
         };
         addConfigButton(HocClkConfigValue_GPUSchedulingMethod, "GPU Scheduling Override Method", ValueRange(0, 0, 1, "", 0),
                         "GPU Scheduling Override Method", &thresholdsDisabled, {}, gpuSchedMethodValues, false);
-
-        std::vector<NamedValue> ramRFMeasurementMethods = {
-            NamedValue("PLL", MemoryFrequencyMeasurementMode_PLL),
-            NamedValue("Actmon", MemoryFrequencyMeasurementMode_Actmon),
-        };
-        addConfigButton(HocClkConfigValue_MemoryFrequencyMeasurementMode, "Memory Frequency Measurement Mode", ValueRange(0, 0, 1, "", 0),
-                        "Memory Frequency Measurement Mode", &thresholdsDisabled, {}, ramRFMeasurementMethods, false);
 
         tsl::elm::CustomDrawer *chargeWarningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150 Overriding the charge current", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
@@ -896,7 +922,7 @@ class ExperimentalSettingsSubMenuGui : public MiscGui {
             NamedValue("100mA", 100),
             NamedValue("150mA", 150),
             NamedValue("500mA", 500),
-            NamedValue("900mA", 900, "Hoag Default"),
+            NamedValue("900mA", 900, "Default (Lite)"),
             NamedValue("1200mA", 1200, "Default"),
             NamedValue("1500mA", 1500),
             NamedValue("2000mA", 2000),
@@ -927,6 +953,44 @@ class ExperimentalSettingsSubMenuGui : public MiscGui {
         }
     }
 };
+
+#ifdef OVERLAY_DEBUG
+class DebugSettingsSubMenuGui : public MiscGui {
+    public:
+    DebugSettingsSubMenuGui() {
+    }
+
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override {
+        if (keysDown & KEY_B) {
+            triggerExitFeedback();
+            lastItemName = "Debug Settings";
+            tsl::swapTo<MiscGui>();
+            return true;
+        }
+        return false;
+    }
+
+    protected:
+    void listUI() override {
+        Result rc = hocclkIpcGetConfigValues(this->configList);
+        if (R_FAILED(rc)) [[unlikely]] {
+            FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc);
+            return;
+        }
+        this->listElement->addItem(new CompactCategoryHeader("Debug Settings"));
+        ValueThresholds thresholdsDisabled(0, 0);
+        std::vector<NamedValue> VerbosityList = {
+            NamedValue("Disabled", 0xff), NamedValue("0", 0), NamedValue("1", 1),
+            NamedValue("2", 2), NamedValue("3", 3),
+        };
+
+        addConfigButton(KipConfigValue_PcvDebugVerbosity, "PCV Log Verbosity", ValueRange(0, 0, 1, "", 0),
+                        "Verbosity", &thresholdsDisabled, {}, VerbosityList, false, true);
+    }
+};
+
+#endif
 
 class GovernorSettingsSubMenuGui : public MiscGui {
     public:
@@ -961,6 +1025,13 @@ class GovernorSettingsSubMenuGui : public MiscGui {
 
         addConfigButton(HocClkConfigValue_CpuGovernorMinimumFreq, "CPU Governor Minimum Frequency", ValueRange(0, 0, 1, "", 0),
                         "CPU Governor Minimum Frequency", &thresholdsDisabled, {}, GovernorMinHz, false);
+
+        addConfigButton(HocClkConfigValue_GovernorPollRateMs, "Governor Poll Rate", ValueRange(1, 50, 1, " ms", 1),
+                        "Governor Poll Rate", &thresholdsDisabled, {}, {}, false);
+        addConfigButton(HocClkConfigValue_GovernorDownHoldTicks, "Governor Down Hold", ValueRange(0, 100, 1, " ticks", 1),
+                        "Governor Down Hold", &thresholdsDisabled, {}, {}, false);
+        addConfigButton(HocClkConfigValue_GovernorStepUtil, "Governor Step Divisor", ValueRange(100, 1500, 25, "", 1),
+                        "Governor Step Divisor", &thresholdsDisabled, {}, {}, false);
     }
 };
 
@@ -995,20 +1066,18 @@ class DisplaySubMenuGui : public MiscGui {
 
         this->listElement->addItem(new CompactCategoryHeader("Display Settings"));
         addConfigToggle(HocClkConfigValue_OverwriteRefreshRate, nullptr);
-        if (!this->context->isUsingRetroSuper) {
-            tsl::elm::CustomDrawer *warningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-                renderer->drawString("\uE150 Usage of unsafe display", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
-                renderer->drawString("refresh rates may cause stress", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
-                renderer->drawString("or damage to your display! ", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
-                renderer->drawString("Proceed at your own risk!", false, x + 20, y + 90, 18, tsl::style::color::ColorText);
-            });
+        tsl::elm::CustomDrawer *warningText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString("\uE150 Usage of unsafe display", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
+            renderer->drawString("refresh rates may cause stress", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
+            renderer->drawString("or damage to your display! ", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
+            renderer->drawString("Proceed at your own risk!", false, x + 20, y + 90, 18, tsl::style::color::ColorText);
+        });
 
-            warningText->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 110);
-            this->listElement->addItem(warningText);
-            ValueThresholds displayThresholds(60, 65);
-            addConfigButton(HocClkConfigValue_MaxDisplayClockH, "Max Handheld Display Hz", ValueRange(60, IsAula() ? 65 : 75, 1, " Hz", 1),
-                            "Display Clock", &displayThresholds, {}, {}, false);
-        }
+        warningText->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 110);
+        this->listElement->addItem(warningText);
+        ValueThresholds displayThresholds(60, 65);
+        addConfigButton(HocClkConfigValue_MaxDisplayClockH, "Max Handheld Display Hz", ValueRange(60, IsAula() ? 65 : 75, 1, " Hz", 1),
+                        "Display Clock", &displayThresholds, {}, {}, false);
         if (!IsAula()) {
             tsl::elm::CustomDrawer *warningTextDV = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
                 renderer->drawString("\uE150 Adjust the display voltage", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
@@ -1050,6 +1119,7 @@ class SafetySubMenuGui : public MiscGui {
         this->listElement->addItem(new CompactCategoryHeader("Safety Settings"));
         addConfigToggle(HocClkConfigValue_UncappedClocks, nullptr);
         addConfigToggle(HocClkConfigValue_ThermalThrottle, nullptr);
+        addConfigToggle(HocClkConfigValue_Watchdog, nullptr);
 
 #if IS_MINIMAL == 0
         ValueThresholds throttleThresholds(70, 80);
@@ -1090,10 +1160,15 @@ class RamSubmenuGui : public MiscGui {
         std::vector<NamedValue> noNamedValues = {};
 
         this->listElement->addItem(new CompactCategoryHeader("RAM Settings"));
-
-        addMappedConfigTrackbar(KipConfigValue_emcDvbShift, "DVB Shift",
-                                { 0xFFFFFFFCu, 0xFFFFFFFDu, 0xFFFFFFFEu, 0xFFFFFFFFu, 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u },
-                                { "-4", "-3", "-2", "-1", " 0", "1", "2", "3", "4", "5", "6", "7", "8" });
+        if(IsMariko()) {
+            addMappedConfigTrackbar(KipConfigValue_emcDvbShift, "DVB Shift",
+                                    { 0xFFFFFFFCu, 0xFFFFFFFDu, 0xFFFFFFFEu, 0xFFFFFFFFu, 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u },
+                                    { "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8" });
+        } else {
+            addMappedConfigTrackbar(KipConfigValue_emcDvbShift, "DVB Shift",
+                                    { 0u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u },
+                                    { "0", "1", "2", "3", "4", "5", "6", "7", "8" });
+        }
 
         if (IsMariko()) {
             u32 socSpeedo = this->context->speedos[HocClkSpeedo_SOC];
@@ -1132,7 +1207,7 @@ class RamSubmenuGui : public MiscGui {
         };
 
         ValueThresholds vdd2Thresholds(IsMariko() ? 1212500 : 1237500, IsMariko() ? 1250000 : 1275000);
-        addConfigButton(KipConfigValue_commonEmcMemVolt, "RAM VDD2 Voltage", ValueRange(912500, 1350000, 12500, "mV", 1000, 1), "Voltage",
+        addConfigButton(KipConfigValue_commonEmcMemVolt, "RAM VDD2 Voltage", ValueRange(912500, IsMariko() ? 1275000 : 1350000, 12500, "mV", 1000, 1), "Voltage",
                         &vdd2Thresholds, emc_voltage_label, noNamedValues, false, true);
 
         if (IsMariko()) {
@@ -1196,6 +1271,11 @@ class RamSubmenuGui : public MiscGui {
                 NamedValue("2361 MHz", 2361600),
                 NamedValue("2380 MHz", 2380800),
                 NamedValue("2400 MHz", 2400000, "JEDEC."),
+                NamedValue("2419 MHz", 2419200),
+                NamedValue("2438 MHz", 2438400),
+                NamedValue("2457 MHz", 2457600),
+                NamedValue("2476 MHz", 2476800),
+                NamedValue("2496 MHz", 2496000),
             };
         } else {
             emcMaxClock = {
@@ -1254,7 +1334,10 @@ class RamSubmenuGui : public MiscGui {
                 NamedValue("3300 MHz", 3300000, "±1760 speedo"),
                 NamedValue("3333 MHz", 3333000, "±1780 speedo"),
                 NamedValue("3366 MHz", 3366000, "±1800 speedo"),
-                NamedValue("3400 MHz", 3400000, "±1820 speedo")
+                NamedValue("3400 MHz", 3400000, "±1820 speedo"),
+                NamedValue("3433 MHz", 3433000, "±???? speedo"),
+                NamedValue("3466 MHz", 3466000, "±???? speedo"),
+                NamedValue("3500 MHz", 3500000, "±???? speedo"),
             };
         }
 
@@ -1272,17 +1355,6 @@ class RamSubmenuGui : public MiscGui {
                             emcMaxClock, false, true);
         }
 
-        tsl::elm::ListItem *latenciesSubmenu = new tsl::elm::ListItem("RAM Latency Editor");
-        latenciesSubmenu->setClickListener([](u64 keys) {
-            if (keys & HidNpadButton_A) {
-                tsl::swapTo<RamLatenciesSubmenuGui>();
-                return true;
-            }
-            return false;
-        });
-        latenciesSubmenu->setValue(R_ARROW);
-        this->listElement->addItem(latenciesSubmenu);
-
         tsl::elm::ListItem *timingsSubmenu = new tsl::elm::ListItem("RAM Timing Reductions");
         timingsSubmenu->setClickListener([](u64 keys) {
             if (keys & HidNpadButton_A) {
@@ -1293,6 +1365,17 @@ class RamSubmenuGui : public MiscGui {
         });
         timingsSubmenu->setValue(R_ARROW);
         this->listElement->addItem(timingsSubmenu);
+
+        tsl::elm::ListItem *latenciesSubmenu = new tsl::elm::ListItem("RAM Latency Editor");
+        latenciesSubmenu->setClickListener([](u64 keys) {
+            if (keys & HidNpadButton_A) {
+                tsl::swapTo<RamLatenciesSubmenuGui>();
+                return true;
+            }
+            return false;
+        });
+        latenciesSubmenu->setValue(R_ARROW);
+        this->listElement->addItem(latenciesSubmenu);
 
         if (IsMariko()) {
             tsl::elm::ListItem *socVoltageTable = new tsl::elm::ListItem("SOC Voltage Table");
@@ -1313,6 +1396,67 @@ class RamSubmenuGui : public MiscGui {
         lastItemName = "";
     }
 };
+
+struct RamTimingPresetSet {
+    uint32_t t[8];
+};
+
+struct RamTimingPresetRow {
+    std::initializer_list<uint8_t> dramIds;
+    RamTimingPresetSet common;
+    RamTimingPresetSet st;
+};
+
+static const RamTimingPresetRow kMarikoRamTimingPresets[] = {
+    { { 32, 33, 34 }, { { 4, 4, 5, 4, 2, 6, 5, 6 } }, { { 6, 6, 7, 5, 2, 6, 5, 6 } } },              // WT:B
+    { { 3, 5, 6, 29, 30, 31 }, { { 3, 3, 2, 1, 5, 5, 4, 6 } }, { { 4, 4, 4, 2, 7, 6, 5, 6 } } },     // NEE / x267
+    { { 17, 19, 24 }, { { 4, 4, 5, 4, 5, 5, 6, 6 } }, { { 4, 4, 8, 5, 5, 6, 7, 6 } } },              // AA-MGCL 4GB
+    { { 11, 15 }, { { 2, 2, 2, 1, 4, 4, 4, 6 } }, { { 3, 5, 3, 2, 5, 4, 5, 6 } } },                  // WT:E
+    { { 8, 12 }, { { 3, 2, 4, 1, 4, 4, 4, 6 } }, { { 4, 3, 8, 1, 5, 4, 4, 6 } } },                   // AM-MGCJ 4GB
+    { { 25, 26, 27 }, { { 4, 4, 2, 4, 4, 6, 3, 6 } }, { { 5, 5, 4, 4, 5, 6, 5, 6 } } },              // WT:F
+    { { 20, 21, 22 }, { { 4, 4, 4, 3, 4, 5, 6, 6 } }, { { 4, 4, 8, 4, 5, 6, 8, 6 } } },              // AB-MGCL
+    { { 10, 14 }, { { 2, 2, 3, 0, 1, 2, 2, 6 } }, { { 5, 3, 4, 1, 8, 3, 3, 6 } } },                  // NME
+};
+
+static const RamTimingPresetSet kEristaCommonTiming = { { 4, 4, 4, 0, 1, 5, 4, 6 } };
+static const RamTimingPresetSet kEristaSTTiming = { { 4, 5, 9, 1, 2, 6, 4, 6 } };
+
+// 8GB DRAM modules are commonly used for ram upgrade
+// and are not representative of the actual ram in the console
+// Theoretically you could do it via MRR Vendor registers
+// but thats for the future
+static bool isEightGigRamID(u8 dramID) {
+    switch (dramID) {
+        case 7:
+        case 9:
+        case 13:
+        case 18:
+        case 23:
+        case 28:
+            return true;
+        default:
+            return false;
+    }
+}
+
+static const RamTimingPresetRow *findMarikoRamTimingPreset(u8 dramID) {
+    for (const auto &row : kMarikoRamTimingPresets) {
+        for (auto id : row.dramIds) {
+            if (id == dramID)
+                return &row;
+        }
+    }
+    return nullptr;
+}
+
+static void applyRamTimingPreset(HocClkConfigValueList *configList, const RamTimingPresetSet &set) {
+    static constexpr HocClkConfigValue keys[8] = {
+        KipConfigValue_t1_tRCD, KipConfigValue_t2_tRP,  KipConfigValue_t3_tRAS, KipConfigValue_t4_tRRD,
+        KipConfigValue_t5_tRFC, KipConfigValue_t6_tRTW, KipConfigValue_t7_tWTR, KipConfigValue_t8_tREFI,
+    };
+    for (int i = 0; i < 8; i++)
+        configList->values[keys[i]] = set.t[i];
+}
 
 class RamTimingsSubmenuGui : public MiscGui {
     public:
@@ -1339,10 +1483,21 @@ class RamTimingsSubmenuGui : public MiscGui {
         }
         this->listElement->addItem(new CompactCategoryHeader("Memory Timings"));
 
+        tsl::elm::ListItem *timingPresetsSubMenu = new tsl::elm::ListItem("Timing Presets");
+        timingPresetsSubMenu->setClickListener([](u64 keys) {
+            if (keys & HidNpadButton_A) {
+                tsl::swapTo<RamTimingPresetsSubmenuGui>();
+                return true;
+            }
+            return false;
+        });
+        timingPresetsSubMenu->setValue(R_ARROW);
+        this->listElement->addItem(timingPresetsSubMenu);
+
         addConfigTrackbar(KipConfigValue_t1_tRCD, "t1 tRCD", ValueRange(0, 7, 1));
         addConfigTrackbar(KipConfigValue_t2_tRP, "t2 tRP", ValueRange(0, 7, 1));
         addConfigTrackbar(KipConfigValue_t3_tRAS, "t3 tRAS", ValueRange(0, 9, 1));
-        addConfigTrackbar(KipConfigValue_t4_tRRD, "t4 tRRD", ValueRange(0, 6, 1));
+        addConfigTrackbar(KipConfigValue_t4_tRRD, "t4 tRRD", ValueRange(0, IsErista() ? 7u : 6u , 1));
         addConfigTrackbar(KipConfigValue_t5_tRFC, "t5 tRFC", ValueRange(0, IsErista() ? 5u : 10u, 1));
         addConfigTrackbar(KipConfigValue_t6_tRTW, "t6 tRTW", ValueRange(0, 9, 1));
         addConfigTrackbar(KipConfigValue_t7_tWTR, "t7 tWTR", ValueRange(0, 9, 1));
@@ -1406,6 +1561,9 @@ class RamTimingsSubmenuGui : public MiscGui {
             NamedValue("3333 MHz", 3333000, "±1780 speedo"),
             NamedValue("3366 MHz", 3366000, "±1800 speedo"),
             NamedValue("3400 MHz", 3400000, "±1820 speedo"),
+            NamedValue("3433 MHz", 3433000, "±???? speedo"),
+            NamedValue("3466 MHz", 3466000, "±???? speedo"),
+            NamedValue("3500 MHz", 3500000, "±???? speedo"),
         };
         RamDisplayUnit unit = (RamDisplayUnit)this->configList->values[HocClkConfigValue_RamDisplayUnit];
 
@@ -1554,6 +1712,114 @@ class RamTimingsSubmenuGui : public MiscGui {
                                 { "-2", "-1", " 0", "+1", "+2" });
         addMappedConfigTrackbar(KipConfigValue_t7_tWTR_fine_tune, "t7 tWTR Fine Tune", { 0xFFFFFFFDu, 0xFFFFFFFEu, 0xFFFFFFFFu, 0u, 1u, 2u, 3u },
                                 { "-3", "-2", "-1", " 0", "+1", "+2", "+3" });
+
+        if (!lastItemName.empty()) {
+            this->listElement->jumpToItem(lastItemName);
+        }
+        lastItemName = "";
+    }
+};
+
+class RamTimingPresetsSubmenuGui : public MiscGui {
+    public:
+    RamTimingPresetsSubmenuGui() {
+    }
+
+    bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick,
+                      HidAnalogStickState rightJoyStick) override {
+        if (keysDown & KEY_B) {
+            triggerExitFeedback();
+            lastItemName = "Timing Presets";
+            tsl::swapTo<RamTimingsSubmenuGui>();
+            return true;
+        }
+        return false;
+    }
+
+    protected:
+    void listUI() override {
+        Result rc = hocclkIpcGetConfigValues(this->configList);
+        if (R_FAILED(rc)) [[unlikely]] {
+            FatalGui::openWithResultCode("hocclkIpcGetConfigValues", rc);
+            return;
+        }
+
+        if (!this->context) {
+            this->context = new HocClkContext;
+        }
+        Result crc = hocclkIpcGetCurrentContext(this->context);
+        if (R_FAILED(crc)) [[unlikely]] {
+            FatalGui::openWithResultCode("hocclkIpcGetCurrentContext", crc);
+            return;
+        }
+        u8 dramID = this->context->dramID;
+        this->listElement->addItem(new CompactCategoryHeader("Timing Presets: " + formatRamModule(dramID)));
+
+        tsl::elm::CustomDrawer *presetWarning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString("\uE150 Timing presets are only a baseline and", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
+            renderer->drawString("may need adjustment for your particular", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
+            renderer->drawString("DRAM Module", false, x + 20, y + 70, 18, tsl::style::color::ColorText);
+        });
+        presetWarning->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 90);
+        this->listElement->addItem(presetWarning);
+
+        const RamTimingPresetSet *presetCommon = nullptr;
+        const RamTimingPresetSet *presetST = nullptr;
+        if (!isEightGigRamID(dramID)) {
+            if (IsMariko()) {
+                const RamTimingPresetRow *row = findMarikoRamTimingPreset(dramID);
+                if (row) {
+                    presetCommon = &row->common;
+                    presetST = &row->st;
+                }
+            } else {
+                presetCommon = &kEristaCommonTiming;
+                presetST = &kEristaSTTiming;
+            }
+        }
+
+        if (presetCommon && presetST) {
+            tsl::elm::ListItem *commonPresetBtn = new tsl::elm::ListItem("Apply Common Preset");
+            commonPresetBtn->setClickListener([this, presetCommon](u64 keys) {
+                if (!(keys & HidNpadButton_A))
+                    return false;
+                applyRamTimingPreset(this->configList, *presetCommon);
+                Result rc = hocclkIpcSetConfigValues(this->configList);
+                if (R_FAILED(rc)) {
+                    FatalGui::openWithResultCode("hocclkIpcSetConfigValues", rc);
+                    return false;
+                }
+                shouldSaveKip = true;
+                lastItemName = "Timing Presets";
+                tsl::swapTo<RamTimingsSubmenuGui>();
+                return true;
+            });
+            this->listElement->addItem(commonPresetBtn);
+
+            tsl::elm::ListItem *stPresetBtn = new tsl::elm::ListItem("Apply Super Tight (ST) Preset");
+            stPresetBtn->setClickListener([this, presetST](u64 keys) {
+                if (!(keys & HidNpadButton_A))
+                    return false;
+                applyRamTimingPreset(this->configList, *presetST);
+                Result rc = hocclkIpcSetConfigValues(this->configList);
+                if (R_FAILED(rc)) {
+                    FatalGui::openWithResultCode("hocclkIpcSetConfigValues", rc);
+                    return false;
+                }
+                shouldSaveKip = true;
+                lastItemName = "Timing Presets";
+                tsl::swapTo<RamTimingsSubmenuGui>();
+                return true;
+            });
+            this->listElement->addItem(stPresetBtn);
+        } else {
+            tsl::elm::CustomDrawer *noPresetText = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                renderer->drawString("Timing presets are not available", false, x + 20, y + 30, 18, tsl::style::color::ColorText);
+                renderer->drawString("for your RAM module.", false, x + 20, y + 50, 18, tsl::style::color::ColorText);
+            });
+            noPresetText->setBoundaries(0, 0, tsl::cfg::FramebufferWidth, 70);
+            this->listElement->addItem(noPresetText);
+        }
     }
 };
 
@@ -1644,7 +1910,8 @@ class RamLatenciesSubmenuGui : public MiscGui {
             kFreqOptions = {
                 1633000, 1666000, 1700000, 1733000, 1800000, 1833000, 1862400, 1881600, 1900800, 1920000, 1939200, 1958400,
                 1977600, 1996800, 2016000, 2035200, 2054400, 2073600, 2092800, 2112000, 2131200, 2150400, 2169600, 2188800,
-                2208000, 2227200, 2246400, 2265600, 2284800, 2304000, 2323200, 2342400, 2361600, 2380800, 2400000,
+                2208000, 2227200, 2246400, 2265600, 2284800, 2304000, 2323200, 2342400, 2361600, 2380800, 2400000, 2419200,
+                2438400, 2457600, 2476800, 2496000,
             };
         }
 
@@ -2059,8 +2326,10 @@ class RamLatenciesSubmenuGui : public MiscGui {
             this->listElement->addItem(graph);
         }
 
+        const int readTierCount = IsMariko() ? 4 : 3;
+
         this->listElement->addItem(new CompactCategoryHeader("Read Latency"));
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < readTierCount; i++)
             addLatencyRow(kTierLabels[i], i, kLatencyRKeys);
 
         this->listElement->addItem(new CompactCategoryHeader("Write Latency"));
@@ -2102,7 +2371,7 @@ class CpuSubmenuGui : public MiscGui {
         this->listElement->addItem(new CompactCategoryHeader("CPU Settings"));
         if (IsMariko()) {
             addConfigTrackbar(KipConfigValue_marikoCpuUVLow, "CPU Low UV", ValueRange(0, 8, 1));
-            addConfigTrackbar(KipConfigValue_marikoCpuUVHigh, "CPU High UV", ValueRange(0, 12, 1));
+            addConfigTrackbar(KipConfigValue_marikoCpuUVHigh, "CPU High UV", ValueRange(0, 13, 1));
 
             std::vector<NamedValue> marikoTableConf = { // NamedValue("Auto", 0),
                                                         NamedValue("Default", 1), NamedValue("1581MHz Tbreak", 2), NamedValue("1683MHz Tbreak", 3),
@@ -2119,92 +2388,43 @@ class CpuSubmenuGui : public MiscGui {
                             {}, false, true);
 
             ValueThresholds mCpuVoltThresholds(1160, 1180);
-            addConfigButton(KipConfigValue_marikoCpuMaxVolt, "CPU Max Voltage", ValueRange(1000, 1200, 5, "mV", 1), "CPU Max Voltage",
+            addConfigButton(KipConfigValue_marikoCpuMaxVolt, "CPU Max Voltage", ValueRange(1000, 1235, 5, "mV", 1), "CPU Max Voltage",
                             &mCpuVoltThresholds, {}, {}, false, true);
 
             std::vector<NamedValue> maxClkOptions = {
                 NamedValue("1963 MHz", 1963500, "Rating"), NamedValue("2091 MHz", 2091000), NamedValue("2193 MHz", 2193000), NamedValue("2295 MHz", 2295000),
-                NamedValue("2397 MHz", 2397000, "Safe Max"), NamedValue("2499 MHz", 2499000, "Unsafe Max"), NamedValue("2601 MHz", 2601000), NamedValue("2703 MHz", 2703000, "Absolute Max"),
+                NamedValue("2397 MHz", 2397000, "Safe Max"), NamedValue("2499 MHz", 2499000, "Unsafe Max"), NamedValue("2601 MHz", 2601000), NamedValue("2703 MHz", 2703000),
+                NamedValue("2805 MHz", 2805000, "Absolute Max"),
             };
 
             addConfigButton(KipConfigValue_marikoCpuMaxClock, "CPU Max Clock", ValueRange(0, 0, 1, "", 1), "CPU Max Clock",
                             this->configList->values[KipConfigValue_marikoCpuUVHigh] ? &mCpuClockThresholdsUV : &mCpuClockThresholds, {},
                             maxClkOptions, false, true);
 
-            std::vector<NamedValue> clkOptionsRamOc = {
-                NamedValue("1122 MHz", 1122000), NamedValue("1224 MHz", 1224000), NamedValue("1326 MHz", 1326000), NamedValue("1428 MHz", 1428000),
-                NamedValue("1581 MHz", 1581000), NamedValue("1683 MHz", 1683000, "Default"), NamedValue("1785 MHz", 1785000), NamedValue("1887 MHz", 1887000),
-                NamedValue("1963 MHz", 1963500), NamedValue("2091 MHz", 2091000), NamedValue("2193 MHz", 2193000), NamedValue("2295 MHz", 2295000),
-                NamedValue("2397 MHz", 2397000), NamedValue("2499 MHz", 2499000), NamedValue("2601 MHz", 2601000), NamedValue("2703 MHz", 2703000),
-            };
-
             addConfigButton(KipConfigValue_marikoCpuBoostClock, "CPU Boost Clock", ValueRange(0, 0, 1, "", 1), "CPU Boost Clock",
                             this->configList->values[KipConfigValue_marikoCpuUVHigh] ? &mCpuClockThresholdsUV : &mCpuClockThresholds, {}, maxClkOptions,
                             false, true);
 
-            std::vector<NamedValue> emcMaxClock = {
-                NamedValue("1600 MHz", 1600000),
-                NamedValue("1633 MHz", 1633000),
-                NamedValue("1666 MHz", 1666000),
-                NamedValue("1700 MHz", 1700000),
-                NamedValue("1733 MHz", 1733000),
-                NamedValue("1766 MHz", 1766000),
-                NamedValue("1800 MHz", 1800000),
-                NamedValue("1833 MHz", 1833000),
-                NamedValue("1866 MHz", 1866000, "JEDEC."),
-                NamedValue("1900 MHz", 1900000),
-                NamedValue("1933 MHz", 1933000),
-                NamedValue("1966 MHz", 1966000),
-                NamedValue("1996 MHz", 1996800, "JEDEC."),
-                NamedValue("2000 MHz", 2000000),
-                NamedValue("2033 MHz", 2033000),
-                NamedValue("2066 MHz", 2066000),
-                NamedValue("2100 MHz", 2100000),
-                NamedValue("2133 MHz", 2133000, "JEDEC."),
-                NamedValue("2166 MHz", 2166000),
-                NamedValue("2200 MHz", 2200000),
-                NamedValue("2233 MHz", 2233000),
-                NamedValue("2266 MHz", 2266000),
-                NamedValue("2300 MHz", 2300000),
-                NamedValue("2333 MHz", 2333000),
-                NamedValue("2366 MHz", 2366000),
-                NamedValue("2400 MHz", 2400000, "JEDEC."),
-                NamedValue("2433 MHz", 2433000),
-                NamedValue("2466 MHz", 2466000),
-                NamedValue("2500 MHz", 2500000),
-                NamedValue("2533 MHz", 2533000),
-                NamedValue("2566 MHz", 2566000),
-                NamedValue("2600 MHz", 2600000),
-                NamedValue("2633 MHz", 2633000),
-                NamedValue("2666 MHz", 2666000, "JEDEC."),
-                NamedValue("2700 MHz", 2700000),
-                NamedValue("2733 MHz", 2733000),
-                NamedValue("2766 MHz", 2766000),
-                NamedValue("2800 MHz", 2800000),
-                NamedValue("2833 MHz", 2833000),
-                NamedValue("2866 MHz", 2866000),
-                NamedValue("2900 MHz", 2900000),
-                NamedValue("2933 MHz", 2933000, "JEDEC."),
-                NamedValue("2966 MHz", 2966000),
-                NamedValue("3000 MHz", 3000000),
-                NamedValue("3033 MHz", 3033000),
-                NamedValue("3066 MHz", 3066000),
-                NamedValue("3100 MHz", 3100000),
-                NamedValue("3133 MHz", 3133000),
-                NamedValue("3166 MHz", 3166000),
-                NamedValue("3200 MHz", 3200000, "JEDEC."),
-                NamedValue("3233 MHz", 3233000, "±1720 speedo"),
-                NamedValue("3266 MHz", 3266000, "±1740 speedo"),
-                NamedValue("3300 MHz", 3300000, "±1760 speedo"),
-                NamedValue("3333 MHz", 3333000, "±1780 speedo"),
-                NamedValue("3366 MHz", 3366000, "±1800 speedo"),
-                NamedValue("3400 MHz", 3400000, "±1820 speedo"),
+            std::vector<NamedValue> cpuDvfsOffset = {
+                NamedValue("-80 mV", 0xFFFFFFB0), NamedValue("-75 mV", 0xFFFFFFB5), NamedValue("-70 mV", 0xFFFFFFBA), NamedValue("-65 mV", 0xFFFFFFBF),
+                NamedValue("-60 mV", 0xFFFFFFC4), NamedValue("-55 mV", 0xFFFFFFC9), NamedValue("-50 mV", 0xFFFFFFCE), NamedValue("-45 mV", 0xFFFFFFD3),
+                NamedValue("-40 mV", 0xFFFFFFD8), NamedValue("-35 mV", 0xFFFFFFDD), NamedValue("-30 mV", 0xFFFFFFE2), NamedValue("-25 mV", 0xFFFFFFE7),
+                NamedValue("-20 mV", 0xFFFFFFEC), NamedValue("-15 mV", 0xFFFFFFF1), NamedValue("-10 mV", 0xFFFFFFF6), NamedValue(" -5 mV", 0xFFFFFFFB),
+                NamedValue("Disabled", 0),        NamedValue(" +5 mV", 5),          NamedValue("+10 mV", 10),         NamedValue("+15 mV", 15),
+                NamedValue("+20 mV", 20),
             };
-            addConfigToggle(HocClkConfigValue_AutoRAMCPUOverclock, "Auto CPU RAM OC");
-            addConfigButton(HocClkConfigValue_AutoRamCpuCpuOCFreq, "Auto CPU RAM OC CPU clock", ValueRange(0, 0, 1, "", 1), "CPU Clock",
-                            &thresholdsDisabled, {}, clkOptionsRamOc, false, false);
-            addConfigButton(HocClkConfigValue_AutoRamCpuRamOCThreshold, "Auto CPU RAM OC Threshold", ValueRange(0, 0, 1, "", 1), "RAM Clock",
-                            &thresholdsDisabled, {}, emcMaxClock, false, false);
+
+            std::vector<NamedValue> cpuDvfsValues = {
+                NamedValue("Disabled", CPUDVFSMode_Disabled),
+                NamedValue("LUT Modify", CPUDVFSMode_Modify),
+            };
+
+            addConfigButton(HocClkConfigValue_CPUDVFSMode, "CPU DVFS Mode", ValueRange(0, 0, 1, "", 0), "CPU DVFS Mode", &thresholdsDisabled, {}, cpuDvfsValues,
+                            false);
+
+            addConfigButton(HocClkConfigValue_CPUDVFSOffset, "CPU DVFS Offset", ValueRange(0, 12, 1, "", 0), "CPU DVFS Offset", &thresholdsDisabled, {},
+                            cpuDvfsOffset, false);
+
         } else {
             addConfigTrackbar(KipConfigValue_eristaCpuUV, "CPU UV", ValueRange(0, 5, 1));
 
@@ -2319,8 +2539,10 @@ class GpuSubmenuGui : public MiscGui {
             addConfigButton(KipConfigValue_marikoGpuVmin, "GPU VMIN", ValueRange(0, 0, 0, "0", 1), "GPU VMIN", &thresholdsDisabled, {}, mGpuVoltsVmin,
                             false, true);
             ValueThresholds MgpuVmaxThresholds(805, 850);
-            addConfigButton(KipConfigValue_marikoGpuVmax, "GPU Maximum Voltage", ValueRange(800, 960, 5, "mV", 1), "GPU Maximum Voltage",
-                            &MgpuVmaxThresholds, {}, {}, false, true);
+            if(IsMariko()) {
+                addConfigButton(KipConfigValue_marikoGpuVmax, "GPU Maximum Voltage", ValueRange(800, 995, 5, "mV", 1), "GPU Maximum Voltage",
+                                &MgpuVmaxThresholds, {}, {}, false, true);
+            }
         }
 
         std::vector<NamedValue> gpuOffset = {
@@ -2374,10 +2596,10 @@ class GpuSubmenuGui : public MiscGui {
             // NamedValue("Official Service", DVFSMode_OfficialService),
         };
 
-        addConfigButton(HocClkConfigValue_DVFSMode, "GPU DVFS Mode", ValueRange(0, 0, 1, "", 0), "GPU DVFS Mode", &thresholdsDisabled, {}, dvfsValues,
+        addConfigButton(HocClkConfigValue_GPUDVFSMode, "GPU DVFS Mode", ValueRange(0, 0, 1, "", 0), "GPU DVFS Mode", &thresholdsDisabled, {}, dvfsValues,
                         false);
 
-        addConfigButton(HocClkConfigValue_DVFSOffset, "GPU DVFS Offset", ValueRange(0, 12, 1, "", 0), "GPU DVFS Offset", &thresholdsDisabled, {},
+        addConfigButton(HocClkConfigValue_GPUDVFSOffset, "GPU DVFS Offset", ValueRange(0, 12, 1, "", 0), "GPU DVFS Offset", &thresholdsDisabled, {},
                         dvfsOffset, false);
 
         tsl::elm::ListItem *customTableSubmenu = new tsl::elm::ListItem("GPU Voltage Table");
@@ -2425,7 +2647,7 @@ class GpuCustomTableSubmenuGui : public MiscGui {
 
         this->listElement->addItem(new CompactCategoryHeader("GPU Custom Table (mV)"));
 
-        ValueThresholds MgpuVmaxThresholds(800, 850);
+        ValueThresholds MgpuVmaxThresholds(825, 900);
         ValueThresholds EgpuVmaxThresholds(950, 975);
 
         std::vector<NamedValue> mGpuVolts = {
@@ -2448,7 +2670,9 @@ class GpuCustomTableSubmenuGui : public MiscGui {
             NamedValue("870mV", 870),     NamedValue("875mV", 875), NamedValue("880mV", 880), NamedValue("885mV", 885), NamedValue("890mV", 890),
             NamedValue("895mV", 895),     NamedValue("900mV", 900), NamedValue("905mV", 905), NamedValue("910mV", 910), NamedValue("915mV", 915),
             NamedValue("920mV", 920),     NamedValue("925mV", 925), NamedValue("930mV", 930), NamedValue("935mV", 935), NamedValue("940mV", 940),
-            NamedValue("945mV", 945),     NamedValue("950mV", 950), NamedValue("955mV", 955), NamedValue("960mV", 960),
+            NamedValue("945mV", 945),     NamedValue("950mV", 950), NamedValue("955mV", 955), NamedValue("960mV", 960), NamedValue("965mV", 965),
+            NamedValue("970mV", 970),     NamedValue("975mV", 975), NamedValue("980mV", 980), NamedValue("985mV", 985), NamedValue("990mV", 990),
+            NamedValue("995mV", 995),
         };
 
         std::vector<NamedValue> eGpuVolts = {
@@ -2488,7 +2712,8 @@ class GpuCustomTableSubmenuGui : public MiscGui {
             NamedValue("875mV", 875),     NamedValue("880mV", 880), NamedValue("885mV", 885), NamedValue("890mV", 890), NamedValue("895mV", 895),
             NamedValue("900mV", 900),     NamedValue("905mV", 905), NamedValue("910mV", 910), NamedValue("915mV", 915), NamedValue("920mV", 920),
             NamedValue("925mV", 925),     NamedValue("930mV", 930), NamedValue("935mV", 935), NamedValue("940mV", 940), NamedValue("945mV", 945),
-            NamedValue("950mV", 950),     NamedValue("955mV", 955), NamedValue("960mV", 960),
+            NamedValue("950mV", 950),     NamedValue("955mV", 955), NamedValue("960mV", 960), NamedValue("965mV", 965), NamedValue("970mV", 970),
+            NamedValue("975mV", 975),     NamedValue("980mV", 980), NamedValue("985mV", 985), NamedValue("990mV", 990), NamedValue("995mV", 995),
         };
 
         std::vector<NamedValue> eGpuVolts_noAuto = {
@@ -2570,6 +2795,9 @@ class GpuCustomTableSubmenuGui : public MiscGui {
                                             &MgpuVmaxThresholds, {}, mGpuVolts_noAuto, false, true);
                     addGpuFreqVoltageButton(KipConfigValue_g_volt_1536000, "1536.0MHz", 1'536'000'000, ValueRange(0, 0, 0, "0", 1), "Voltage",
                                             &MgpuVmaxThresholds, {}, mGpuVolts_noAuto, false, true);
+                    addGpuFreqVoltageButton(KipConfigValue_g_volt_1574400, "1574.4MHz", 1'574'400'000, ValueRange(0, 0, 0, "0", 1), "Voltage",
+                                            &MgpuVmaxThresholds, {}, mGpuVolts_noAuto, false, true);
+
                 }
             }
         } else {

@@ -21,7 +21,7 @@
 #include "process_management.hpp"
 #include <sys/stat.h>
 
-namespace integrations {
+namespace hos {
 
     namespace {
 
@@ -88,11 +88,6 @@ namespace integrations {
         return stat("sdmc:/atmosphere/contents/0000000000534C56/flags/boot2.flag", &st) == 0;
     }
 
-    bool GetRETROSuperStatus() {
-        struct stat st = { 0 };
-        return stat("sdmc:/config/horizon-oc/retro.flag", &st) == 0;  // TODO: unhardcode this
-    }
-
     void LoadSaltyNX() {
         if (!CheckSaltyNXPort())
             return;
@@ -103,7 +98,7 @@ namespace integrations {
         if (!gSharedMemoryUsed)
             return 254;
 
-        u64 tid = processManagement::GetCurrentApplicationId();
+        u64 tid = GetCurrentApplicationId();
         if (tid == 0)
             return 254;
 
@@ -124,7 +119,7 @@ namespace integrations {
         if (!gSharedMemoryUsed)
             return 0;
 
-        u64 tid = processManagement::GetCurrentApplicationId();
+        u64 tid = GetCurrentApplicationId();
         if (tid == 0)
             return 0;
 
@@ -156,4 +151,4 @@ namespace integrations {
         return 0;
     }
 
-}  // namespace integrations
+}  // namespace hos

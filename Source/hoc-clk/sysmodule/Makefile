@@ -17,12 +17,18 @@ include $(DEVKITPRO)/libnx/switch_rules
 # INCLUDES is a list of directories containing header files
 # EXEFS_SRC is the optional input directory containing data copied into exefs, if anything this normally should only contain "main.npdm".
 #---------------------------------------------------------------------------------
+
+rwildcard = $(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+
 TARGET		:=	hoc-clk
 CONFIG_DIR	:=	horizon-oc
 BUILD		:=	build
 OUTDIR		:=	out
 RESOURCES	:=	res
-SOURCES		:=	src src/hos src/i2c src/ipc src/board src/display src/tsensor src/mgr src/file src/soc src/mapping src/pwr src/util
+CSOURCES	:=	$(call rwildcard,src/,*.c) $(call rwildcard,../common/src/,*.c)
+CPPSOURCES	:=	$(call rwildcard,src/,*.cpp) $(call rwildcard,../common/src/,*.cpp)
+SSOURCES	:=	$(call rwildcard,src/,*.s) $(call rwildcard,../common/src/,*.s)
+SOURCES		:=	$(sort $(dir $(CSOURCES) $(CPPSOURCES) $(SSOURCES)))
 DATA		:=	data
 INCLUDES	:=	../common/include src/hos src/soc src/i2c src/util src/pwr src/ipc
 EXEFS_SRC	:=	exefs_src
@@ -39,7 +45,7 @@ DEFINES	:=	-DDISABLE_IPC -DKIP_VERSION=$(KIP_VERSION) -DCUST_REV=$(CUST_REV) -DT
 
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS	:=	-g -Wall -Os \
+CFLAGS	:=	-g -Wall -Os -flto=auto \
             -ffast-math -ffunction-sections -fdata-sections -fno-asynchronous-unwind-tables -fno-unwind-tables \
             $(ARCH) $(DEFINES)
 
@@ -48,7 +54,7 @@ CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 CXXFLAGS    := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++23
 
 ASFLAGS	:=	-g $(ARCH)
-LDFLAGS    =    -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,-wrap,__cxa_throw -Wl,-wrap,_Unwind_Resume -Wl,-wrap,__gxx_personality_v0
+LDFLAGS    =    -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Os -flto=auto -Wl,-Map,$(notdir $*.map) -Wl,-wrap,__cxa_throw -Wl,-wrap,_Unwind_Resume -Wl,-wrap,__gxx_personality_v0
 
 LIBS	:= $(foreach lib,$(LIBNAMES),-l$(lib)) -lnx
 

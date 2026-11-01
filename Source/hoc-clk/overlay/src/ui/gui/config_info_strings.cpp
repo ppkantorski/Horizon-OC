@@ -45,6 +45,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Options:",
                 "- VDD2 - Display VDD2 voltage",
                 "- VDDQ - Display VDDQ voltage",
+                "- VDD2/VDDQ - Display both voltages, but without decimal place",
                 "Default: VDD2"
             };
 
@@ -73,15 +74,6 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "- INI: override via system_settings.ini",
                 "- NV Service: override via nvservices sysmodule (experimental)",
                 "Default: INI"
-            };
-
-        case HocClkConfigValue_MemoryFrequencyMeasurementMode:
-            return {
-                "How the RAM real frequency is measured",
-                "Options:",
-                "- PLL: Measure from PLLMB and PLLM (more accurate)",
-                "- Actmon: Measure from Actmon (less accurate)",
-                "Default: PLL"
             };
 
         case HocClkConfigValue_BatteryChargeCurrent:
@@ -113,6 +105,26 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
             return {
                 "The minimum frequency that the CPU governor will allow.",
                 "Default: 612MHz"
+            };
+
+        case HocClkConfigValue_GovernorPollRateMs:
+            return {
+                "How often the CPU/GPU governor runs its loop.",
+                "Default: 5ms"
+            };
+
+        case HocClkConfigValue_GovernorDownHoldTicks:
+            return {
+                "How many governor ticks to hold the current frequency",
+                "before ramping down. 0 disables holding",
+                "Default: 10 ticks"
+            };
+
+        case HocClkConfigValue_GovernorStepUtil:
+            return {
+                "Load divisor mapping utilization to frequency.",
+                "Lower ramps up faster, above 1000 caps the top end",
+                "Default: 900"
             };
 
         case HocClkConfigValue_OverwriteRefreshRate:
@@ -188,15 +200,21 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
             };
 
         case KipConfigValue_emcDvbShift:
-            return {
-                "Each level adds/removes 25mV from the SOC Voltage table",
-                "Consoles are bracketed by SoC Speedo. The brackets are as follows:",
-                " - Speedo 1487-1598: Bracket 0",
-                " - Speedo 1598-1709: Bracket 1",
-                " - Speedo 1709-1820: Bracket 2",
-                "Default: 0"
-            };
-
+            if(isMariko) {
+                return {
+                    "Each level adds/removes 25mV from the SOC Voltage table",
+                    "Consoles are bracketed by SoC Speedo. The brackets are as follows:",
+                    " - Speedo 1487-1598: Bracket 0",
+                    " - Speedo 1598-1709: Bracket 1",
+                    " - Speedo 1709-1820: Bracket 2",
+                    "Default: 0"
+                };
+            } else {
+                return {
+                    "Each level adds 25mV from the SOC Voltage table",
+                    "Default: 0"
+                };
+            }
         case KipConfigValue_marikoSocVmax:
             return {
                 "The maximum available SOC Voltage that the DVB-adjusted table can use",
@@ -229,7 +247,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
             return {
                 "The step that RAM clocks take.",
                 "Options:",
-                " - 33MHz - 3 MHz step (ex. 1600, 1633, 1666, 1700, etc.)",
+                " - 33MHz - 33 MHz step (ex. 1600, 1633, 1666, 1700, etc.)",
                 " - 66MHz - 66 MHz step (ex. 1600, 1666, 1733, etc.)",
                 " - 100MHz - 100 MHz step (ex. 1600, 1700, 1800, etc.)",
                 " - 133MHz - 133 MHz step (ex. 1600, 1733, 1866, etc.)",
@@ -439,24 +457,6 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "The clock used for the CPU in \"boost mode\"",
                 "Default: 1785 MHz"
             };
-        case HocClkConfigValue_AutoRAMCPUOverclock:
-            return {
-                "When enabled, automatically raises the CPU clock to the configured OC frequency when RAM clock meets or exceeds the threshold to meet the increased voltage requirement.",
-                "Default: ON"
-            };
-
-        case HocClkConfigValue_AutoRamCpuCpuOCFreq:
-            return {
-                "The CPU clock (in MHz) applied when Auto High RAM CPU OC is enabled and the RAM threshold is met.",
-                "Default: 1683 MHz"
-            };
-
-        case HocClkConfigValue_AutoRamCpuRamOCThreshold:
-            return {
-                "The RAM clock threshold (in MHz) at or above which the Auto High RAM CPU OC will activate.",
-                "Default: 2133MHz"
-            };
-
         case HocClkConfigValue_OverwriteBoostMode:
             return {
                 "If enabled, profiles can override the boost mode setting",
@@ -488,7 +488,7 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Default: 800 mV"
             };
 
-        case HocClkConfigValue_DVFSMode:
+        case HocClkConfigValue_GPUDVFSMode:
             return {
                 "The mode used for GPU DVFS",
                 "Adjusts GPU vmin when RAM clock is changed due to a higher requirement",
@@ -498,9 +498,25 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "Default: PCV Hijack"
             };
 
-        case HocClkConfigValue_DVFSOffset:
+        case HocClkConfigValue_GPUDVFSOffset:
             return {
                 "The offset added/subtracted to the GPU vmin when the RAM clock is changed due to a higher requirement in PCV Hijack mode",
+                "Default: 0 mV (Disabled)"
+            };
+
+        case HocClkConfigValue_CPUDVFSMode:
+            return {
+                "The mode used for CPU DVFS",
+                "Adjusts CPU vmin when RAM clock is changed due to a higher requirement",
+                "Options:",
+                "- Disabled: No CPU vmin adjustment",
+                "- LUT Modify: Modifies the CLDVFS LUT",
+                "Default: LUT Modify"
+            };
+
+        case HocClkConfigValue_CPUDVFSOffset:
+            return {
+                "The offset added/subtracted to the CPU vmin when the RAM clock is changed due to a higher requirement in LUT Modify mode",
                 "Default: 0 mV (Disabled)"
             };
 
@@ -543,6 +559,18 @@ std::vector<std::string> ConfigInfoStrings(HocClkConfigValue val, bool isMariko,
                 "RAM frequency changes overwrite requested voltage.",
                 "Voltage applies globally across all frequencies.",
                 "\"Reset\" restores default or RAM-stable minimum."
+            };
+        case HocClkConfigValue_FileLogging:
+            return {
+                "Write sysmodule logs to log.txt in the config folder.",
+                "Takes effect after a reboot.",
+                "Default: Off"
+            };
+        case HocClkConfigValue_UartLogging:
+            return {
+                "Output sysmodule logs over UART.",
+                "Takes effect after a reboot.",
+                "Default: Off"
             };
         default:
             return {};

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Souldbminer and Horizon OC Contributors
+ * Copyright (c) Souldbminer, Lightos and Horizon OC Contributors
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,7 +28,7 @@
 #include "clock_manager.hpp"
 
 
-namespace governor {
+namespace mgr {
     extern bool isCpuGovernorInBoostMode;
     extern bool isVRREnabled;
     extern bool isGpuGovernorEnabled;
@@ -36,7 +36,7 @@ namespace governor {
     extern bool lastGpuGovernorState;
     extern bool lastCpuGovernorState;
     extern bool lastVrrGovernorState;
-    void startThreads();
-    void exitThreads();
+    void StartThreads();
+    void ExitThreads();
     void HandleGovernor(uint32_t targetHz);
-}  // namespace governor
+}  // namespace mgr

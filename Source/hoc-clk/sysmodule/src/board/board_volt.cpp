@@ -70,10 +70,11 @@ namespace board {
             { 0xdfff, 0xdfff, 0x21707ff, 0x27d07ff }, { 0xdfff, 0xdfff, 0x21707ff, 0x27e07ff }, { 0xdfff, 0xdfff, 0x21707ff, 0x27f07ff },
         };
 
-        MarikoCpuUvEntry marikoCpuUvHigh[12] = {
+        MarikoCpuUvEntry marikoCpuUvHigh[13] = {
             { 0x0, 0xffff, 0, 0 },         { 0x0, 0xffdf, 0, 0x27207ff }, { 0x0, 0xffdf, 0, 0x27307ff }, { 0x0, 0xffdf, 0, 0x27407ff },
             { 0x0, 0xffdf, 0, 0x27707ff }, { 0x0, 0xffdf, 0, 0x27807ff }, { 0x0, 0xdfff, 0, 0x27b07ff }, { 0x0, 0xdfff, 0, 0x27c07ff },
             { 0x0, 0xdfff, 0, 0x27d07ff }, { 0x0, 0xdfff, 0, 0x27e07ff }, { 0x0, 0xdfff, 0, 0x27f07ff }, { 0x0, 0xdfff, 0, 0x27f07ff },
+            { 0x0, 0xdfff, 0, 0x27ff7ff },
         };
     }  // namespace
 
@@ -283,13 +284,12 @@ namespace board {
 
     bool ValidateHandle(Handle handle) {
         if (handle == INVALID_HANDLE) {
-            fileUtils::LogLine("Invalid handle!");
+            file::utils::LogLine("Invalid handle!");
             return false;
         }
 
         return true;
     }
-
 
     void CacheGpuVoltTable() {
         // Likely CPU regulator?
@@ -319,7 +319,7 @@ namespace board {
 
                 if (R_FAILED(resultProcessMemory) || !address) {
                     svcCloseHandle(handle);
-                    fileUtils::LogLine("[dvfs] Failed to get process data. %u", R_DESCRIPTION(resultProcessMemory));
+                    file::utils::LogLine("[dvfs] Failed to get process data. %u", R_DESCRIPTION(resultProcessMemory));
                     handle = INVALID_HANDLE;
                     return;
                 }
@@ -359,11 +359,11 @@ namespace board {
 
                 // Print info AFTER we exit the handle to avoid hangs
                 for (int i = 0; i < (int)std::size(cpuVoltTable); ++i) {
-                    fileUtils::LogLine("[dvfs] cpu volt %d: %u mV", i, cpuVoltTable[i]);
+                    file::utils::LogLine("[dvfs] cpu volt %d: %u mV", i, cpuVoltTable[i]);
                 }
 
                 for (int i = 0; i < (int)std::size(voltData.voltTableStock); ++i) {
-                    fileUtils::LogLine("[dvfs] gpu volt %d: %u mV", i, voltData.voltTableStock[0][i]);
+                    file::utils::LogLine("[dvfs] gpu volt %d: %u mV", i, voltData.voltTableStock[0][i]);
                 }
                 return;
             }
@@ -412,7 +412,7 @@ namespace board {
 
         ASSERT_RESULT_OK(WriteGpuVoltTable(table), "WriteGpuVoltTable");
         voltData.ramVmin = vmin;
-        fileUtils::LogLine("[dvfs] voltage set to %u mV", vmin);
+        file::utils::LogLine("[dvfs] voltage set to %u mV", vmin);
     }
 
     u32 GetGpuFreqIndex(u32 hz) {
@@ -610,4 +610,237 @@ namespace board {
             return baseVolt;
         }
     }
-}  // namespace board
+
+    namespace {
+        constexpr size_t MaxPotentialLutSize = 64;
+        size_t LutSize = 33;
+        constexpr u32 PmicVmin   = 250;
+        constexpr u32 PmicStep   = 5;
+
+        struct {
+            volatile u32 *lut  = nullptr;
+            u32 table[MaxPotentialLutSize] = {};
+            u32 lastVmin       = 0;
+            u32 outputCfg      = 0;
+            bool initialized   = false;
+        } cpuVoltData;
+    }
+
+    namespace {
+        inline void DataSyncBarrier() {
+            __asm__ volatile("dsb sy" ::: "memory");
+        }
+
+        void VolatileCopyDwords(volatile u32 *dst, const volatile u32 *src, size_t dwords) {
+            for (size_t i = 0; i < dwords; ++i) {
+                dst[i] = src[i];
+            }
+
+            DataSyncBarrier();
+        }
+
+        u32 GetLutCode(u32 mv) {
+            return mv <= PmicVmin ? 0 : (mv - PmicVmin) / PmicStep;
+        }
+
+        [[maybe_unused]] u32 GetLutVolt(u32 code) {
+            return code * PmicStep + PmicVmin;
+        }
+
+        void InitializeLutPtr() {
+            cpuVoltData.lut = reinterpret_cast<volatile u32 *>(cldvfs + CL_DVFS_LUT_TABLE_0);
+        }
+
+        void CacheCpuLut() {
+            VolatileCopyDwords(cpuVoltData.table, cpuVoltData.lut, LutSize);
+        }
+
+        /* TODO: Dynamically get this from the PCV LUT? */
+        void UnstuckFreqWar() {
+            u32 hz = board::GetHz(HocClkModule_CPU);
+            /* Voltage needs to be above the forced minimum voltage, so we set a high frequency (will be capped by pcv) for a short time. */
+            /* This frequency is only applied for ~255ms. */
+            constexpr u32 HighFreqVoltBump = 1963'000'000;
+            board::SetHz(HocClkModule_CPU, HighFreqVoltBump);
+            svcSleepThread(5'000'000);
+            board::SetHz(HocClkModule_CPU, hz);
+        }
+
+        void AdjustMinLutIndex() {
+            constexpr u32 Shift = 8;
+            constexpr u32 Mask  = 0x3F << Shift;
+            /* Index is always 0 for us. */
+            constexpr u32 MinLutIndex = 0;
+
+            volatile u32 *reg = reinterpret_cast<volatile u32 *>(cldvfs + CL_DVFS_OUTPUT_CFG_0);
+
+            *reg = (*reg & ~Mask) | ((MinLutIndex << Shift) & Mask);
+
+            static_cast<void>(*reg);
+        }
+
+        void RestoreMinLutIndex() {
+            *reinterpret_cast<volatile u32 *>(cldvfs + CL_DVFS_OUTPUT_CFG_0) = cpuVoltData.outputCfg;
+        }
+
+        void RestoreCpuLut() {
+            cpuVoltData.lastVmin = 0;
+            VolatileCopyDwords(cpuVoltData.lut, cpuVoltData.table, LutSize);
+            RestoreMinLutIndex();
+            UnstuckFreqWar();
+        }
+
+        u32 FloorLutTable(u32 *lut, u32 minCode) {
+            u32 floored = 0;
+            while (floored < LutSize && lut[floored] < minCode) {
+                lut[floored++] = minCode;
+            }
+            return floored;
+        }
+
+        u32 StripRedundantLutEntries(u32 *lut, u32 redundant) {
+            const u32 strippedCount = LutSize - redundant;
+            std::memmove(lut, lut + redundant, sizeof(u32) * strippedCount);
+
+            return strippedCount;
+        }
+
+        /* Naiive interpolation. */
+        u32 InterpolateLut(u32 low, u32 high) {
+            return low + (high - low) / 2;
+        }
+
+        /* Find biggest deltas, shift to create a new slot in between it, interpolate later. */
+        u32 SplitAndInterpolateDeltas(u32 *lut, u32 validCount) {
+            while (validCount < LutSize) {
+                u32 biggestDelta = 0;
+                u32 upperIdx = 0;
+
+                for (u32 i = 0; i + 1 < validCount; ++i) {
+                    const u32 delta = lut[i + 1] - lut[i];
+                    if (delta > biggestDelta) {
+                        biggestDelta = delta;
+                        upperIdx = i + 1;
+                    }
+                }
+
+                if (biggestDelta < 2) {
+                    break;
+                }
+
+                const u32 mid = InterpolateLut(lut[upperIdx - 1], lut[upperIdx]);
+                std::memmove(lut + upperIdx + 1, lut + upperIdx, (validCount - upperIdx) * sizeof(u32));
+                lut[upperIdx] = mid;
+                ++validCount;
+            }
+
+            return validCount;
+        }
+
+        void PadLutTail(u32 *lut, u32 validCount) {
+            if (validCount == 0)
+                return;
+            for (u32 i = validCount; i < LutSize; ++i) {
+                lut[i] = lut[validCount - 1];
+            }
+        }
+    }
+
+    void InitializeCpuLut(bool kip) {
+        if (kip) {
+            LutSize = 64; /* Account for patched LUT by KIP */
+        }
+
+        InitializeLutPtr();
+
+        CacheCpuLut();
+
+        cpuVoltData.outputCfg = *reinterpret_cast<volatile u32 *>(cldvfs + CL_DVFS_OUTPUT_CFG_0);
+
+        cpuVoltData.initialized = true;
+
+        for (u32 i = 0; i < LutSize; i++) {
+            file::utils::LogLine("[dvfs] CPU Real LUT %d: %dmV", i, GetLutVolt(*(u32*)(cldvfs + CL_DVFS_LUT_TABLE_0 + (i * sizeof(u32)))));
+        }
+    }
+
+    /* TODO: Verify table on consoles */
+    u32 GetMinimumCpuVmin(u32 freqMhz, u32 bracket) {
+        struct CpuVminEntry {
+            u32 freq;
+            u32 volt;
+        };
+
+        static const CpuVminEntry cpuVminRamTable[/* Bracket */ 7][/* Entry */ 12] = {
+            { {1866, 550}, {1996, 560}, {2133, 570}, {2400, 580}, {2533, 590}, {2666, 600}, {2800, 610}, {2933, 620}, {3066, 630}, {3200, 640}, {3333, 660}, {3466, 680} },  // Bracket 0 (Speedo 1751-1800)
+            { {1866, 555}, {1996, 565}, {2133, 575}, {2400, 585}, {2533, 595}, {2666, 605}, {2800, 615}, {2933, 625}, {3066, 635}, {3200, 645}, {3333, 665}, {3466, 685} },  // Bracket 1 (Speedo 1701-1750)
+            { {1866, 560}, {1996, 570}, {2133, 580}, {2400, 590}, {2533, 600}, {2666, 610}, {2800, 620}, {2933, 630}, {3066, 640}, {3200, 650}, {3333, 670}, {3466, 690} },  // Bracket 2 (Speedo 1651-1700)
+            { {1866, 565}, {1996, 575}, {2133, 585}, {2400, 595}, {2533, 605}, {2666, 615}, {2800, 625}, {2933, 635}, {3066, 645}, {3200, 655}, {3333, 675}, {3466, 695} },  // Bracket 3 (Speedo 1601-1650)
+            { {1866, 570}, {1996, 580}, {2133, 590}, {2400, 600}, {2533, 610}, {2666, 620}, {2800, 630}, {2933, 640}, {3066, 650}, {3200, 660}, {3333, 680}, {3466, 700} },  // Bracket 4 (Speedo 1551-1600)
+            { {1866, 575}, {1996, 585}, {2133, 595}, {2400, 605}, {2533, 615}, {2666, 625}, {2800, 635}, {2933, 645}, {3066, 655}, {3200, 665}, {3333, 685}, {3466, 705} },  // Bracket 5 (Speedo 1501-1550)
+            { {1866, 580}, {1996, 590}, {2133, 600}, {2400, 610}, {2533, 620}, {2666, 630}, {2800, 640}, {2933, 650}, {3066, 660}, {3200, 670}, {3333, 690}, {3466, 710} },  // Bracket 6 (Speedo 1451-1500)
+        };
+
+        if (freqMhz <= 1600) {
+            return 0;  // DVFS doesnt work below 1600MHz, it will just use vMin
+        }
+
+        if (bracket >= std::size(cpuVminRamTable)) {
+            bracket = 0;
+        }
+
+        const auto &entries = cpuVminRamTable[bracket];
+        u32 baseVolt = entries[std::size(entries) - 1].volt;
+        for (const auto &entry : entries) {
+            if (freqMhz <= entry.freq) {
+                baseVolt = entry.volt;
+                break;
+            }
+        }
+
+        return baseVolt;
+    }
+    void ApplyCpuMinVolt(u32 vmin, bool force) {
+        if(!force) {
+            if (!cpuVoltData.initialized || (vmin == cpuVoltData.lastVmin)) {
+                return;
+            }
+        }
+
+        file::utils::LogLine("[dvfs]: %setting cpu vmin to %dmV", force ? "Forcefully s" : "S", vmin);
+
+        if (vmin == 0) {
+            RestoreCpuLut();
+            file::utils::LogLine("[dvfs]: Restored LUT");
+            return;
+        }
+
+        u32 tmpLut[MaxPotentialLutSize];
+        std::memcpy(tmpLut, cpuVoltData.table, sizeof(tmpLut));
+
+        const u32 minCode = std::min(GetLutCode(vmin), tmpLut[LutSize - 1]);
+
+        const u32 floored = FloorLutTable(tmpLut, minCode);
+        if (floored == 0) {
+            RestoreCpuLut();
+            file::utils::LogLine("[dvfs]: Floored, restored LUT");
+            return;
+        }
+
+        u32 redundant = floored - 1;
+        if (floored < LutSize && tmpLut[floored] == minCode) {
+            redundant = floored;
+        }
+
+        u32 valid = StripRedundantLutEntries(tmpLut, redundant);
+        valid     = SplitAndInterpolateDeltas(tmpLut, valid);
+        PadLutTail(tmpLut, valid);
+
+        VolatileCopyDwords(cpuVoltData.lut, tmpLut, LutSize);
+        AdjustMinLutIndex();
+
+        UnstuckFreqWar();
+
+        cpuVoltData.lastVmin = vmin;
+    }
+}

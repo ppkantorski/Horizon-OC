@@ -32,7 +32,6 @@
 #include <pwm.h>
 #include <registers.h>
 #include <switch.h>
-#include <t210.h>
 #include <tmp451.h>
 
 #include "../display/display_refresh_rate.hpp"
@@ -49,6 +48,12 @@
 #include "board_volt.hpp"
 #include <ipc_server.h>
 #include <lockable_mutex.h>
+#include "../mapping/mem_map.hpp"
+#include "../soc/dram_mrr.hpp"
+#include "../i2c/max77620_wdt.hpp"
+#include "../mgr/clock_manager.hpp"
+#include "../file/config.hpp"
+#include "../file/kip.hpp"
 
 namespace board {
 
@@ -59,20 +64,91 @@ namespace board {
     HocClkConsoleType gConsoleType = HocClkConsoleType_Icosa;
     FuseData fuseData;
     u8 speedoBracket;
+    u8 cpuSpeedoBracket;
     PwmChannelSession iCon;
 
     u32 fd = 0, fd2 = 0;
 
-#define PMC_BASE 0x7000E400
-#define APB_MISC_GP_HIDREV 0x804
-#define GP_HIDREV_MAJOR_T210 0x1
-#define GP_HIDREV_MAJOR_T210B01 0x2
-#define APB_BASE 0x70000000
-#define FUSE_RESERVED_ODMX(x) (0x1C8 + 4 * (x))
-#define FUSE_OFFSET 0x800
+    #define PMC_BASE 0x7000E400
+    #define APB_MISC_GP_HIDREV 0x804
+    #define GP_HIDREV_MAJOR_T210 0x1
+    #define GP_HIDREV_MAJOR_T210B01 0x2
+    #define APB_BASE 0x70000000
+    #define FUSE_RESERVED_ODMX(x) (0x1C8 + 4 * (x))
+    #define FUSE_OFFSET 0x800
+
+    constexpr u32 pscDependencies[] = { PscPmModuleId_Olsc };
+    constexpr PscPmModuleId PscModuleId = (PscPmModuleId)705;
+
+    PscPmModule s_pscModule;
+    bool s_pscPrepared = false;
+    Thread s_pscThread;
+    bool s_pscExit = false;
+
+    std::atomic_bool s_isAwake = true;
+
+    void PscThreadFunc(void *) {
+        while (!s_pscExit) {
+            Result rc = eventWait(&s_pscModule.event, 1'000'000'000ULL);
+            if (R_FAILED(rc)) {
+                continue; // Timeout
+            }
+
+            PscPmState state;
+            u32 flags;
+            rc = pscPmModuleGetRequest(&s_pscModule, &state, &flags);
+            if (R_SUCCEEDED(rc)) {
+                if (state == PscPmState_ReadyAwaken) {
+                    i2c::wdt::ResetWdtEnableState();
+                    i2c::wdt::Pet();
+
+                    if(board::GetSocType() == HocClkSocType_Mariko && 
+                       file::config::GetConfigValue(HocClkConfigValue_CPUDVFSMode) == CPUDVFSMode_Modify) {
+                        s32 cpuDvfsOffset = file::config::GetConfigValue(HocClkConfigValue_CPUDVFSOffset);
+                        cpuDvfsOffset = std::max(cpuDvfsOffset, -80);
+                        u32 cpuVmin = GetMinimumCpuVmin(mgr::GetNearestOverrideHz(HocClkModule_MEM) / 1000000, GetCpuSpeedoBracket());
+
+                        if (cpuVmin) {
+                            cpuVmin += cpuDvfsOffset;
+                        }
+                        
+                        ApplyCpuMinVolt(cpuVmin, true);
+                    }
+
+                    file::utils::LogLine("[brd]: Ready to awaken");
+
+                    s_isAwake = true;
+                } else if (state == PscPmState_ReadySleep) {
+                    i2c::wdt::Disarm();
+
+                    ResetToStockMem();
+                    ResetToStockCpu();
+                    ApplyCpuMinVolt(0, true);
+
+                    file::utils::LogLine("[brd]: Ready to sleep");
+
+                    s_isAwake = false;
+                } else if (state == PscPmState_ReadyShutdown) {
+                    i2c::wdt::Disarm();
+
+                    ResetToStockMem();
+                    ResetToStockCpu();
+                    ApplyCpuMinVolt(0, true);
+
+                    file::utils::LogLine("[brd]: Ready to shutdown");
+
+                    s_isAwake = false;
+                }
+
+                pscPmModuleAcknowledge(&s_pscModule, state);
+            }
+        }
+    }
+
     void FetchHardwareInfos() {
         ReadFuses(fuseData, fuseVirtAddr);
         SetGpuBracket(fuseData.gpuSpeedo, speedoBracket);
+        SetCpuBracket(fuseData.cpuSpeedo, cpuSpeedoBracket);
 
         u32 hidrev = *(u32 *)(apbVirtAddr + APB_MISC_GP_HIDREV);
         if (((hidrev >> 4) & 0xF) >= GP_HIDREV_MAJOR_T210B01) {
@@ -193,14 +269,30 @@ namespace board {
         display::DisplayRefreshConfig cfg = { .clkVirtAddr = clkVirtAddr,
                                               .dsiVirtAddr = dsiVirtAddr,
                                               .isLite = (GetConsoleType() == HocClkConsoleType_Hoag),
-                                              .isRetroSUPER = integrations::GetRETROSuperStatus() };
+                                              .isRetroSUPER = false };
         display::Initialize(&cfg);
 
         CacheDfllData();
+        InitializeCpuLut(file::kip::IsKipLoaded());
         CacheGpuVoltTable();
+
+        rc = pscmInitialize();
+        ASSERT_RESULT_OK(rc, "pscmInitialize");
+
+        rc = pscmGetPmModule(&s_pscModule, PscModuleId, pscDependencies, sizeof(pscDependencies) / sizeof(u32), true);
+        ASSERT_RESULT_OK(rc, "pscmGetPmModule");
+
+        rc = threadCreate(&s_pscThread, PscThreadFunc, nullptr, NULL, 0x1000, 0x10, 3);
+        ASSERT_RESULT_OK(rc, "threadCreate");
+
+        rc = threadStart(&s_pscThread);
+        ASSERT_RESULT_OK(rc, "threadStart");
+
+        s_isAwake = true;
     }
 
     void Exit() {
+
         if (HOSSVC_HAS_CLKRST) {
             clkrstExit();
         } else {
@@ -227,6 +319,16 @@ namespace board {
         batteryInfoExit();
         pmdmntExit();
         nvExit();
+
+        eventFire(&s_pscModule.event);
+        threadWaitForExit(&s_pscThread);
+        threadClose(&s_pscThread);
+
+        pscPmModuleFinalize(&s_pscModule);
+        pscPmModuleClose(&s_pscModule);
+        pscmExit();
+
+        i2c::wdt::Disarm();
     }
 
     HocClkSocType GetSocType() {
@@ -238,6 +340,10 @@ namespace board {
     }
 
     u8 GetDramID() {
+        return soc::IdentifyDramId();
+    }
+
+    u8 GetFuseDramId() {
         return gDramID;
     }
 
@@ -248,7 +354,7 @@ namespace board {
         svcCallSecureMonitor(&args);
 
         if (args.X[1] == (MC_REGISTER_BASE + MC_EMEM_CFG_0)) {  // if param 1 is identical read failed
-            notification::writeNotification("Horizon OC\nSecmon read failed!\n This may be a hardware issue!");
+            hos::WriteNotification("Horizon OC\nSecmon read failed!\n This may be a hardware issue!");
             return false;
         }
 
@@ -270,8 +376,12 @@ namespace board {
         return speedoBracket;
     }
 
-    bool IsUsingRetroSuperDisplay() {
-        return false; /* stub for now. */
+    u8 GetCpuSpeedoBracket() {
+        return cpuSpeedoBracket;
+    }
+
+    bool IsAwake() {
+        return s_isAwake;
     }
 
 }  // namespace board

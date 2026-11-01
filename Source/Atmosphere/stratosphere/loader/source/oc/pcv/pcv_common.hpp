@@ -163,6 +163,30 @@ namespace ams::ldr::hoc::pcv {
     };
     static_assert(sizeof(CvbMeta) == 0x78);
 
+    struct SubClockStub {
+        u8 _unknown[0x48];
+    };
+
+    struct SharedClkBus {
+        u64 moduleId;
+        u32 currentRateHz;
+        u32 padding0;
+        u32 *allowedFreqTable;
+        u32 allowedFreqCount;
+        u32 padding1;
+        SubClockStub *subClocksTable;
+        u32 subClockCount;
+        u32 padding2;
+        void *unk30;
+        void *clockSource;
+        u32 targetRateHz;
+        u32 saveDivFlag;
+        u32 idleRateHz; /* Unsure. */
+        u32 alwaysOnFlag;
+        u64 clockSession;
+    };
+    static_assert(sizeof(SharedClkBus) == 0x58);
+
     constexpr u32 CpuClkOSLimit = 1785'000;
     constexpr u32 GpuClkOsLimit = 921'600;
     constexpr u32 EmcClkOSLimit = 1600'000;
@@ -170,6 +194,7 @@ namespace ams::ldr::hoc::pcv {
     #define R_SKIP() R_SUCCEED()
 
     // Count 32 / Index 31 is reserved to be empty
+    /* The actual lut table has a size of 33. */
     constexpr size_t DvfsTableEntryCount = 32;
     constexpr size_t DvfsTableEntryLimit = DvfsTableEntryCount - 1;
 
@@ -177,11 +202,8 @@ namespace ams::ldr::hoc::pcv {
     constexpr size_t EmcDvfsTableEntryCount = 64;
     constexpr size_t EmcDvfsTableEntryLimit = EmcDvfsTableEntryCount - 1;
 
-    // The pcv SoC-voltage DVB table is a fixed 32-entry region. (it doesn't need to be larger)
-    constexpr size_t DvbTableCapacity = 32;
-
-    // extra .bss location, 0 until Patch() runs.
-    inline uintptr_t g_pcv_scratch = 0;
+    /* Note: According to TRM the lut size is 33, but up to 64 LUT is possible. */
+    constexpr size_t ClDvfsLutSize = 64;
 
     inline uintptr_t g_pcv_cave      = 0;
     inline size_t    g_pcv_cave_size = 0;

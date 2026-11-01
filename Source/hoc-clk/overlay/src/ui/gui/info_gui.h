@@ -21,6 +21,10 @@
 
 #include "base_menu_gui.h"
 
+// Word-wraps and appends `paragraphs` to `list` as CustomDrawer text items,
+// using the same layout/rendering rules InfoGui uses for its body text.
+void addWrappedTextItems(tsl::elm::List *list, const std::vector<std::string> &paragraphs);
+
 class InfoGui : public BaseMenuGui {
     public:
     InfoGui(std::string title, std::vector<std::string> strings);

@@ -18,7 +18,8 @@
 
 #include "../oc_common.hpp"
 
-#define HOOK_PAYLOAD_FN __attribute__((section("hoc_hookpayload"), used, noinline, visibility("hidden")))
+/* aligned(4) is the ARM64 instruction alignment. This saves some memory over 16 byte padding */
+#define HOOK_PAYLOAD_FN __attribute__((section("hoc_hookpayload"), used, noinline, visibility("hidden"), aligned(4)))
 
 /* Inline asm because fuck compilers: GCC refuses to put a variable and a function in the same section. */
 /* It wants alloc+write for one and alloc+exec for the other.                                           */
@@ -37,6 +38,9 @@
         ".text\n");                                             \
     extern "C" __attribute__((visibility("hidden"))) type *name
 
+#define DECLARE_HOOK_PAYLOAD_PTR(type, name)                    \
+    extern "C" __attribute__((visibility("hidden"))) type *name
+
 #define HOOK_PAYLOAD_PTR(type, name)                            \
     ([]() -> type * {                                           \
         type **_hoc_pp;                                         \
@@ -51,6 +55,7 @@ namespace ams::ldr::hoc::pcv {
 
     constexpr size_t HookPageSize     = 0x1000;
     constexpr size_t PcvDataArenaSize = 0x1000;
+    constexpr size_t HookStubReserve  = 0x80;
 
     inline s64 SignExtend(u64 value, int bits) {
         const int shift = 64 - bits;
@@ -123,6 +128,15 @@ namespace ams::ldr::hoc::pcv {
                 m_data_used  = 0;
             }
 
+            void SetCave(uintptr_t cave, size_t cave_size) {
+                m_cave      = cave;
+                m_cave_size = cave_size;
+            }
+
+            static size_t RequiredCaveSize() {
+                return util::AlignUp(static_cast<size_t>(__stop_hoc_hookpayload - __start_hoc_hookpayload), sizeof(u32)) + HookStubReserve;
+            }
+
             bool IsEnabled() const { return m_cave != 0 && m_cave_size != 0; }
 
             Result CheckEnabled() const {
@@ -144,6 +158,10 @@ namespace ams::ldr::hoc::pcv {
             }
 
             uintptr_t CaveVa() const { return ToVa(reinterpret_cast<const void *>(m_cave)); }
+            uintptr_t CaveBase() const { return m_cave; }
+
+            /* Todo remove? */
+            u32 *Reserve(size_t words) { return this->AllocCode(words); }
 
             Result CopyPayload() {
                 R_TRY(this->CheckEnabled());
@@ -281,6 +299,8 @@ namespace ams::ldr::hoc::pcv {
             Result ValidatePayloadFn(const void *fn) const {
                 constexpr u32 MaxInstructions = 512;
                 constexpr u32 RetInsn         = 0xD65F03C0u;
+                constexpr u32 BrMask          = 0xFFFFFC1Fu;
+                constexpr u32 BrInsn          = 0xD61F0000u;
 
                 const uintptr_t lo = m_payload;
                 const uintptr_t hi = m_payload + m_payload_sz;
@@ -299,7 +319,7 @@ namespace ams::ldr::hoc::pcv {
                     const u32 insn      = insns[i];
                     const uintptr_t site = base + i * sizeof(u32);
 
-                    if (insn == RetInsn) {
+                    if (insn == RetInsn || (insn & BrMask) == BrInsn) {
                         R_SUCCEED();
                     }
 
@@ -331,7 +351,7 @@ namespace ams::ldr::hoc::pcv {
         private:
             u32 *AllocCode(size_t words) {
                 const size_t bytes = words * sizeof(u32);
-                if (!this->IsEnabled() || m_used + bytes > m_cave_size) {
+                if (!this->IsEnabled() || m_payload == 0 || m_used + bytes > m_cave_size) {
                     return nullptr;
                 }
 

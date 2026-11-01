@@ -31,7 +31,6 @@ tsl::elm::ListItem* IddqItem = NULL;
 tsl::elm::ListItem* DramModule = NULL;
 tsl::elm::ListItem* sysdockStatusItem = NULL;
 tsl::elm::ListItem* saltyNXStatusItem = NULL;
-tsl::elm::ListItem* RETROStatusItem = NULL;
 tsl::elm::ListItem* waferCordsItem = NULL;
 tsl::elm::ListItem* ramVoltItem = NULL;
 tsl::elm::ListItem* eristaPLLXItem = NULL;
@@ -42,8 +41,10 @@ tsl::elm::ListItem* ramBWItemGpu = NULL;
 tsl::elm::ListItem* ramBWItemMax = NULL;
 tsl::elm::ListItem* bqtempitem = NULL;
 tsl::elm::ListItem* aotagTempItem = NULL;
+tsl::elm::ListItem* dramTempItem = NULL;
 tsl::elm::ListItem* cTypeItem = NULL;
 tsl::elm::ListItem* creditsItem = NULL;
+tsl::elm::ListItem* wdtItem = NULL;
 
 #define R_ARROW "\u2192"
 
@@ -96,6 +97,10 @@ void AboutGui::listUI()
         new tsl::elm::ListItem("BQ24193 Temp:");
     this->listElement->addItem(bqtempitem);
 
+    dramTempItem =
+        new tsl::elm::ListItem("DRAM Temp:");
+    this->listElement->addItem(dramTempItem);
+
     this->listElement->addItem(
         new tsl::elm::CategoryHeader("RAM Bandwidth")
     );
@@ -141,12 +146,6 @@ void AboutGui::listUI()
         new tsl::elm::ListItem("Wafer Position:");
     this->listElement->addItem(waferCordsItem);
 
-    if(IsHoag()) {
-        RETROStatusItem =
-            new tsl::elm::ListItem("RR Display status:");
-        this->listElement->addItem(RETROStatusItem);
-    }
-
     this->listElement->addItem(
         new tsl::elm::CategoryHeader("Software Info")
     );
@@ -154,11 +153,15 @@ void AboutGui::listUI()
     // custRevItem = new tsl::elm::ListItem("CUST revision:");
     // this->listElement->addItem(custRevItem);
 
+
     kipVersionItem = new tsl::elm::ListItem("KIP version:");
     this->listElement->addItem(kipVersionItem);
 
     kipLoadedItem = new tsl::elm::ListItem("KIP status:");
     this->listElement->addItem(kipLoadedItem);
+
+    wdtItem = new tsl::elm::ListItem("Watchcat:");
+    this->listElement->addItem(wdtItem);
 
     if(!IsHoag()) {
         sysdockStatusItem =
@@ -191,49 +194,6 @@ void AboutGui::listUI()
     lastItemName = "";
 }
 
-std::string AboutGui::formatRamModule() {
-    switch (this->context->dramID) {
-        case 0: return "HB-MGCH 4GB";
-        case 4: return "HM-MGCH 6GB";
-        case 7: return "HM-MGXX 8GB";
-
-        case 1: return "NLE 4GB";
-        case 2: return "WT:C 4GB";
-
-        case 3:
-        case 5 ... 6: return "NEE 4GB";
-
-        case 8:
-        case 12: return "AM-MGCJ 4GB";
-        case 9:
-        case 13: return "AM-MGCJ 8GB";
-
-        case 10:
-        case 14: return "NME 4GB";
-
-        case 11:
-        case 15: return "WT:E 4GB";
-
-        case 17:
-        case 19:
-        case 24: return "AA-MGCL 4GB";
-
-        case 18:
-        case 23:
-        case 28: return "AA-MGCL 8GB";
-
-        case 20 ... 22: return "AB-MGCL 4GB";
-
-        case 25 ... 27: return "WT:F 4GB";
-
-        case 29 ... 31: return "x267 4GB";
-
-        case 32 ... 34: return "WT:B 4GB";
-
-        default: return "Unknown";
-    }
-}
-
 void AboutGui::update()
 {
     BaseMenuGui::update();
@@ -255,7 +215,7 @@ void AboutGui::refresh()
     sprintf(strings[1], "%u/%u/%u", this->context->iddq[HocClkSpeedo_CPU], this->context->iddq[HocClkSpeedo_GPU], this->context->iddq[HocClkSpeedo_SOC]);
     SpeedoItem->setValue(strings[0]);
     IddqItem->setValue(strings[1]);
-    DramModule->setValue(formatRamModule());
+    DramModule->setValue(formatRamModule(this->context->dramID));
 
     // custRevItem->setValue(std::to_string(this->context->custRev));
 
@@ -266,9 +226,6 @@ void AboutGui::refresh()
         sysdockStatusItem->setValue(this->context->isSysDockInstalled ? "Installed" : "Not Installed");
 
     saltyNXStatusItem->setValue(this->context->isSaltyNXInstalled ? "Installed" : "Not Installed");
-
-    if(IsHoag())
-        RETROStatusItem->setValue(this->context->isUsingRetroSuper ? "Installed" : "Not Installed");
 
     sprintf(strings[2], "X: %d Y: %d", this->context->waferX, this->context->waferY);
     waferCordsItem->setValue(strings[2]);
@@ -324,7 +281,12 @@ void AboutGui::refresh()
 
     bqtempitem->setValue(strings[10]);
 
+    millis = context->temps[HocClkThermalSensor_DRAM];
+    sprintf(strings[12], "%u.%u °C", millis / 1000U, (millis % 1000U) / 100U);
+    dramTempItem->setValue(strings[12]);
+
     cTypeItem->setValue(hocClkFormatConsoleType(this->context->consoleType, true));
+    wdtItem->setValue(context->isWdtEnabled ? "Enabled" : "Disabled");
 }
 
 class CreditsSubMenu : public AboutGui {

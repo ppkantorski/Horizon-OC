@@ -21,23 +21,32 @@
 #include <stratosphere.hpp>
 #include <vapours/results/results_common.hpp>
 
-#define HOC_UART_LOG 1
-#define HOC_PCV_NVLOG_PATCH 1
-#define HOC_PCV_FORCE_VERBOSITY 1
+
+#ifndef HOC_UART_LOG
+#define HOC_UART_LOG 0
+#endif
+
+#if HOC_UART_LOG && !(defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING))
+    #undef HOC_UART_LOG
+    #define HOC_UART_LOG 0
+#endif
 
 #include "customize.hpp"
 #include "oc_log.hpp"
 
+#define HOC_IRAM_LOG 0
+
 #if (!HOC_UART_LOG) && (defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING))
+    #undef HOC_IRAM_LOG
     #define HOC_IRAM_LOG 1
 #endif
 
 #if defined(AMS_BUILD_FOR_AUDITING) || defined(AMS_BUILD_FOR_DEBUGGING)
 
-    #if defined(HOC_IRAM_LOG)
+    #if HOC_IRAM_LOG
         #define LOGGING(...) Log(__VA_ARGS__)
     #elif HOC_UART_LOG
-        #define LOGGING(...) AMS_LOG(__VA_ARGS__)
+        #define LOGGING(fmt, ...) AMS_LOG(fmt "\n", ##__VA_ARGS__)
     #endif
 
 #else
@@ -51,37 +60,45 @@
     *(offset) = value;
 
 namespace ams::ldr {
-    R_DEFINE_ERROR_RESULT(OutOfRange,                1000);
-    R_DEFINE_ERROR_RESULT(InvalidMemPllmEntry,       1001);
-    R_DEFINE_ERROR_RESULT(InvalidMtcMagic,           1002);
-    R_DEFINE_ERROR_RESULT(InvalidMtcTable,           1003);
-    R_DEFINE_ERROR_RESULT(InvalidDvbTable,           1004);
-    R_DEFINE_ERROR_RESULT(InvalidCpuFreqVddEntry,    1005);
-    R_DEFINE_ERROR_RESULT(InvalidCpuVoltDfllEntry,   1006);
-    R_DEFINE_ERROR_RESULT(InvalidCpuDvfs,            1007);
-    R_DEFINE_ERROR_RESULT(InvalidCpuMinVolt,         1008);
-    R_DEFINE_ERROR_RESULT(InvalidGpuDvfs,            1009);
-    R_DEFINE_ERROR_RESULT(InvalidGpuFreqMaxPattern,  1010);
-    R_DEFINE_ERROR_RESULT(InvalidGpuPllEntry,        1011);
-    R_DEFINE_ERROR_RESULT(InvalidRegulatorEntry,     1012);
-    R_DEFINE_ERROR_RESULT(UninitializedPatcher,      1013);
-    R_DEFINE_ERROR_RESULT(UnsuccessfulPatcher,       1014);
-    R_DEFINE_ERROR_RESULT(SafetyCheckFailure,        1015);
-    R_DEFINE_ERROR_RESULT(InvalidMtcTablePattern,    1016);
-    R_DEFINE_ERROR_RESULT(InvalidSocVoltPattern,     1017);
-    R_DEFINE_ERROR_RESULT(InvalidSocVoltLimit,       1018);
-    R_DEFINE_ERROR_RESULT(InvalidEmcDvfsCount,       1019);
-    R_DEFINE_ERROR_RESULT(InvalidEmcSocLut,          1020);
-    R_DEFINE_ERROR_RESULT(InvalidEmcRateList,        1021);
-    R_DEFINE_ERROR_RESULT(InvalidNvLogRedirect,      1022);
-    R_DEFINE_ERROR_RESULT(InvalidBusFreqReloc,       1023);
-    R_DEFINE_ERROR_RESULT(HookArenaOutOfMemory,      1024);
-    R_DEFINE_ERROR_RESULT(HookPayloadTooLarge,       1025);
-    R_DEFINE_ERROR_RESULT(HookRelocationUnsupported, 1026);
-    R_DEFINE_ERROR_RESULT(HookSiteInvalid,           1027);
-    R_DEFINE_ERROR_RESULT(HookPayloadEscapes,        1028);
-    R_DEFINE_ERROR_RESULT(HookDataOutOfMemory,       1029);
-    R_DEFINE_ERROR_RESULT(HookUnavailable,           1030);
+    R_DEFINE_ERROR_RESULT(OutOfRange,                   1000);
+    R_DEFINE_ERROR_RESULT(InvalidMemPllmEntry,          1001);
+    R_DEFINE_ERROR_RESULT(InvalidMtcMagic,              1002);
+    R_DEFINE_ERROR_RESULT(InvalidMtcTable,              1003);
+    R_DEFINE_ERROR_RESULT(InvalidDvbTable,              1004);
+    R_DEFINE_ERROR_RESULT(InvalidCpuFreqVddEntry,       1005);
+    R_DEFINE_ERROR_RESULT(InvalidCpuVoltDfllEntry,      1006);
+    R_DEFINE_ERROR_RESULT(InvalidCpuDvfs,               1007);
+    R_DEFINE_ERROR_RESULT(InvalidCpuMinVolt,            1008);
+    R_DEFINE_ERROR_RESULT(InvalidGpuDvfs,               1009);
+    R_DEFINE_ERROR_RESULT(InvalidGpuFreqMaxPattern,     1010);
+    R_DEFINE_ERROR_RESULT(InvalidGpuPllEntry,           1011);
+    R_DEFINE_ERROR_RESULT(InvalidRegulatorEntry,        1012);
+    R_DEFINE_ERROR_RESULT(UninitializedPatcher,         1013);
+    R_DEFINE_ERROR_RESULT(UnsuccessfulPatcher,          1014);
+    R_DEFINE_ERROR_RESULT(SafetyCheckFailure,           1015);
+    R_DEFINE_ERROR_RESULT(InvalidMtcTablePattern,       1016);
+    R_DEFINE_ERROR_RESULT(InvalidSocVoltPattern,        1017);
+    R_DEFINE_ERROR_RESULT(InvalidSocVoltLimit,          1018);
+    R_DEFINE_ERROR_RESULT(InvalidEmcDvfsCount,          1019);
+    R_DEFINE_ERROR_RESULT(InvalidEmcSocLut,             1020);
+    R_DEFINE_ERROR_RESULT(InvalidEmcRateList,           1021);
+    R_DEFINE_ERROR_RESULT(InvalidNvLogRedirect,         1022);
+    R_DEFINE_ERROR_RESULT(InvalidBusFreqReloc,          1023);
+    R_DEFINE_ERROR_RESULT(HookArenaOutOfMemory,         1024);
+    R_DEFINE_ERROR_RESULT(HookPayloadTooLarge,          1025);
+    R_DEFINE_ERROR_RESULT(HookRelocationUnsupported,    1026);
+    R_DEFINE_ERROR_RESULT(HookSiteInvalid,              1027);
+    R_DEFINE_ERROR_RESULT(HookPayloadEscapes,           1028);
+    R_DEFINE_ERROR_RESULT(HookDataOutOfMemory,          1029);
+    R_DEFINE_ERROR_RESULT(HookUnavailable,              1030);
+    R_DEFINE_ERROR_RESULT(InvalidNvsrvDevTable,         1031);
+    R_DEFINE_ERROR_RESULT(InvalidForceVerbosityPattern, 1032);
+    R_DEFINE_ERROR_RESULT(InvalidCpuLutMaxAsmPattern,   1033);
+    R_DEFINE_ERROR_RESULT(InvalidCpuLutHook,            1034);
+    R_DEFINE_ERROR_RESULT(InvalidDvcoRateConfig,        1035);
+    R_DEFINE_ERROR_RESULT(InvalidVoltCode,              1036);
+    R_DEFINE_ERROR_RESULT(InvalidVoltLutIndex,          1037);
+    R_DEFINE_ERROR_RESULT(InvalidHookCave,              1038);
 }
 
 namespace ams::ldr::hoc {

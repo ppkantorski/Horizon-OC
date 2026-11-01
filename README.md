@@ -34,9 +34,9 @@ It enables advanced CPU, GPU, and RAM tuning with user-friendly configuration to
 
 ## Default clocks
 
-* **CPU:** Up to 1963MHz (Mariko) / 1785MHz (Erista)
-* **GPU:** Up to 1075MHz (Mariko) / 921MHz (Erista)
-* **RAM:** Up to 1866/2133MHz (Mariko) / 1600MHz (Erista)
+* **CPU:** 1963MHz (Mariko) / 1785MHz (Erista)
+* **GPU:** 1152MHz (Mariko) / 921MHz (Erista)
+* **RAM:** 2133MHz (Mariko) / 1600MHz (Erista)
 * Over/undervolting support
 * Built-in configurator
 * Compatible with most homebrew
@@ -51,7 +51,7 @@ It enables advanced CPU, GPU, and RAM tuning with user-friendly configuration to
 
    * [Atmosphere](https://github.com/Atmosphere-NX/Atmosphere)
    * [Ultrahand Overlay](https://github.com/ppkantorski/Ultrahand-Overlay)
-2. Download and extract the **Horizon OC Package** to the root of your SD card.
+2. Download and extract **Horizon OC** to the root of your SD card.
 3. If using **Hekate**, edit `hekate_ipl.ini` to include:
 
    ```
@@ -83,13 +83,23 @@ We don't accept donations. Put your spare cash into a charity instead :)
 Refer to COMPILATION.md
 
 ---
-## Clock table
+
+Higher clocks are achievable via undervolting or further configuration, refer to this table for more details.
+The averages are only for reference. Each ram is different and must be tuned independently. Refer to the guide for more details!
+
+<details>
+<summary><h2 style="display:inline">Clock table</h2></summary>
 
 ### MEM clocks (mhz)
-
-* 3200 → max on mariko, JEDEC.
+* 3400 → max on mariko.
+* 3366
+* 3333
+* 3300
+* 3266
+* 3233
+* 3200 → JEDEC, Hynix NEE/x267 Average
 * 3166
-* 3133
+* 3133 → Micron WT:B Average
 * 3100
 * 3066
 * 3033
@@ -98,20 +108,20 @@ Refer to COMPILATION.md
 * 2933 → JEDEC.
 * 2900
 * 2866
-* 2833
+* 2833 → Samsung AA-MGCL Average
 * 2800
 * 2766
-* 2733
+* 2733 → Samsung AM-MGCJ/Micron WT:E Average
 * 2700
-* 2666 → JEDEC.
+* 2666 → JEDEC, Micron WT:F Average
 * 2633
 * 2600
-* 2566
+* 2566 → Samsung AB-MGCL Average
 * 2533
 * 2500
 * 2466
 * 2433
-* 2400 → max on erista, JEDEC.
+* 2400 → max on erista, JEDEC, Hynix NME Average
 * 2366
 * 2333
 * 2300
@@ -124,7 +134,7 @@ Refer to COMPILATION.md
 * 2066
 * 2033
 * 2000
-* 1996 → JEDEC standard
+* 1996 → JEDEC, Erista Average
 * 1966
 * 1933
 * 1900
@@ -138,12 +148,18 @@ Refer to COMPILATION.md
 * 1633
 * 1600 → official docked, boost mode, Erista JEDEC standard max (3200 Modules), JEDEC.
 * 1331 → official handheld, JEDEC.
-* 1065
-* 800
-* 665
+* 1065 → Erista only
+* 800  → Erista only
+* 665  → Erista only
+* 408  → Erista only
+* 204  → sleep mode
+* 102  → Erista only
+* 68   → Erista only
+* 40   → Erista only
 
 ### CPU clocks (mhz)
-* 2703 → mariko absolute max, dangerous
+* 2805 → mariko absolute max, dangerous
+* 2703
 * 2601 → unsafe
 * 2499
 * 2397 → mariko safe max with UV (low speedo)
@@ -166,9 +182,13 @@ Refer to COMPILATION.md
 * 612 → sleep mode
 
 ### GPU clocks (mhz)
-* 1536 → absolute max clock on mariko. Dangerous
-* 1497 → max mariko unsafe clock 
+* 1574  → absolute max clock on mariko. Dangerous
+* 1536
+* 1497 → max mariko unsafe clock
+* 1459
+* 1420
 * 1382 → Max mariko "safe" clock
+* 1344
 * 1305
 * 1267 → NVIDIA T214(mariko) rating
 * 1228 → mariko High UV safe clock
@@ -195,12 +215,15 @@ Refer to COMPILATION.md
 3. On Mariko, cap with hiOpt is 614MHz, with hiOpt-15mV it is 691MHz and with High UV it's 768MHz
 4. Clocks higher than 768MHz on erista need the official charger is plugged in.
 
+</details>
+
 ---
 
 ## Credits
-* **Lightos's Cat** - Cat
+* **Lightos's Cats** - Cats
 * **Souldbminer** - hoc-clk and loader development
 * **Lightos** - Loader patches development, hoc-clk development, guides
+* **HAZEL** - Perfect DRAM timings help
 * **TDRR** - HOC Logo Design
 * **tetetete-ctrl** - Website design
 * **SciresM** - Atmosphere CFW
@@ -217,6 +240,9 @@ Refer to COMPILATION.md
 * **Dominatorul, Samybigio, Arcdelta, Miki, Happy, Winnerboi77, Blaise, Alvise, agjeococh, frost, letum00, and Xenshen** - Testing
 * **Samybigio2011, Miki** - Italian translations
 * **angelblaster** - Korean translations
-* **q1332348216-glitch** - Chinese translations
+* **q1332348216-glitch, nangongjing1, xinluochenjiang** - Chinese translations
 * **th3-ne0undr5c0r** - French translations
+* **redraz** - Russian translations
+* **Wivi** - Portuguese translations
+* **Niklas080208** - JSON language support for sysmodule notifications.
 * **Nvidia** - [Tegra X1 Technical Reference Manual](https://developer.nvidia.com/embedded/dlc/tegra-x1-technical-reference-manual), soctherm driver, L4T

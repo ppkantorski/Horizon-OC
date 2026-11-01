@@ -4,12 +4,21 @@ set -e
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DIST_DIR="$ROOT_DIR/dist"
 CORES="$(nproc --all)"
+OVERLAY_DEBUG=0
 
-if [[ -n "$1" ]]; then
-    DIST_DIR="$1"
-fi
+for arg in "$@"; do
+    case "$arg" in
+        -d|--debug)
+            OVERLAY_DEBUG=1
+            ;;
+        "")
+            ;;
+        *)
+            DIST_DIR="$arg"
+            ;;
+    esac
+done
 
-echo
 echo "*** Compiling hoc-clk ***"
 TITLE_ID="$(grep -oP '"title_id":\s*"0x\K(\w+)' "$ROOT_DIR/sysmodule/perms.json")"
 
@@ -25,7 +34,7 @@ cp -vf "$ROOT_DIR/sysmodule/toolbox.json" "$DIST_DIR/atmosphere/contents/$TITLE_
 echo
 echo "*** Compiling hoc-clk-overlay ***"
 pushd "$ROOT_DIR/overlay"
-make -j$CORES
+make -j$CORES OVERLAY_DEBUG=$OVERLAY_DEBUG
 popd > /dev/null
 
 mkdir -p "$DIST_DIR/switch/.overlays"
@@ -34,7 +43,11 @@ echo
 
 echo "*** Copying assets ***"
 mkdir -p "$DIST_DIR/config/horizon-oc"
-cp -vf "$ROOT_DIR/config.ini.template" "$DIST_DIR/config/horizon-oc/config.ini.template"
+cp -vf "$ROOT_DIR/templates/settings.ini.template" "$DIST_DIR/config/horizon-oc/settings.ini.template"
+mkdir -p "$DIST_DIR/config/horizon-oc/kip"
+cp -vf "$ROOT_DIR/templates/kip/current.ini.template" "$DIST_DIR/config/horizon-oc/kip/current.ini.template"
+mkdir -p "$DIST_DIR/config/horizon-oc/profiles"
+cp -vf "$ROOT_DIR/templates/profiles/README.ini" "$DIST_DIR/config/horizon-oc/profiles/README.ini"
 mkdir -p "$DIST_DIR/config/ultrahand/assets/notifications"
 cp -vf  "$ROOT_DIR/assets/hoc.rgba" "$DIST_DIR/config/ultrahand/assets/notifications/hoc.rgba"
 

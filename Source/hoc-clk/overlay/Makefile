@@ -17,15 +17,22 @@ include $(DEVKITPRO)/libnx/switch_rules
 # INCLUDES is a list of directories containing header files
 # EXEFS_SRC is the optional input directory containing data copied into exefs, if anything this normally should only contain "main.npdm".
 #---------------------------------------------------------------------------------
+rwildcard = $(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+
 TARGET		:=	horizon-oc-overlay
 BUILD		:=	build
 OUTDIR		:=	out
 RESOURCES	:=	res
-SOURCES		:=	src src/ui/gui src/ui/elements ../common/src ../common/src/client
+CSOURCES	:=	$(call rwildcard,src/,*.c) $(call rwildcard,../common/src/,*.c)
+CPPSOURCES	:=	$(call rwildcard,src/,*.cpp) $(call rwildcard,../common/src/,*.cpp)
+SSOURCES	:=	$(call rwildcard,src/,*.s) $(call rwildcard,../common/src/,*.s)
+SOURCES		:=	$(sort $(dir $(CSOURCES) $(CPPSOURCES) $(SSOURCES)))
 DATA		:=	data ../assets
 INCLUDES	:=	../common/include
 EXEFS_SRC	:=	exefs_src
 IS_MINIMAL	:=	0
+OVERLAY_DEBUG ?= 0
+
 
 APP_TITLE	:=	Horizon OC
 NO_ICON		:=	1
@@ -46,6 +53,9 @@ TARGET_VERSION := $(APP_VERSION)
 # options for code generation
 #---------------------------------------------------------------------------------
 DEFINES := -DDISABLE_IPC -DTARGET="\"$(TARGET)\"" -DTARGET_VERSION="\"$(TARGET_VERSION)\"" -DIS_MINIMAL=$(IS_MINIMAL)
+ifeq ($(OVERLAY_DEBUG),1)
+    DEFINES += -DOVERLAY_DEBUG
+endif
 
 ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
@@ -69,7 +79,7 @@ CXXFLAGS	:= $(CFLAGS) -fno-exceptions -std=gnu++23
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map),-wrap,__cxa_throw -Wl,-wrap,_Unwind_Resume -Wl,-wrap,__gxx_personality_v0
 
-LIBS := -lcurl -lz -lminizip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx
+LIBS := -lcurl -lz -lminizip -lnx
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

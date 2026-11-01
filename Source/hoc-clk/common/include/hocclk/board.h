@@ -31,6 +31,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <switch/types.h>
+
 typedef enum
 {
     HocClkSocType_Erista = 0, // T210, found in Icosa and Copper
@@ -92,6 +93,7 @@ typedef enum
     HocClkThermalSensor_PLLX, // PLLX temperature in millicelcius
     HocClkThermalSensor_AO, // AOTAG
     HocClkThermalSensor_BQ24193, // BQ24193 temperature. Refer to BQ24193Temp for returned values
+    HocClkThermalSensor_DRAM, // DRAM die temperature from LPDDR4(X) MR4. Use in combination with PCB and AO to get accurate reading
     HocClkThermalSensor_EnumMax
 } HocClkThermalSensor;
 
@@ -141,6 +143,12 @@ enum {
     DVFSMode_EnumMax,
 };
 
+enum {
+    CPUDVFSMode_Disabled = 0,
+    CPUDVFSMode_Modify, // LUT Modify dvfs
+    CPUDVFSMode_EnumMax,
+};
+
 typedef enum {
     GpuSchedulingMode_DoNotOverride = 0,
     GpuSchedulingMode_Enabled,
@@ -162,6 +170,7 @@ typedef enum {
 typedef enum {
     RamDisplayMode_VDD2 = 0,
     RamDisplayMode_VDDQ,
+    RamDisplayMode_VDD2VDDQ,
     RamDisplayMode_EnumMax,
 } RamDisplayMode;
 
@@ -288,6 +297,8 @@ static inline const char* hocclkFormatThermalSensor(HocClkThermalSensor thermSen
             return pretty ? "AO" : "ao";
         case HocClkThermalSensor_BQ24193:
             return pretty ? "BQ24193" : "bq24193";
+        case HocClkThermalSensor_DRAM:
+            return pretty ? "DRAM" : "dram";
         default:
             return "unknown";
     }

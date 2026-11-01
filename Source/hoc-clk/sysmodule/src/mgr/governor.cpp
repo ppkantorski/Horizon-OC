@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Souldbminer and Horizon OC Contributors
+ * Copyright (c) Souldbminer, Lightos and Horizon OC Contributors
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,11 +19,29 @@
 #include "governor.hpp"
 #include <hocclk/clock_manager.h>
 
-namespace governor {
+namespace mgr {
 
-#define POLL_NS 5'000'000   // 5 ms  – governor poll rate
-#define DOWN_HOLD_TICKS 10  // 50 ms – how long to in POLL_NS to hold while ramping down
-#define STEP_UTIL 900       // multiplier for step calculations
+#define DOWN_HOLD_TICKS_DEFAULT 10 // 50 ms at 5ms poll – how long to hold while ramping down
+#define STEP_UTIL_DEFAULT 900      // multiplier for step calculations (max freq at 90% load)
+
+    u64 GovernorPollNs() {
+        u64 ms = file::config::GetConfigValue(HocClkConfigValue_GovernorPollRateMs);
+        if (ms < 1 || ms > 50)
+            ms = 5;
+        return ms * 1'000'000ULL;
+    }
+
+    u32 GovernorDownHoldTicks() {
+        u64 ticks = file::config::GetConfigValue(HocClkConfigValue_GovernorDownHoldTicks);
+        return (ticks <= 100) ? (u32)ticks : DOWN_HOLD_TICKS_DEFAULT;
+    }
+
+    u32 GovernorStepUtil() {
+        u64 step = file::config::GetConfigValue(HocClkConfigValue_GovernorStepUtil);
+        if (step < 100 || step > 1500)
+            step = STEP_UTIL_DEFAULT;
+        return (u32)step;
+    }
 
     bool isGpuGovernorEnabled = false;
     bool isCpuGovernorEnabled = false;
@@ -37,11 +55,11 @@ namespace governor {
     Thread governorTHREAD;
 
     void HandleGovernor(uint32_t targetHz) {
-        u32 tempTargetHz = clockManager::gContext.overrideFreqs[HocClkModule_Governor];
+        u32 tempTargetHz = mgr::gContext.overrideFreqs[HocClkModule_Governor];
         if (!tempTargetHz) {
-            tempTargetHz = config::GetAutoClockHz(clockManager::gContext.applicationId, HocClkModule_Governor, clockManager::gContext.profile, true);
+            tempTargetHz = file::config::GetAutoClockHz(mgr::gContext.applicationId, HocClkModule_Governor, mgr::gContext.profile, true);
             if (!tempTargetHz)
-                tempTargetHz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Governor, clockManager::gContext.profile, true);
+                tempTargetHz = file::config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Governor, mgr::gContext.profile, true);
         }
 
         auto resolve = [](u8 app, u8 temp) -> u8 {
@@ -73,7 +91,7 @@ namespace governor {
 
         if (newCpuGovernorState != lastCpuGovernorState || newGpuGovernorState != lastGpuGovernorState ||
             newVrrGovernorState != lastVrrGovernorState) {
-            fileUtils::LogLine("[mgr] Governor state changed: CPU %s, GPU %s, VRR %s", newCpuGovernorState ? "enabled" : "disabled",
+            file::utils::LogLine("[mgr] Governor state changed: CPU %s, GPU %s, VRR %s", newCpuGovernorState ? "enabled" : "disabled",
                                newGpuGovernorState ? "enabled" : "disabled", newVrrGovernorState ? "enabled" : "disabled");
             lastCpuGovernorState = newCpuGovernorState;
             lastGpuGovernorState = newGpuGovernorState;
@@ -82,11 +100,11 @@ namespace governor {
     }
 
     u32 SchedutilTargetHz(u32 util, u32 tableMaxHz) {
-        u64 hz = (u64)tableMaxHz * util / STEP_UTIL;
+        u64 hz = (u64)tableMaxHz * util / GovernorStepUtil();
         return (u32)(std::min(hz, static_cast<u64>(tableMaxHz)));
     }
 
-    u32 TableIndexForHz(const clockManager::FreqTable &table, u32 targetHz) {
+    u32 TableIndexForHz(const mgr::FreqTable &table, u32 targetHz) {
         for (u32 i = 0; i < table.count; i++)
             if (table.list[i] >= targetHz)
                 return i;
@@ -94,11 +112,11 @@ namespace governor {
     }
 
     u32 ResolveTargetHz(HocClkModule module) {
-        u32 hz = clockManager::gContext.overrideFreqs[module];
+        u32 hz = mgr::gContext.overrideFreqs[module];
         if (!hz)
-            hz = config::GetAutoClockHz(clockManager::gContext.applicationId, module, clockManager::gContext.profile, false);
+            hz = file::config::GetAutoClockHz(mgr::gContext.applicationId, module, mgr::gContext.profile, false);
         if (!hz)
-            hz = config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, module, clockManager::gContext.profile, false);
+            hz = file::config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, module, mgr::gContext.profile, false);
         return hz;
     }
 
@@ -115,13 +133,14 @@ namespace governor {
         u8 vrrFocusTick = 0;
 
         for (;;) {
+            const u64 pollNs = GovernorPollNs();
 
-            if (!clockManager::gRunning) {
+            if (!mgr::gRunning) {
                 cpuDownHoldRemaining = 0;
                 cpuLastHz = 0;
                 gpuDownHoldRemaining = 0;
                 gpuLastHz = 0;
-                svcSleepThread(POLL_NS);
+                svcSleepThread(pollNs);
                 continue;
             }
 
@@ -136,14 +155,14 @@ namespace governor {
                 } else {
                     isCpuGovernorInBoostMode = false;
 
-                    auto &table = clockManager::gFreqTable[HocClkModule_CPU];
-                    std::scoped_lock lock{ clockManager::gContextMutex };
+                    auto &table = mgr::gFreqTable[HocClkModule_CPU];
+                    std::scoped_lock lock{ mgr::gContextMutex };
 
                     u32 cpuLoad = board::GetPartLoad(HocClkPartLoad_CPUMax);
                     u32 tableMaxHz = table.list[table.count - 1];
                     u32 desiredHz = SchedutilTargetHz(cpuLoad, tableMaxHz);
                     u32 targetHz = ResolveTargetHz(HocClkModule_CPU);
-                    u32 maxHz = clockManager::GetMaxAllowedHz(HocClkModule_CPU, clockManager::gContext.profile);
+                    u32 maxHz = mgr::GetMaxAllowedHz(HocClkModule_CPU, mgr::gContext.profile);
 
                     if (targetHz && desiredHz > targetHz)
                         desiredHz = targetHz;
@@ -156,32 +175,23 @@ namespace governor {
                     if (!goingDown)
                         cpuDownHoldRemaining = 0;
                     else if (cpuDownHoldRemaining == 0)
-                        cpuDownHoldRemaining = DOWN_HOLD_TICKS;
+                        cpuDownHoldRemaining = GovernorDownHoldTicks();
 
                     if (cpuDownHoldRemaining > 0)
                         cpuDownHoldRemaining--;
 
                     if (++cpuTick > 50) {
-                        minHz = config::GetConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq);
-                        if (config::GetConfigValue(HocClkConfigValue_AutoRAMCPUOverclock)) {
-                            u32 ramHz = clockManager::gContext.freqs[HocClkModule_MEM];
-                            u32 threshold = (u32)config::GetConfigValue(HocClkConfigValue_AutoRamCpuRamOCThreshold) * 1000;
-                            if (ramHz >= threshold) {
-                                u32 overrideHz = (u32)config::GetConfigValue(HocClkConfigValue_AutoRamCpuCpuOCFreq) * 1000;
-                                if (overrideHz > minHz)
-                                    minHz = overrideHz;
-                            }
-                        }
+                        minHz = file::config::GetConfigValue(HocClkConfigValue_CpuGovernorMinimumFreq);
                         cpuTick = 0;
                     }
 
                     if (newHz < minHz)
                         newHz = minHz;
 
-                    if ((!goingDown || (cpuDownHoldRemaining == 0)) && clockManager::IsAssignableHz(HocClkModule_CPU, newHz)) {
+                    if ((!goingDown || (cpuDownHoldRemaining == 0)) && mgr::IsAssignableHz(HocClkModule_CPU, newHz)) {
                         board::SetHz(HocClkModule_CPU, newHz);
-                        clockManager::gContext.freqs[HocClkModule_CPU] = newHz;
-                        clockManager::gContext.stable.freqs[HocClkModule_CPU] = newHz;
+                        mgr::gContext.freqs[HocClkModule_CPU] = newHz;
+                        mgr::gContext.stable.freqs[HocClkModule_CPU] = newHz;
                         cpuLastHz = newHz;
                     }
                 }
@@ -192,14 +202,14 @@ namespace governor {
             }
 
             if (isGpuGovernorEnabled) {
-                auto &table = clockManager::gFreqTable[HocClkModule_GPU];
-                std::scoped_lock lock{ clockManager::gContextMutex };
+                auto &table = mgr::gFreqTable[HocClkModule_GPU];
+                std::scoped_lock lock{ mgr::gContextMutex };
 
                 u32 gpuLoad = board::GetPartLoad(HocClkPartLoad_GPU);
                 u32 tableMaxHz = table.list[table.count - 1];
                 u32 desiredHz = SchedutilTargetHz(gpuLoad, tableMaxHz);
                 u32 targetHz = ResolveTargetHz(HocClkModule_GPU);
-                u32 maxHz = clockManager::GetMaxAllowedHz(HocClkModule_GPU, clockManager::gContext.profile);
+                u32 maxHz = mgr::GetMaxAllowedHz(HocClkModule_GPU, mgr::gContext.profile);
 
                 if (targetHz && desiredHz > targetHz)
                     desiredHz = targetHz;
@@ -212,15 +222,15 @@ namespace governor {
                 if (!goingDown)
                     gpuDownHoldRemaining = 0;
                 else if (gpuDownHoldRemaining == 0)
-                    gpuDownHoldRemaining = DOWN_HOLD_TICKS;
+                    gpuDownHoldRemaining = GovernorDownHoldTicks();
 
                 if (gpuDownHoldRemaining > 0)
                     gpuDownHoldRemaining--;
 
-                if ((!goingDown || (gpuDownHoldRemaining == 0)) && clockManager::IsAssignableHz(HocClkModule_GPU, newHz)) {
+                if ((!goingDown || (gpuDownHoldRemaining == 0)) && mgr::IsAssignableHz(HocClkModule_GPU, newHz)) {
                     board::SetHz(HocClkModule_GPU, newHz);
-                    clockManager::gContext.freqs[HocClkModule_GPU] = newHz;
-                    clockManager::gContext.stable.freqs[HocClkModule_GPU] = newHz;
+                    mgr::gContext.freqs[HocClkModule_GPU] = newHz;
+                    mgr::gContext.stable.freqs[HocClkModule_GPU] = newHz;
                     gpuLastHz = newHz;
                 }
             } else {
@@ -228,13 +238,13 @@ namespace governor {
                 gpuLastHz = 0;
             }
 
-            if (isVRREnabled && clockManager::gContext.profile != HocClkProfile_Docked && clockManager::gContext.isSaltyNXInstalled) {
+            if (isVRREnabled && mgr::gContext.profile != HocClkProfile_Docked && mgr::gContext.isSaltyNXInstalled) {
                 bool skipVrr = false;
 
                 if (++vrrFocusTick > 100) {
                     vrrFocusTick = 0;
                     bool isApplicationOutOfFocus = false;
-                    Result rc = processManagement::isApplicationOutOfFocus(&isApplicationOutOfFocus);
+                    Result rc = hos::IsApplicationOutOfFocus(&isApplicationOutOfFocus);
                     if (R_FAILED(rc) || isApplicationOutOfFocus) {
                         board::ResetToStockDisplay();
                         skipVrr = true;
@@ -242,18 +252,18 @@ namespace governor {
                 }
 
                 if (!skipVrr) {
-                    u8 fps = integrations::GetSaltyNXFPS();
+                    u8 fps = hos::GetSaltyNXFPS();
 
                     if (fps != 254) {
-                        std::scoped_lock lock{ clockManager::gContextMutex };
+                        std::scoped_lock lock{ mgr::gContextMutex };
 
-                        u32 targetHz = clockManager::gContext.overrideFreqs[HocClkModule_Display];
+                        u32 targetHz = mgr::gContext.overrideFreqs[HocClkModule_Display];
                         if (!targetHz) {
-                            targetHz = config::GetAutoClockHz(clockManager::gContext.applicationId, HocClkModule_Display,
-                                                              clockManager::gContext.profile, false);
+                            targetHz = file::config::GetAutoClockHz(mgr::gContext.applicationId, HocClkModule_Display,
+                                                              mgr::gContext.profile, false);
                             if (!targetHz)
                                 targetHz =
-                                    config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Display, clockManager::gContext.profile, false);
+                                    file::config::GetAutoClockHz(HOCCLK_GLOBAL_PROFILE_TID, HocClkModule_Display, mgr::gContext.profile, false);
                         }
 
                         u8 maxDisplay = targetHz ? (u8)targetHz : 60;
@@ -262,19 +272,19 @@ namespace governor {
                         if (maxDisplay != minDisplay) {
                             if (fps >= minDisplay && fps <= maxDisplay) {
                                 board::SetHz(HocClkModule_Display, fps);
-                                clockManager::gContext.freqs[HocClkModule_Display] = fps;
-                                clockManager::gContext.realFreqs[HocClkModule_Display] = fps;
-                                clockManager::gContext.stable.freqs[HocClkModule_Display] = fps;
-                                clockManager::gContext.stable.realFreqs[HocClkModule_Display] = fps;
+                                mgr::gContext.freqs[HocClkModule_Display] = fps;
+                                mgr::gContext.realFreqs[HocClkModule_Display] = fps;
+                                mgr::gContext.stable.freqs[HocClkModule_Display] = fps;
+                                mgr::gContext.stable.realFreqs[HocClkModule_Display] = fps;
                             } else {
                                 for (u32 i = 0; i < 10; i++) {
                                     u32 compareHz = fps * i;
                                     if (compareHz >= minDisplay && compareHz <= maxDisplay) {
                                         board::SetHz(HocClkModule_Display, compareHz);
-                                        clockManager::gContext.freqs[HocClkModule_Display] = compareHz;
-                                        clockManager::gContext.realFreqs[HocClkModule_Display] = compareHz;
-                                        clockManager::gContext.stable.freqs[HocClkModule_Display] = compareHz;
-                                        clockManager::gContext.stable.realFreqs[HocClkModule_Display] = compareHz;
+                                        mgr::gContext.freqs[HocClkModule_Display] = compareHz;
+                                        mgr::gContext.realFreqs[HocClkModule_Display] = compareHz;
+                                        mgr::gContext.stable.freqs[HocClkModule_Display] = compareHz;
+                                        mgr::gContext.stable.realFreqs[HocClkModule_Display] = compareHz;
                                         break;
                                     }
                                 }
@@ -290,16 +300,16 @@ namespace governor {
                 }
             }
 
-            svcSleepThread(POLL_NS);
+            svcSleepThread(pollNs);
         }
     }
 
-    void startThreads() {
+    void StartThreads() {
         threadCreate(&governorTHREAD, GovernorThread, nullptr, NULL, 0x2000, 0x3F, -2);
         threadStart(&governorTHREAD);
     }
 
-    void exitThreads() {
+    void ExitThreads() {
         threadClose(&governorTHREAD);
     }
-}  // namespace governor
+}  // namespace mgr

@@ -48,16 +48,18 @@ namespace board {
     extern HocClkConsoleType gConsoleType;
     extern FuseData fuseData;
     extern u8 speedoBracket;
+    extern u8 cpuSpeedoBracket;
 
     void Initialize();
     void Exit();
     HocClkSocType GetSocType();
     HocClkConsoleType GetConsoleType();
+    u8 GetFuseDramId();
     u8 GetDramID();
     u8 GetGpuSpeedoBracket();
+    u8 GetCpuSpeedoBracket();
     bool IsDram8GB();
     void SetDisplayRefreshDockedState(bool docked);
     FuseData *GetFuseData();
-    bool IsUsingRetroSuperDisplay();
-
+    bool IsAwake();
 }  // namespace board
